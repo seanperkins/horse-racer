@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useGameStore } from '@/lib/store/gameStore'
-import { RadarChart } from './RadarChart'
+import { HorizontalStatBars } from './HorizontalStatBars'
 import { InfoTooltip } from './InfoTooltip'
 import { BLOODLINE_TOOLTIPS, JOCKEY_TRAIT_TOOLTIPS, ABILITY_TOOLTIPS, GAME_MECHANIC_TOOLTIPS, EQUIPMENT_EFFECT_TOOLTIPS } from '@/game/tooltips'
 import type { ClientMessage } from '@/types/messages'
@@ -355,9 +355,9 @@ function HorseCard({
         </div>
       </div>
 
-      {/* Radar Chart */}
-      <div className="flex justify-center py-2">
-        <RadarChart
+      {/* Stats */}
+      <div className="py-2">
+        <HorizontalStatBars
           stats={{
             spd: horse.stats.speed,
             sta: horse.stats.stamina,
@@ -382,8 +382,6 @@ function HorseCard({
             grt: 'Resistance to terrain penalties and ability to handle difficult conditions.',
             tmp: 'Consistency of performance. Lower temper means more predictable results.',
           }}
-          size={180}
-          showLabels={true}
         />
       </div>
 
@@ -492,9 +490,9 @@ function JockeyCard({
         )}
       </div>
 
-      {/* Radar Chart */}
-      <div className="flex justify-center py-2">
-        <RadarChart
+      {/* Stats */}
+      <div className="py-2">
+        <HorizontalStatBars
           stats={{
             skl: jockey.stats.skill,
             tmg: jockey.stats.timing,
@@ -510,8 +508,6 @@ function JockeyCard({
             tmg: 'Reaction speed and decision timing. Better timing means optimal pace changes.',
             wgt: 'Jockey weight in kg. Lower weight reduces burden on the horse.',
           }}
-          size={150}
-          showLabels={true}
         />
       </div>
 
