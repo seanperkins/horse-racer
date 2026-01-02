@@ -3,6 +3,7 @@ import { parse } from 'url'
 import next from 'next'
 import { WebSocketServer } from 'ws'
 import { setupWebSocketServer } from './server/websocket-handler'
+import { getUserFromRequest } from './server/auth-helper'
 
 const dev = process.env.NODE_ENV !== 'production'
 const hostname = 'localhost'
@@ -34,13 +35,17 @@ app.prepare().then(() => {
   setupWebSocketServer(wss)
 
   // Handle WebSocket upgrade requests
-  server.on('upgrade', (request, socket, head) => {
+  server.on('upgrade', async (request, socket, head) => {
     const { pathname } = parse(request.url || '', true)
 
     // Handle our custom WebSocket connections
     if (pathname === '/ws') {
+      // Extract authenticated user from session cookie
+      const user = await getUserFromRequest(request)
+
       wss.handleUpgrade(request, socket, head, (ws) => {
-        wss.emit('connection', ws, request)
+        // Pass user info to WebSocket connection handler
+        wss.emit('connection', ws, request, user)
       })
     }
     // Let Next.js handle its own HMR WebSocket connections

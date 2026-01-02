@@ -103,6 +103,30 @@ export class GameRoom {
     return this.players.size < MAX_PLAYERS && !this.gameStarted
   }
 
+  /**
+   * Update WebSocket connection for an existing player (for reconnection)
+   */
+  updatePlayerConnection(userId: string, ws: WebSocket): void {
+    this.lastActivityAt = Date.now()
+
+    if (!this.players.has(userId)) {
+      console.warn(`Cannot update connection: Player ${userId} not in room ${this.roomId}`)
+      return
+    }
+
+    // Close old socket if it exists
+    const oldSocket = this.playerSockets.get(userId)
+    if (oldSocket && oldSocket !== ws) {
+      console.log(`🔄 Replacing socket for player ${userId}`)
+      oldSocket.close()
+    }
+
+    this.playerSockets.set(userId, ws)
+
+    // Send full game state to reconnected player
+    this.syncPlayerState(userId)
+  }
+
   isEmpty(): boolean {
     // Room is empty if there are no players AND it's been inactive for > 3 minutes
     if (this.players.size === 0) {

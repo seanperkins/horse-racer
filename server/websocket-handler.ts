@@ -10,14 +10,51 @@ const gameRooms = new Map<string, GameRoom>()
 // Store player connections
 const playerConnections = new Map<string, WebSocket>()
 
+interface AuthenticatedUser {
+  id: string
+  username: string
+  email?: string
+}
+
 export function setupWebSocketServer(wss: WebSocketServer): void {
   console.log('WebSocket server initialized')
 
-  wss.on('connection', (ws: WebSocket) => {
+  wss.on('connection', (ws: WebSocket, request: any, user: AuthenticatedUser | null) => {
     console.log('New WebSocket connection')
 
-    let playerId: string | null = null
+    // Use authenticated user ID if available, otherwise wait for join_lobby message
+    let playerId: string | null = user?.id || null
+    let playerName: string | null = user?.username || null
     let currentRoom: GameRoom | null = null
+
+    // If user is authenticated, try to restore their session
+    if (playerId) {
+      console.log(`🔐 Authenticated connection for user: ${playerId} (${playerName})`)
+
+      // Close any previous connection for this user
+      const existingConnection = playerConnections.get(playerId)
+      if (existingConnection && existingConnection !== ws) {
+        console.log(`🔄 Closing previous connection for player ${playerId}`)
+        existingConnection.close()
+      }
+
+      playerConnections.set(playerId, ws)
+
+      // Try to find and restore the player's room
+      const existingRoom = findRoomByPlayerId(playerId)
+      if (existingRoom) {
+        currentRoom = existingRoom
+        console.log(`📍 Auto-restored room ${existingRoom.roomId} for player ${playerId}`)
+
+        // Update the WebSocket connection in the room
+        existingRoom.updatePlayerConnection(playerId, ws)
+
+        // Send current lobby state to reconnected player
+        existingRoom.broadcastLobbyState()
+      }
+    } else {
+      console.log('⚠️  Unauthenticated WebSocket connection - waiting for join_lobby')
+    }
 
     ws.on('message', async (data) => {
       try {
@@ -29,18 +66,25 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
         // Handle different message types
         switch (validatedMessage.type) {
           case 'join_lobby':
-            playerId = validatedMessage.userId
-            console.log(`🔑 Setting playerId to: ${playerId}`)
+            // For unauthenticated users, get playerId from the message
+            if (!playerId) {
+              playerId = validatedMessage.userId
+              playerName = validatedMessage.playerName
+              console.log(`🔑 Setting playerId from join_lobby: ${playerId}`)
 
-            // Close any prior socket for the same userId
-            const existingConnection = playerConnections.get(playerId)
-            if (existingConnection && existingConnection !== ws) {
-              console.log(`🔄 Closing previous connection for player ${playerId}`)
-              existingConnection.close()
+              // Close any prior socket for the same userId
+              const existingConnection = playerConnections.get(playerId)
+              if (existingConnection && existingConnection !== ws) {
+                console.log(`🔄 Closing previous connection for player ${playerId}`)
+                existingConnection.close()
+              }
+
+              playerConnections.set(playerId, ws)
+            } else {
+              console.log(`🔐 Authenticated user ${playerId} joining lobby`)
             }
 
-            playerConnections.set(playerId, ws)
-            handleJoinLobby(ws, validatedMessage, wss, playerId, (room) => {
+            handleJoinLobby(ws, validatedMessage, wss, playerId, playerName, (room) => {
               currentRoom = room
               console.log(`📍 Set currentRoom to: ${room.roomId} for player ${playerId}`)
             })
@@ -257,9 +301,12 @@ function handleJoinLobby(
   message: Extract<ClientMessage, { type: 'join_lobby' }>,
   wss: WebSocketServer,
   playerId: string,
+  authenticatedPlayerName: string | null,
   setCurrentRoom: (room: GameRoom) => void
 ): void {
-  const { playerName, userId, friendCode, createPrivate } = message
+  const { playerName: messagePlayerName, userId, friendCode, createPrivate } = message
+  // Use authenticated player name if available, otherwise use message player name
+  const playerName = authenticatedPlayerName || messagePlayerName
 
   let room: GameRoom | undefined
 
