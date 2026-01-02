@@ -1,26 +1,28 @@
-import type { NextConfig } from 'next'
+import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  output: "standalone",
   reactStrictMode: true,
 
   experimental: {
     serverActions: {
-      bodySizeLimit: '2mb',
+      bodySizeLimit: "2mb",
     },
   },
 
   // Add empty turbopack config to silence the error
-  turbopack: {},
+  turbopack: {
+    root: "./",
+  },
 
   webpack: (config, { dev }) => {
     if (dev) {
       config.infrastructureLogging = {
-        level: 'error',
-      }
+        level: "error",
+      };
     }
-    return config
+    return config;
   },
-}
+};
 
-export default nextConfig
+export default nextConfig;

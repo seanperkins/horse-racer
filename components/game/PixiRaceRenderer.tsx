@@ -417,13 +417,14 @@ export function PixiRaceRenderer({
       // Send live events to parent if callback provided
       if (onRaceEvent) {
         const outcome = simulator.getOutcome();
-        onRaceEvent(outcome.events.map(e => ({
+        const formattedEvents = outcome.events.map(e => ({
           tick: e.tick,
           playerId: e.playerId,
           playerName: raceInputs.entries.find(entry => entry.playerId === e.playerId)?.playerName || e.playerId,
           type: e.type as string,
           description: e.description,
-        })));
+        }));
+        onRaceEvent(formattedEvents);
       }
 
       // Collect new events
