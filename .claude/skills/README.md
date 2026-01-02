@@ -1,6 +1,6 @@
-# Thunder Hooves - Claude Code Skills
+# Neighs of Thunder - Claude Code Skills
 
-Custom development skills for accelerating Thunder Hooves development and testing.
+Custom development skills for accelerating Neighs of Thunder development and testing.
 
 ## Available Skills
 
@@ -118,6 +118,32 @@ Custom development skills for accelerating Thunder Hooves development and testin
 
 /deploy-check --skip-e2e
 # Skip E2E tests for faster check
+```
+
+---
+
+### 6. `/commit` - Smart Git Commit
+**Purpose:** Create well-formatted commits with auto-generated messages
+
+**Use Cases:**
+- Quick commits with conventional commit messages
+- Analyze changes and generate appropriate message
+- Follow repository commit style
+- Ensure commit message quality
+
+**Example:**
+```bash
+/commit
+# Create commit with auto-generated message
+
+/commit --all
+# Stage all changes and commit
+
+/commit --message "fix: reconnection bug"
+# Use custom message
+
+/commit --amend
+# Amend last commit (if safe)
 ```
 
 ---

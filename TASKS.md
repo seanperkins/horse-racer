@@ -1,14 +1,15 @@
 # Neighs of Thunder - Remaining Tasks
 
-## 🛠 WebSocket Room Join Fixes (Proposed)
-
-- Allow reconnects to bypass `canJoin()` when `room.players.has(userId)`; for join-by-code, prefer rejoining by `userId` over creating a new room.
-- Enforce `ready_up` sender identity: use connection-bound `playerId` and reject mismatched `validatedMessage.userId`.
-- Restore `currentRoom` for all message types when missing (lookup by `playerId`), or return a clear error if not in a room.
-- Decide join-by-code behavior: "join-only" vs "create-or-join"; update server/client flow and UI feedback accordingly.
-- On reconnect, close any prior socket for the same `userId` and clean up stale `playerSockets` entries.
-
 ## ✅ Recently Completed
+
+### WebSocket Room Join Fixes (2026-01-02)
+
+- ✅ Reconnects bypass `canJoin()` when `room.players.has(userId)`
+- ✅ Join-by-code is now join-only (doesn't create new rooms, returns error if not found)
+- ✅ `ready_up` enforces sender identity using connection-bound `playerId`
+- ✅ All message handlers restore `currentRoom` when missing via `findRoomByPlayerId()`
+- ✅ Clear error messages returned when player not in a room
+- ✅ Reconnection closes prior socket for same `userId` and cleans up stale `playerSockets` entries
 
 ### URL State Management & Reconnection (2026-01-02)
 

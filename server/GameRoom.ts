@@ -4,7 +4,6 @@ import { RaceSimulator } from '@/game/simulation/RaceSimulator'
 import {
   calculatePowerRating,
   calculateWinProbability,
-  calculatePayoutMultiplier,
   calculateBloodlineBonuses,
 } from '@/game/stats'
 import { generateShopInventory } from '@/game/shop'
@@ -12,6 +11,10 @@ import { generateTrackForRound } from '@/game/tracks'
 import { generateAIRaceEntry } from '@/game/ai-horses'
 
 const MAX_PLAYERS = 8
+const HOUSE_EDGE = 0.95
+const WIN_ODDS_CAP = 8
+const PLACE_ODDS_CAP = 3
+const EXACTA_ODDS_CAP = 60
 const PHASE_DURATIONS: Record<GamePhase, number> = {
   lobby: 0,
   shop: 45,
@@ -58,6 +61,8 @@ export class GameRoom {
   isPrivate: boolean
   lastRaceSeed: string | null
   lastBettingOdds: Map<string, { win: number; place: number }>
+  lastBettingStrengths: Map<string, number>
+  lastBettingTotalStrength: number
   currentTrack: Track | null
   createdAt: number
   lastActivityAt: number
@@ -75,6 +80,8 @@ export class GameRoom {
     this.isPrivate = !!friendCode
     this.lastRaceSeed = null
     this.lastBettingOdds = new Map()
+    this.lastBettingStrengths = new Map()
+    this.lastBettingTotalStrength = 0
     this.currentTrack = null
     this.createdAt = Date.now()
     this.lastActivityAt = Date.now()
@@ -123,6 +130,14 @@ export class GameRoom {
     if (this.players.has(userId)) {
       // Player reconnecting
       console.log(`Player ${userId} reconnecting to room ${this.roomId}`)
+
+      // Close and cleanup any prior socket for this player
+      const oldSocket = this.playerSockets.get(userId)
+      if (oldSocket && oldSocket !== ws) {
+        console.log(`🔄 Cleaning up old socket for player ${userId}`)
+        oldSocket.close()
+      }
+
       this.playerSockets.set(userId, ws)
 
       // Send full game state to reconnecting player
@@ -524,16 +539,21 @@ export class GameRoom {
     const powerRatings = entries.map(entry => {
       return calculatePowerRating(entry.horse, entry.jockey, entry.equipment || {})
     })
+    const totalStrength = powerRatings.reduce((sum, rating) => sum + rating, 0)
+    this.lastBettingStrengths.clear()
+    this.lastBettingTotalStrength = totalStrength
 
     const entriesWithOdds = entries.map((entry, index) => {
       const winProbability = calculateWinProbability(powerRatings[index], powerRatings)
-      const payoutMultiplier = calculatePayoutMultiplier(winProbability)
-      const placeMultiplier = Math.min(3, Math.max(1.5, payoutMultiplier * 0.6))
+      const placeProbability = this.calculatePlaceProbability(powerRatings, index)
+      const payoutMultiplier = this.calculateOddsFromProbability(winProbability, WIN_ODDS_CAP)
+      const placeMultiplier = this.calculateOddsFromProbability(placeProbability, PLACE_ODDS_CAP)
 
       this.lastBettingOdds.set(entry.playerId, {
         win: payoutMultiplier,
         place: placeMultiplier,
       })
+      this.lastBettingStrengths.set(entry.playerId, powerRatings[index])
 
       return {
         ...entry,
@@ -813,7 +833,12 @@ export class GameRoom {
           // Bet on exact 1st and 2nd place finishers
           won = bet.exactaFirst === winner?.playerId && bet.exactaSecond === runnerUp?.playerId
           if (won) {
-            payoutMultiplier = 10
+            const exactaProbability = this.calculateExactaProbability(bet.exactaFirst, bet.exactaSecond)
+            if (exactaProbability > 0) {
+              payoutMultiplier = this.calculateOddsFromProbability(exactaProbability, EXACTA_ODDS_CAP)
+            } else {
+              payoutMultiplier = 10
+            }
           }
           break
       }
@@ -827,6 +852,59 @@ export class GameRoom {
     }
 
     return results
+  }
+
+  private calculateOddsFromProbability(probability: number, cap: number): number {
+    const safeProbability = Math.max(probability, 1e-6)
+    return Math.min(cap, HOUSE_EDGE / safeProbability)
+  }
+
+  private calculatePlaceProbability(strengths: number[], index: number): number {
+    const totalStrength = strengths.reduce((sum, rating) => sum + rating, 0)
+    const strength = strengths[index]
+    if (totalStrength <= 0) return 0
+
+    let probability = strength / totalStrength
+
+    for (let j = 0; j < strengths.length; j++) {
+      if (j === index) continue
+      const strengthJ = strengths[j]
+      const totalAfterJ = totalStrength - strengthJ
+      if (totalAfterJ <= 0) continue
+      probability += (strengthJ / totalStrength) * (strength / totalAfterJ)
+    }
+
+    for (let j = 0; j < strengths.length; j++) {
+      if (j === index) continue
+      const strengthJ = strengths[j]
+      const totalAfterJ = totalStrength - strengthJ
+      if (totalAfterJ <= 0) continue
+
+      for (let k = 0; k < strengths.length; k++) {
+        if (k === index || k === j) continue
+        const strengthK = strengths[k]
+        const totalAfterJK = totalAfterJ - strengthK
+        if (totalAfterJK <= 0) continue
+        probability += (strengthJ / totalStrength) * (strengthK / totalAfterJ) * (strength / totalAfterJK)
+      }
+    }
+
+    return Math.min(probability, 1)
+  }
+
+  private calculateExactaProbability(firstId?: string, secondId?: string): number {
+    if (!firstId || !secondId) return 0
+    const totalStrength = this.lastBettingTotalStrength
+    if (totalStrength <= 0) return 0
+
+    const firstStrength = this.lastBettingStrengths.get(firstId)
+    const secondStrength = this.lastBettingStrengths.get(secondId)
+    if (!firstStrength || !secondStrength) return 0
+
+    const remainingStrength = totalStrength - firstStrength
+    if (remainingStrength <= 0) return 0
+
+    return (firstStrength / totalStrength) * (secondStrength / remainingStrength)
   }
 
   calculateGoldReward(position: number): number {
