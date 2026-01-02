@@ -33,6 +33,7 @@ interface ParticipantState {
   maxStamina: number
   isStumbled: boolean
   stumbleRecoveryTicks: number
+  finishTick: number | null // Tick when horse crossed finish line
   events: Array<{ tick: number; type: string; description: string }>
 }
 
@@ -92,6 +93,7 @@ export class RaceSimulator {
         maxStamina: derivedStats.staminaPool,
         isStumbled: false,
         stumbleRecoveryTicks: 0,
+        finishTick: null,
         events: [],
       })
     }
@@ -209,6 +211,11 @@ export class RaceSimulator {
    */
   private isRaceComplete(): boolean {
     for (const state of this.states.values()) {
+      // Record finish tick if horse just crossed the line
+      if (state.position >= this.raceDistance && state.finishTick === null) {
+        state.finishTick = this.currentTick
+      }
+
       if (state.position < this.raceDistance) {
         return false
       }
@@ -557,7 +564,7 @@ export class RaceSimulator {
           playerId: state.playerId,
           playerName: participant.playerName,
           position: index + 1,
-          finishTime: this.currentTick * (1000 / this.tickRate), // Convert to ms
+          finishTime: (state.finishTick || this.currentTick) * (1000 / this.tickRate), // Convert to ms
           distance: state.position,
         }
       })
