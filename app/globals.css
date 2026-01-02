@@ -1,0 +1,110 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Press+Start+2P&family=VT323&display=swap");
+@import "tailwindcss";
+
+:root {
+  --bg-deep: #0e0d1b;
+  --bg-track: #1f1b2e;
+  --bg-panel: #2a2540;
+  --bg-panel-strong: #342d52;
+  --text-main: #f7f2e8;
+  --text-dim: #b7aebf;
+  --accent-gold: #f4c04b;
+  --accent-red: #ef5d5d;
+  --accent-green: #5bd08a;
+  --accent-blue: #4db2ff;
+  --accent-orange: #ff8a3d;
+  --accent-cyan: #45f2d7;
+  --outline: #4f4772;
+}
+
+body {
+  color: var(--text-main);
+  background:
+    radial-gradient(
+      1200px 500px at 20% -10%,
+      #3a2d52 0%,
+      rgba(58, 45, 82, 0) 55%
+    ),
+    linear-gradient(180deg, #151225 0%, #0e0d1b 45%, #1b1325 100%);
+  font-family: "VT323", "IBM Plex Mono", monospace;
+  letter-spacing: 0.3px;
+}
+
+.th-bg {
+  background:
+    radial-gradient(
+      1000px 450px at 75% -20%,
+      #2c2242 0%,
+      rgba(44, 34, 66, 0) 55%
+    ),
+    linear-gradient(180deg, var(--bg-track) 0%, var(--bg-deep) 65%);
+}
+
+.th-panel {
+  background: var(--bg-panel);
+  border: 2px solid var(--outline);
+  box-shadow: 0 10px 25px rgba(10, 8, 18, 0.5);
+}
+
+.th-panel-strong {
+  background: var(--bg-panel-strong);
+  border: 2px solid var(--outline);
+}
+
+.th-title {
+  font-family: "Press Start 2P", "VT323", monospace;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.th-label {
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+
+.th-button {
+  background: var(--accent-gold);
+  color: #1d1408;
+  border: 2px solid #c6942f;
+  box-shadow: 0 6px 0 #9b6a1f;
+  transition:
+    transform 0.1s ease,
+    filter 0.2s ease;
+}
+
+.th-button:active {
+  transform: translateY(2px);
+  box-shadow: 0 4px 0 #9b6a1f;
+}
+
+.th-button-blue {
+  background: var(--accent-blue);
+  border-color: #2a7ab8;
+  box-shadow: 0 6px 0 #245c88;
+  color: #0b1522;
+}
+
+.th-button-green {
+  background: var(--accent-green);
+  border-color: #2f8f5b;
+  box-shadow: 0 6px 0 #246944;
+  color: #0b2016;
+}
+
+.th-button-red {
+  background: var(--accent-red);
+  border-color: #b54141;
+  box-shadow: 0 6px 0 #7b2f2f;
+  color: #220c0c;
+}
+
+.th-chip {
+  background: #231c37;
+  border: 1px solid var(--outline);
+  color: var(--text-dim);
+}
+
+.th-timer-bar {
+  background: #1b162b;
+  border: 1px solid var(--outline);
+}

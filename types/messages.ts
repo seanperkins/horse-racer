@@ -1,0 +1,277 @@
+import { z } from 'zod'
+
+// Base message schema
+export const BaseMessageSchema = z.object({
+  type: z.string(),
+  timestamp: z.number().optional(),
+})
+
+// Client -> Server messages
+export const JoinLobbySchema = BaseMessageSchema.extend({
+  type: z.literal('join_lobby'),
+  playerName: z.string().min(1).max(20),
+  userId: z.string(),
+  friendCode: z.string().length(4).optional(), // 4-letter room code to join
+  createPrivate: z.boolean().optional(), // Create a private room
+})
+
+export const ReadyUpSchema = BaseMessageSchema.extend({
+  type: z.literal('ready_up'),
+  ready: z.boolean(),
+  userId: z.string(),
+})
+
+export const PurchaseUnitSchema = BaseMessageSchema.extend({
+  type: z.literal('purchase_unit'),
+  unitId: z.string(),
+  unitType: z.enum(['horse', 'jockey', 'equipment']),
+})
+
+export const SellUnitSchema = BaseMessageSchema.extend({
+  type: z.literal('sell_unit'),
+  unitId: z.string(),
+})
+
+export const RerollShopSchema = BaseMessageSchema.extend({
+  type: z.literal('reroll_shop'),
+})
+
+export const TrainHorseSchema = BaseMessageSchema.extend({
+  type: z.literal('train_horse'),
+  horseId: z.string(),
+  stat: z.enum(['speed', 'stamina', 'grit', 'temper']),
+})
+
+export const HireJockeySchema = BaseMessageSchema.extend({
+  type: z.literal('hire_jockey'),
+  jockeyId: z.string(),
+})
+
+export const FireJockeySchema = BaseMessageSchema.extend({
+  type: z.literal('fire_jockey'),
+})
+
+export const SetupRaceEntrySchema = BaseMessageSchema.extend({
+  type: z.literal('setup_race_entry'),
+  horseId: z.string(),
+  jockeyId: z.string(),
+  equipment: z.object({
+    saddle: z.string().optional(),
+    horseshoes: z.string().optional(),
+    blinders: z.string().optional(),
+  }),
+  strategy: z.object({
+    start: z.enum(['burst', 'steady', 'hang_back']),
+    mid: z.enum(['push', 'conserve', 'react']),
+    finish: z.enum(['sprint', 'maintain', 'gamble']),
+  }),
+})
+
+export const PlaceBetSchema = BaseMessageSchema.extend({
+  type: z.literal('place_bet'),
+  betType: z.enum(['win', 'place', 'exacta']),
+  targetPlayerId: z.string().optional(), // For win/place bets
+  exactaFirst: z.string().optional(), // For exacta
+  exactaSecond: z.string().optional(), // For exacta
+  amount: z.number().min(1).max(10),
+  betForHeart: z.boolean().default(false), // Recovery bet
+})
+
+// Server -> Client messages
+export const LobbyStateSchema = BaseMessageSchema.extend({
+  type: z.literal('lobby_state'),
+  players: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      ready: z.boolean(),
+    }),
+  ),
+  requiredPlayers: z.number(),
+  friendCode: z.string(), // 4-letter room code
+  isPrivate: z.boolean(), // Whether this is a private room
+})
+
+export const GamePhaseSchema = BaseMessageSchema.extend({
+  type: z.literal('game_phase'),
+  phase: z.enum(['shop', 'preparation', 'betting', 'race', 'results']),
+  duration: z.number(), // seconds
+  round: z.number(),
+})
+
+export const ShopStateSchema = BaseMessageSchema.extend({
+  type: z.literal('shop_state'),
+  units: z.array(
+    z.object({
+      id: z.string(),
+      type: z.enum(['horse', 'jockey', 'equipment']),
+      name: z.string(),
+      cost: z.number(),
+      data: z.any(), // Full unit data
+    }),
+  ),
+  playerGold: z.number(),
+  playerUnits: z.object({
+    horses: z.array(z.any()),
+    hiredJockey: z.any().nullable(),
+    equipment: z.array(z.any()),
+  }),
+})
+
+export const TrackInfoSchema = BaseMessageSchema.extend({
+  type: z.literal('track_info'),
+  track: z.object({
+    id: z.string().optional(),
+    name: z.string(),
+    category: z.string(),
+    surface: z.string(),
+    distance: z.number(),
+    description: z.string().optional(),
+    obstacles: z.array(z.any()).optional(),
+  }),
+})
+
+export const BettingOpenSchema = BaseMessageSchema.extend({
+  type: z.literal('betting_open'),
+  entries: z.array(
+    z.object({
+      playerId: z.string(),
+      playerName: z.string(),
+      horse: z.any(),
+      jockey: z.any(),
+      equipment: z.any(),
+      strategy: z.any(),
+      odds: z.number(),
+      placeOdds: z.number(),
+      winProbability: z.number(),
+    }),
+  ),
+})
+
+export const RaceInputsSchema = BaseMessageSchema.extend({
+  type: z.literal('race_inputs'),
+  entries: z.array(
+    z.object({
+      playerId: z.string(),
+      playerName: z.string(),
+      horse: z.any(),
+      jockey: z.any(),
+      equipment: z.any(),
+      strategy: z.any(),
+    }),
+  ),
+  track: z.object({
+    name: z.string(),
+    category: z.string(),
+    surface: z.string(),
+    distance: z.number(),
+    obstacles: z.array(z.any()).optional(),
+  }),
+  seed: z.string(), // For deterministic simulation
+})
+
+export const RaceResultsSchema = BaseMessageSchema.extend({
+  type: z.literal('race_results'),
+  placements: z.array(
+    z.object({
+      playerId: z.string(),
+      playerName: z.string(),
+      position: z.number(),
+      time: z.number(),
+      goldReward: z.number(),
+      heartsDamage: z.number(),
+    }),
+  ),
+  betResults: z.array(
+    z.object({
+      playerId: z.string(),
+      won: z.boolean(),
+      payout: z.number(),
+    }),
+  ),
+  eliminatedPlayers: z.array(z.string()),
+  events: z.array(
+    z.object({
+      tick: z.number(),
+      playerId: z.string(),
+      type: z.string(),
+      description: z.string(),
+    }),
+  ),
+})
+
+export const PlayerStateSchema = BaseMessageSchema.extend({
+  type: z.literal('player_state'),
+  gold: z.number(),
+  hearts: z.number(),
+  inventory: z.object({
+    horses: z.array(z.any()),
+    hiredJockey: z.any().nullable(),
+    equipment: z.array(z.any()),
+  }),
+  wins: z.number(),
+  currentRound: z.number(),
+})
+
+export const ErrorMessageSchema = BaseMessageSchema.extend({
+  type: z.literal('error'),
+  message: z.string(),
+  code: z.string().optional(),
+})
+
+export const PlayerReadySchema = BaseMessageSchema.extend({
+  type: z.literal('player_ready'),
+  playerId: z.string(),
+  ready: z.boolean(),
+})
+
+// Union of all client messages
+export const ClientMessageSchema = z.discriminatedUnion('type', [
+  JoinLobbySchema,
+  ReadyUpSchema,
+  PurchaseUnitSchema,
+  SellUnitSchema,
+  RerollShopSchema,
+  TrainHorseSchema,
+  HireJockeySchema,
+  FireJockeySchema,
+  SetupRaceEntrySchema,
+  PlaceBetSchema,
+])
+
+// Union of all server messages
+export const ServerMessageSchema = z.discriminatedUnion('type', [
+  LobbyStateSchema,
+  GamePhaseSchema,
+  ShopStateSchema,
+  TrackInfoSchema,
+  BettingOpenSchema,
+  RaceInputsSchema,
+  RaceResultsSchema,
+  PlayerStateSchema,
+  ErrorMessageSchema,
+  PlayerReadySchema,
+])
+
+// TypeScript types inferred from schemas
+export type ClientMessage = z.infer<typeof ClientMessageSchema>
+export type ServerMessage = z.infer<typeof ServerMessageSchema>
+
+export type JoinLobby = z.infer<typeof JoinLobbySchema>
+export type ReadyUp = z.infer<typeof ReadyUpSchema>
+export type PurchaseUnit = z.infer<typeof PurchaseUnitSchema>
+export type SellUnit = z.infer<typeof SellUnitSchema>
+export type RerollShop = z.infer<typeof RerollShopSchema>
+export type TrainHorse = z.infer<typeof TrainHorseSchema>
+export type HireJockey = z.infer<typeof HireJockeySchema>
+export type FireJockey = z.infer<typeof FireJockeySchema>
+export type SetupRaceEntry = z.infer<typeof SetupRaceEntrySchema>
+export type PlaceBet = z.infer<typeof PlaceBetSchema>
+
+export type LobbyState = z.infer<typeof LobbyStateSchema>
+export type GamePhase = z.infer<typeof GamePhaseSchema>
+export type ShopState = z.infer<typeof ShopStateSchema>
+export type RaceInputs = z.infer<typeof RaceInputsSchema>
+export type RaceResults = z.infer<typeof RaceResultsSchema>
+export type PlayerState = z.infer<typeof PlayerStateSchema>
+export type ErrorMessage = z.infer<typeof ErrorMessageSchema>
