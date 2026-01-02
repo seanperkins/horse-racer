@@ -103,21 +103,26 @@ export class RaceSimulator {
    * Run the complete race simulation
    */
   public simulate(): RaceOutcome {
-    const maxTicks = 600 // 60 seconds max at 10 ticks/sec
-
     // Add race start events for all participants
     for (const participant of this.config.participants) {
       const state = this.states.get(participant.playerId)!
       this.addEvent(state, 'start', 'Off to a strong start!')
     }
 
-    while (this.currentTick < maxTicks && !this.isRaceComplete()) {
+    // Run until all horses finish the race
+    while (!this.isRaceComplete()) {
       this.tick()
       this.currentTick++
 
       // Add position updates every 2 seconds (20 ticks)
       if (this.currentTick % 20 === 0) {
         this.addPositionUpdates()
+      }
+
+      // Safety check: if simulation runs too long, something is wrong
+      if (this.currentTick > 10000) {
+        console.error('Race simulation exceeded 10000 ticks (16.7 minutes), stopping')
+        break
       }
     }
 
