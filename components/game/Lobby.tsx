@@ -137,12 +137,16 @@ export function Lobby({ sendMessage, roomCode, isConnected }: LobbyProps) {
   }
 
   const handleReadyToggle = () => {
-    if (!userId) return
+    if (!userId) {
+      console.error('❌ Cannot toggle ready: userId is null')
+      return
+    }
 
     const newReadyState = !isReady
     setIsReady(newReadyState)
 
     console.log(`🎮 Sending ready_up message: ${newReadyState}, playerId: ${userId}`)
+    console.log(`Current players:`, players)
     sendMessage({
       type: 'ready_up',
       ready: newReadyState,
