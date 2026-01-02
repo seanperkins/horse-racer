@@ -11,7 +11,12 @@
       "Bash(grep:*)",
       "Bash(timeout 15 npm run dev:*)",
       "Bash(npm run dev:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(lsof:*)",
+      "mcp__plugin_playwright_playwright__*",
+      "Bash(npm run test:*)"
     ]
   }
 }

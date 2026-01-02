@@ -53,8 +53,8 @@ export default function TestRacePage() {
     setResults(null)
   }
 
-  const handleRaceComplete = (placements: any[]) => {
-    setResults(placements)
+  const handleRaceComplete = (result: { placements: any[]; events: any[] }) => {
+    setResults(result.placements)
   }
 
   const resetRace = () => {

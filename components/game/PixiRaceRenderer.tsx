@@ -9,7 +9,7 @@ import { TrackInfo, RaceCanvas, RaceSidebar, RaceEventLog } from "./race";
 
 interface PixiRaceRendererProps {
   raceInputs: RaceInputs;
-  onRaceComplete: (placements: any[]) => void;
+  onRaceComplete: (result: { placements: any[]; events: any[] }) => void;
 }
 
 interface RaceEvent {
@@ -492,7 +492,10 @@ export function PixiRaceRenderer({
         // Small delay to show final positions before showing results
         setTimeout(() => {
           const result = simulator.getOutcome();
-          onRaceComplete(result.placements);
+          onRaceComplete({
+            placements: result.placements,
+            events: result.events,
+          });
         }, 500);
       }
     }, tickInterval);

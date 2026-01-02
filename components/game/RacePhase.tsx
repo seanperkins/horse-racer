@@ -9,6 +9,7 @@ import type { RaceOutcome } from '@/types/game'
 export function RacePhase() {
   const { currentRound, raceInputs, raceResults } = useGameStore()
   const [simulationResult, setSimulationResult] = useState<RaceOutcome | null>(null)
+  const [raceEvents, setRaceEvents] = useState<any[]>([])
 
   // Build player name mapping from race inputs
   const playerNames = useMemo(() => {
@@ -20,11 +21,12 @@ export function RacePhase() {
     return mapping
   }, [raceInputs])
 
-  const handleRaceComplete = (placements: any[]) => {
+  const handleRaceComplete = (result: { placements: any[]; events: any[] }) => {
     setSimulationResult({
-      placements,
-      events: [],
+      placements: result.placements,
+      events: result.events,
     })
+    setRaceEvents(result.events)
   }
 
   return (
@@ -46,7 +48,7 @@ export function RacePhase() {
             {/* Race commentary - takes up 1/3 of width on large screens */}
             <div className="lg:col-span-1">
               <RaceCommentary
-                events={raceResults?.events || []}
+                events={raceEvents}
                 playerNames={playerNames}
               />
             </div>
