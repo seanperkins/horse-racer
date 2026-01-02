@@ -19,31 +19,12 @@ interface BetResult {
 }
 
 export function ResultsPhase() {
-  const { currentRound, gold, hearts, raceResults, playerId, sendMessage, playerReadyStatus } = useGameStore()
-  const [isReady, setIsReady] = useState(false)
-
-  const handleReadyUp = () => {
-    const newReadyState = !isReady
-    setIsReady(newReadyState)
-    sendMessage({
-      type: 'ready_up',
-      ready: newReadyState,
-      userId: playerId,
-    })
-  }
-
-  // Reset ready state when round changes
-  useEffect(() => {
-    setIsReady(false)
-  }, [currentRound])
+  const { currentRound, gold, hearts, raceResults, playerId, playerReadyStatus } = useGameStore()
 
   if (!raceResults || !raceResults.placements) {
     return (
       <div className="min-h-screen p-8 th-bg">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl md:text-3xl th-title text-center mb-8">
-            Race {currentRound} - Results
-          </h1>
           <div className="th-panel rounded-lg p-8 text-center">
             <p className="th-label">Loading results...</p>
           </div>
@@ -77,10 +58,6 @@ export function ResultsPhase() {
   return (
     <div className="min-h-screen p-4 md:p-8 th-bg">
       <div className="max-w-5xl mx-auto">
-        <h1 className="text-2xl md:text-3xl th-title text-center mb-8">
-          Round {currentRound} - Results
-        </h1>
-
         {/* Your Performance Summary */}
         {myPlacement && (
           <div className="th-panel rounded-lg p-6 mb-6">
@@ -227,61 +204,31 @@ export function ResultsPhase() {
           </div>
         )}
 
-        {/* Current Resources */}
-        <div className="flex justify-center gap-8 py-6 border-t border-[var(--outline)]">
-          <div className="text-center">
-            <div className="th-label text-sm mb-2">Your Gold</div>
-            <div className="text-3xl font-bold text-[var(--accent-gold)]">💰 {gold}</div>
-          </div>
-          <div className="text-center">
-            <div className="th-label text-sm mb-2">Your Hearts</div>
-            <div className="text-3xl font-bold text-[var(--accent-red)]">❤️ {hearts}</div>
-          </div>
-        </div>
-
-        {/* Ready Up Section */}
-        {!wasEliminated && (
+        {/* Player Ready Status */}
+        {!wasEliminated && playerReadyStatus && Object.keys(playerReadyStatus).length > 0 && (
           <div className="th-panel rounded-lg p-6 mt-6">
-            <div className="text-center mb-4">
-              <button
-                onClick={handleReadyUp}
-                className={`px-8 py-3 rounded-lg font-bold text-lg transition-all ${
-                  isReady
-                    ? 'bg-[var(--accent-green)] text-white'
-                    : 'bg-[var(--accent-gold)] text-[var(--bg)] hover:bg-[var(--accent-gold)]/80'
-                }`}
-              >
-                {isReady ? '✓ Ready!' : 'Ready Up'}
-              </button>
+            <div className="th-label text-sm mb-3 text-center">
+              Waiting for players...
             </div>
+            <div className="flex flex-wrap gap-2 justify-center">
+              {Object.entries(playerReadyStatus).map(([pid, ready]) => {
+                const player = placements.find((p) => p.playerId === pid)
+                if (!player) return null
 
-            {/* Player Ready Status */}
-            {playerReadyStatus && Object.keys(playerReadyStatus).length > 0 && (
-              <div className="mt-4">
-                <div className="th-label text-sm mb-3 text-center">
-                  Waiting for players...
-                </div>
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {Object.entries(playerReadyStatus).map(([pid, ready]) => {
-                    const player = placements.find((p) => p.playerId === pid)
-                    if (!player) return null
-
-                    return (
-                      <div
-                        key={pid}
-                        className={`px-3 py-1 rounded text-sm font-semibold ${
-                          ready
-                            ? 'bg-[var(--accent-green)]/20 text-[var(--accent-green)] border border-[var(--accent-green)]'
-                            : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--outline)]'
-                        }`}
-                      >
-                        {ready ? '✓' : '○'} {player.playerName}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
+                return (
+                  <div
+                    key={pid}
+                    className={`px-3 py-1 rounded text-sm font-semibold ${
+                      ready
+                        ? 'bg-[var(--accent-green)]/20 text-[var(--accent-green)] border border-[var(--accent-green)]'
+                        : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--outline)]'
+                    }`}
+                  >
+                    {ready ? '✓' : '○'} {player.playerName}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
 

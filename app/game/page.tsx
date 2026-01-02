@@ -10,6 +10,7 @@ import { PreparationPhase } from '@/components/game/PreparationPhase'
 import { BettingPhase } from '@/components/game/BettingPhase'
 import { RacePhase } from '@/components/game/RacePhase'
 import { ResultsPhase } from '@/components/game/ResultsPhase'
+import { UniversalHeader } from '@/components/game/UniversalHeader'
 import type { ServerMessage } from '@/types/messages'
 
 function GamePageContent() {
@@ -179,7 +180,12 @@ function GamePageContent() {
     }
   }
 
-  return <div className="min-h-screen th-bg text-white">{renderPhase()}</div>
+  return (
+    <div className="min-h-screen th-bg text-white">
+      <UniversalHeader />
+      {renderPhase()}
+    </div>
+  )
 }
 
 export default function GamePage() {

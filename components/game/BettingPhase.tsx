@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useGameStore } from '@/lib/store/gameStore'
-import { PhaseTimer } from './PhaseTimer'
 import type { ClientMessage } from '@/types/messages'
 
 interface BettingPhaseProps {
@@ -129,18 +128,6 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
   return (
     <div className="min-h-screen p-4 md:p-8 th-bg">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl md:text-3xl th-title">Betting - Round {currentRound}</h1>
-            <PhaseTimer />
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-xl font-bold text-[var(--accent-gold)]">💰 {gold}g</div>
-            <div className="text-xl font-bold text-[var(--accent-red)]">❤️ {hearts}</div>
-          </div>
-        </div>
-
         {betPlaced ? (
           <div className="th-panel rounded-lg p-8 text-center">
             <h2 className="text-2xl font-bold mb-4 text-[var(--accent-green)]">✓ Bet Placed!</h2>

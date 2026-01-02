@@ -6,7 +6,7 @@ import { PixiRaceRenderer } from './PixiRaceRenderer'
 import type { RaceOutcome } from '@/types/game'
 
 export function RacePhase() {
-  const { currentRound, raceInputs } = useGameStore()
+  const { raceInputs } = useGameStore()
   const [simulationResult, setSimulationResult] = useState<RaceOutcome | null>(null)
 
   const handleRaceEvent = (_events: any[]) => {
@@ -23,10 +23,6 @@ export function RacePhase() {
   return (
     <div className="min-h-screen p-8 th-bg">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl md:text-3xl th-title text-center mb-8">
-          Race {currentRound} - In Progress
-        </h1>
-
         {raceInputs && !simulationResult && (
           <div className="th-panel rounded-lg p-8">
             <PixiRaceRenderer

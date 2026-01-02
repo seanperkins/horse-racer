@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useGameStore } from '@/lib/store/gameStore'
-import { PhaseTimer } from './PhaseTimer'
 import { RadarChart } from './RadarChart'
 import { InfoTooltip } from './InfoTooltip'
 import { BLOODLINE_TOOLTIPS, JOCKEY_TRAIT_TOOLTIPS, ABILITY_TOOLTIPS, GAME_MECHANIC_TOOLTIPS, EQUIPMENT_EFFECT_TOOLTIPS } from '@/game/tooltips'
@@ -101,26 +100,19 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
     <div className="min-h-screen p-4 md:p-8 th-bg">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl md:text-3xl th-title">Shop - Round {currentRound}</h1>
-            <PhaseTimer />
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-2xl font-bold text-(--accent-gold)">💰 {gold}g</div>
-            <InfoTooltip
-              title={GAME_MECHANIC_TOOLTIPS.reroll.title}
-              description={GAME_MECHANIC_TOOLTIPS.reroll.description}
+        <div className="flex items-center justify-end mb-6">
+          <InfoTooltip
+            title={GAME_MECHANIC_TOOLTIPS.reroll.title}
+            description={GAME_MECHANIC_TOOLTIPS.reroll.description}
+          >
+            <button
+              onClick={handleReroll}
+              disabled={gold < 2}
+              className="th-button disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded-lg font-bold"
             >
-              <button
-                onClick={handleReroll}
-                disabled={gold < 2}
-                className="th-button disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded-lg font-bold"
-              >
-                🔄 Reroll (2g)
-              </button>
-            </InfoTooltip>
-          </div>
+              🔄 Reroll (2g)
+            </button>
+          </InfoTooltip>
         </div>
 
         {/* Tab Navigation */}
@@ -224,21 +216,6 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
             </div>
           </div>
         )}
-
-        {/* Ready Button - Fixed at bottom */}
-        <div className="fixed bottom-8 right-8 z-10">
-          <button
-            onClick={() => {
-              if (!playerId) return
-              console.log('✅ Sending ready_up message')
-              sendMessage({ type: 'ready_up', ready: true, userId: playerId })
-            }}
-            className="th-button px-8 py-4 rounded-lg font-bold text-lg shadow-2xl hover:scale-105 transition-transform flex items-center gap-3"
-          >
-            <span className="text-2xl">✅</span>
-            <span>Ready!</span>
-          </button>
-        </div>
 
         {/* Inventory Tab */}
         {selectedTab === 'inventory' && (

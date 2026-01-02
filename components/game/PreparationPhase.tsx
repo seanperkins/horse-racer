@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useGameStore } from '@/lib/store/gameStore'
-import { PhaseTimer } from './PhaseTimer'
 import type { ClientMessage } from '@/types/messages'
 import type { Horse, Jockey, Equipment, RaceStrategy } from '@/types/game'
 
@@ -105,13 +104,7 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
     <div className="min-h-screen p-4 md:p-8 th-bg">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl md:text-3xl th-title">
-              Preparation - Round {currentRound}
-            </h1>
-            <PhaseTimer />
-          </div>
+        <div className="flex items-center justify-end mb-6">
           <button
             onClick={handleSubmit}
             className="px-6 py-3 bg-[var(--accent-green)] text-white rounded-lg font-bold hover:bg-[var(--accent-green)]/80 transition"
