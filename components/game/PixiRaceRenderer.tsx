@@ -341,6 +341,7 @@ export function PixiRaceRenderer({
           mid: "react",
           finish: "sprint",
         },
+        bloodlineBonuses: entry.bloodlineBonuses || undefined,
       })) as any,
       seed: raceInputs.seed || "default-seed",
     });
