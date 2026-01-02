@@ -22,6 +22,8 @@ next-env.d.ts
 # Misc
 .DS_Store
 *.pem
+*.crt
+ca-certificate.crt
 
 # Debug
 npm-debug.log*
