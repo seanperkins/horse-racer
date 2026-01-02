@@ -115,12 +115,12 @@ export interface Equipment {
 
 // Track definition
 export interface Track {
-  id: string
+  id?: string
   name: string
   category: TrackCategory
   surface: SurfaceCondition
   distance: number // in furlongs
-  description: string
+  description?: string
 
   // For cross-country tracks
   obstacles?: Array<{

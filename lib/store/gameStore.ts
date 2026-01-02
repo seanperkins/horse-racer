@@ -1,5 +1,8 @@
 import { create } from 'zustand'
-import type { Player, GamePhase, Horse, Jockey, Equipment, Track } from '@/types/game'
+import type { Player, Horse, Jockey, Equipment, Track } from '@/types/game'
+import type { RaceInputs as RaceInputsMessage } from '@/types/messages'
+
+type GamePhase = 'shop' | 'preparation' | 'betting' | 'race' | 'results'
 
 interface GameState {
   // Player info
@@ -44,11 +47,7 @@ interface GameState {
   bettingEntries: Array<any>
 
   // Race
-  raceInputs: {
-    entries: Array<any>
-    track: Track | null
-    seed: string | null
-  } | null
+  raceInputs: RaceInputsMessage | null
   raceResults: {
     placements: Array<any>
     betResults: Array<any>
@@ -82,7 +81,11 @@ interface GameState {
     hearts: number
     inventory: { horses: Horse[]; hiredJockey: Jockey | null; equipment: Equipment[] }
   }) => void
-  setShopState: (state: { units: any[]; playerGold: number }) => void
+  setShopState: (state: {
+    units: any[]
+    playerGold: number
+    playerUnits?: { horses: Horse[]; hiredJockey: Jockey | null; equipment: Equipment[] }
+  }) => void
   setTrackInfo: (track: Track) => void
   setBettingState: (state: { entries: Array<any> }) => void
   setRaceInputs: (inputs: { entries: Array<any>; track: Track; seed: string }) => void

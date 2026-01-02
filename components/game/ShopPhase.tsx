@@ -22,6 +22,7 @@ interface ShopUnit {
 }
 
 export function ShopPhase({ sendMessage }: ShopPhaseProps) {
+  const playerId = useGameStore((state) => state.playerId)
   const { gold, shopUnits, horses, hiredJockey, equipment, currentRound } = useGameStore()
   const [selectedTab, setSelectedTab] = useState<'shop' | 'inventory'>('shop')
 
@@ -228,8 +229,9 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
         <div className="fixed bottom-8 right-8 z-10">
           <button
             onClick={() => {
+              if (!playerId) return
               console.log('✅ Sending ready_up message')
-              sendMessage({ type: 'ready_up', ready: true })
+              sendMessage({ type: 'ready_up', ready: true, userId: playerId })
             }}
             className="th-button px-8 py-4 rounded-lg font-bold text-lg shadow-2xl hover:scale-105 transition-transform flex items-center gap-3"
           >

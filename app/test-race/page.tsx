@@ -43,6 +43,7 @@ export default function TestRacePage() {
     }
 
     const inputs: RaceInputs = {
+      type: 'race_inputs',
       entries,
       track,
       seed: `test-race-${Date.now()}`,

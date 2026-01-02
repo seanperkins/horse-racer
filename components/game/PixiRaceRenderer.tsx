@@ -329,7 +329,7 @@ export function PixiRaceRenderer({
     );
     // Create simulator
     const simulator = new RaceSimulator({
-      track: raceInputs.track,
+      track: raceInputs.track as any,
       participants: raceInputs.entries.map((entry) => ({
         playerId: entry.playerId,
         playerName: entry.playerName,
@@ -341,7 +341,7 @@ export function PixiRaceRenderer({
           mid: "react",
           finish: "sprint",
         },
-      })),
+      })) as any,
       seed: raceInputs.seed || "default-seed",
     });
     simulatorRef.current = simulator;

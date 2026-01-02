@@ -192,7 +192,7 @@ export function generateHorse(tier: 1 | 2 | 3 | 4, bloodline?: Bloodline): Horse
   }
 
   // Generate ability for Tier 3+
-  const ability = tier >= 3 ? generateHorseAbility(tier, selectedBloodline) : undefined
+  const ability = tier >= 3 ? generateHorseAbility(tier as 3 | 4, selectedBloodline) : undefined
 
   // Calculate cost
   const cost = tier === 1 ? 2 : tier === 2 ? 3 : tier === 3 ? 5 : 7

@@ -78,7 +78,7 @@ export default function GamePage() {
 
       case 'track_info':
         // Store track info in game store for prep/betting/race phases
-        useGameStore.getState().setTrackInfo(message.track)
+        useGameStore.getState().setTrackInfo(message.track as any)
         break
 
       case 'betting_open':
@@ -92,7 +92,7 @@ export default function GamePage() {
         // Store race inputs for client-side simulation
         useGameStore.getState().setRaceInputs({
           entries: message.entries,
-          track: message.track,
+          track: message.track as any,
           seed: message.seed,
         })
         break

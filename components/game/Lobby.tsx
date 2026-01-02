@@ -42,7 +42,7 @@ export function Lobby({ sendMessage, roomCode, isConnected }: LobbyProps) {
   useEffect(() => {
     console.log(`Auto-join check: roomCode=${roomCode}, hasJoined=${hasJoined}, isConnected=${isConnected}, attempted=${autoJoinAttemptedRef.current}`)
 
-    if (roomCode && !hasJoined && isConnected && !autoJoinAttemptedRef.current) {
+    if (roomCode && !hasJoined && isConnected && !autoJoinAttemptedRef.current && userId) {
       // Use username if available, otherwise generate a guest name
       const playerNameToUse = username || `Guest-${userId.slice(0, 8)}`
       console.log(`✅ Auto-joining room with code: ${roomCode}, playerName: ${playerNameToUse}`)
@@ -93,7 +93,7 @@ export function Lobby({ sendMessage, roomCode, isConnected }: LobbyProps) {
   }, [requiredPlayers])
 
   const handleJoinPublic = () => {
-    if (!username) return
+    if (!username || !userId) return
 
     useGameStore.setState({ playerName: username, playerId: userId })
 
@@ -107,7 +107,7 @@ export function Lobby({ sendMessage, roomCode, isConnected }: LobbyProps) {
   }
 
   const handleJoinPrivate = () => {
-    if (!username) return
+    if (!username || !userId) return
 
     useGameStore.setState({ playerName: username, playerId: userId })
 
@@ -122,7 +122,7 @@ export function Lobby({ sendMessage, roomCode, isConnected }: LobbyProps) {
   }
 
   const handleJoinByCode = () => {
-    if (!username || !codeInput.trim()) return
+    if (!username || !codeInput.trim() || !userId) return
 
     useGameStore.setState({ playerName: username, playerId: userId })
 
@@ -137,6 +137,8 @@ export function Lobby({ sendMessage, roomCode, isConnected }: LobbyProps) {
   }
 
   const handleReadyToggle = () => {
+    if (!userId) return
+
     const newReadyState = !isReady
     setIsReady(newReadyState)
 
