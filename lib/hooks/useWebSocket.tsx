@@ -27,7 +27,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
   const [isConnected, setIsConnected] = useState(false)
   const [lastMessage, setLastMessage] = useState<ServerMessage | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>()
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isConnectingRef = useRef(false)
 
   const connect = useCallback(() => {
@@ -41,7 +41,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
 
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current)
-      reconnectTimeoutRef.current = undefined
+      reconnectTimeoutRef.current = null
     }
 
     try {

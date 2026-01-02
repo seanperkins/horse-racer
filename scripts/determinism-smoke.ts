@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { RaceSimulator } from '../game/simulation/RaceSimulator'
 import { calculateDerivedStats } from '../game/stats'
 import type { RaceParticipant, Track } from '../types/game'

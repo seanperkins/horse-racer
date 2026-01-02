@@ -52,7 +52,7 @@ interface GameState {
     placements: Array<any>
     betResults: Array<any>
     eliminatedPlayers: string[]
-    events: Array<{
+    events?: Array<{
       tick: number
       playerId: string
       type: string
@@ -88,8 +88,8 @@ interface GameState {
   }) => void
   setTrackInfo: (track: Track) => void
   setBettingState: (state: { entries: Array<any> }) => void
-  setRaceInputs: (inputs: { entries: Array<any>; track: Track; seed: string }) => void
-  setRaceResults: (results: { placements: Array<any>; betResults: Array<any>; eliminatedPlayers: string[] }) => void
+  setRaceInputs: (inputs: RaceInputsMessage) => void
+  setRaceResults: (results: { placements: Array<any>; betResults: Array<any>; eliminatedPlayers: string[]; events?: Array<any> }) => void
   setPlayerReadyStatus: (playerId: string, ready: boolean) => void
   setWebSocket: (ws: WebSocket | null) => void
   sendMessage: (message: any) => void

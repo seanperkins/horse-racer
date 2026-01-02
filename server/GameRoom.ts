@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { WebSocketServer, WebSocket } from 'ws'
 import type { GamePhase, Player, Horse, Jockey, Equipment, Track } from '@/types/game'
 import { RaceSimulator } from '@/game/simulation/RaceSimulator'

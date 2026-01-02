@@ -90,11 +90,7 @@ export default function GamePage() {
 
       case 'race_inputs':
         // Store race inputs for client-side simulation
-        useGameStore.getState().setRaceInputs({
-          entries: message.entries,
-          track: message.track as any,
-          seed: message.seed,
-        })
+        useGameStore.getState().setRaceInputs(message)
         break
 
       case 'race_results':

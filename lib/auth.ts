@@ -48,6 +48,7 @@ export const authConfig: NextAuthConfig = {
           id: user.id,
           email: user.email,
           name: user.username,
+          username: user.username,
         }
       },
     }),
@@ -56,7 +57,7 @@ export const authConfig: NextAuthConfig = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
-        token.username = user.name
+        token.username = user.name || user.username || ''
       }
       return token
     },
