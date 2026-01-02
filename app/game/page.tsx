@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useEffect } from 'react'
+import { useCallback, useMemo, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useWebSocket } from '@/lib/hooks/useWebSocket'
 import { useGameStore } from '@/lib/store/gameStore'
@@ -12,7 +12,7 @@ import { RacePhase } from '@/components/game/RacePhase'
 import { ResultsPhase } from '@/components/game/ResultsPhase'
 import type { ServerMessage } from '@/types/messages'
 
-export default function GamePage() {
+function GamePageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const roomCode = searchParams.get('room')
@@ -180,4 +180,16 @@ export default function GamePage() {
   }
 
   return <div className="min-h-screen th-bg text-white">{renderPhase()}</div>
+}
+
+export default function GamePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center th-bg text-white">
+        <div className="text-xl">Loading...</div>
+      </div>
+    }>
+      <GamePageContent />
+    </Suspense>
+  )
 }
