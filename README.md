@@ -1,4 +1,4 @@
-# Neights of Thunder ⚡🐴
+# Neighs of Thunder ⚡🐴
 
 A browser-based multiplayer horse racing autobattler built with Next.js, TypeScript, and WebSockets.
 
@@ -115,7 +115,7 @@ npm run dev
 
 #### Option 3: Fully Local (No Docker)
 
-1. **Install PostgreSQL** and create a database named `neights_of_thunder`
+1. **Install PostgreSQL** and create a database named `neighs_of_thunder`
 
 2. **Install dependencies:**
    ```bash
@@ -198,7 +198,7 @@ Create `.env` based on `.env.example`.
    ```
 6. **Create `.env`** (use `.env.example` as a guide). Make sure `DATABASE_URL`, `NEXTAUTH_URL`, and `NEXTAUTH_SECRET` are set.
 7. **Set up Nginx**:
-   - Copy `nginx.conf` into `/etc/nginx/sites-available/neights-of-thunder`
+   - Copy `nginx.conf` into `/etc/nginx/sites-available/neighs-of-thunder`
    - Replace `yourdomain.com` with your domain
    - Create ACME challenge directory:
      ```bash
@@ -206,7 +206,7 @@ Create `.env` based on `.env.example`.
      ```
    - Enable site:
      ```bash
-     sudo ln -s /etc/nginx/sites-available/neights-of-thunder /etc/nginx/sites-enabled/neights-of-thunder
+     sudo ln -s /etc/nginx/sites-available/neighs-of-thunder /etc/nginx/sites-enabled/neighs-of-thunder
      sudo nginx -t
      sudo systemctl reload nginx
      ```
@@ -283,8 +283,8 @@ re-runs `./deploy.sh`, and marks the workflow as failed so you can investigate.
 
 ```bash
 pm2 status
-pm2 logs neights-of-thunder
-pm2 restart neights-of-thunder
+pm2 logs neighs-of-thunder
+pm2 restart neighs-of-thunder
 sudo tail -f /var/log/nginx/access.log
 sudo tail -f /var/log/nginx/error.log
 ```

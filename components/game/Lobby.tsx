@@ -154,7 +154,7 @@ export function Lobby({ sendMessage, roomCode, isConnected }: LobbyProps) {
       <div className="flex min-h-screen items-center justify-center p-8 th-bg">
         <div className="max-w-3xl w-full">
           <div className="text-center mb-10">
-            <h1 className="text-4xl md:text-6xl th-title mb-4">Neights of Thunder</h1>
+            <h1 className="text-4xl md:text-6xl th-title mb-4">Neighs of Thunder</h1>
             <div className="th-label text-lg">Draft. Bet. Race.</div>
           </div>
 

@@ -1,4 +1,4 @@
-# Thunder Hooves - Remaining Tasks
+# Neighs of Thunder - Remaining Tasks
 
 ## 🛠 WebSocket Room Join Fixes (Proposed)
 

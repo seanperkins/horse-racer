@@ -68,7 +68,7 @@ export default function RegisterPage() {
     <main className="flex min-h-screen flex-col items-center justify-center p-24">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2">⚡ Neights of Thunder</h1>
+          <h1 className="text-4xl font-bold mb-2">⚡ Neighs of Thunder</h1>
           <p className="text-gray-400">Create your account</p>
         </div>
 

@@ -3,7 +3,7 @@ import './globals.css'
 import { SessionProvider } from '@/components/providers/SessionProvider'
 
 export const metadata: Metadata = {
-  title: 'Neights of Thunder - Horse Racing Autobattler',
+  title: 'Neighs of Thunder - Horse Racing Autobattler',
   description: 'Multiplayer browser-based horse racing autobattler game',
 }
 

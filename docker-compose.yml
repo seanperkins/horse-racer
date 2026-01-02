@@ -4,12 +4,12 @@ services:
   # PostgreSQL database
   db:
     image: postgres:16-alpine
-    container_name: neights-of-thunder-db
+    container_name: neighs-of-thunder-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: neights_of_thunder
+      POSTGRES_DB: neighs_of_thunder
     ports:
       - "5432:5432"
     volumes:
@@ -25,12 +25,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    container_name: neights-of-thunder-app
+    container_name: neighs-of-thunder-app
     restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/neights_of_thunder?schema=public
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/neighs_of_thunder?schema=public
       - NEXTAUTH_URL=http://localhost:3000
       - NEXTAUTH_SECRET=development-secret-change-in-production
       - NODE_ENV=development

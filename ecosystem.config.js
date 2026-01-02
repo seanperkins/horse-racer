@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'neights-of-thunder',
+      name: 'neighs-of-thunder',
       script: 'node_modules/.bin/tsx',
       args: 'server.ts',
       exec_mode: 'fork',
