@@ -99,8 +99,27 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
   return (
     <div className="min-h-screen p-4 md:p-8 th-bg">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-end mb-6">
+        {/* Tab Navigation with Reroll Button */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSelectedTab('shop')}
+              className={`px-6 py-2 rounded-lg font-bold transition ${
+                selectedTab === 'shop' ? 'th-button' : 'th-panel opacity-70 hover:opacity-100'
+              }`}
+            >
+              🛒 Shop
+            </button>
+            <button
+              onClick={() => setSelectedTab('inventory')}
+              className={`px-6 py-2 rounded-lg font-bold transition ${
+                selectedTab === 'inventory' ? 'th-button' : 'th-panel opacity-70 hover:opacity-100'
+              }`}
+            >
+              🎒 Inventory ({horses.length + (hiredJockey ? 1 : 0) + equipment.length})
+            </button>
+          </div>
+
           <InfoTooltip
             title={GAME_MECHANIC_TOOLTIPS.reroll.title}
             description={GAME_MECHANIC_TOOLTIPS.reroll.description}
@@ -113,26 +132,6 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
               🔄 Reroll (2g)
             </button>
           </InfoTooltip>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="flex gap-2 mb-6">
-          <button
-            onClick={() => setSelectedTab('shop')}
-            className={`px-6 py-2 rounded-lg font-bold transition ${
-              selectedTab === 'shop' ? 'th-button' : 'th-panel opacity-70 hover:opacity-100'
-            }`}
-          >
-            🛒 Shop
-          </button>
-          <button
-            onClick={() => setSelectedTab('inventory')}
-            className={`px-6 py-2 rounded-lg font-bold transition ${
-              selectedTab === 'inventory' ? 'th-button' : 'th-panel opacity-70 hover:opacity-100'
-            }`}
-          >
-            🎒 Inventory ({horses.length + (hiredJockey ? 1 : 0) + equipment.length})
-          </button>
         </div>
 
         {/* Shop Tab */}
@@ -164,13 +163,6 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
             {/* Jockeys */}
             <div className="th-panel rounded-lg p-6">
               <h2 className="text-xl font-bold mb-4">🏇 Jockeys for Hire</h2>
-              {hiredJockey && (
-                <div className="mb-4 p-3 bg-green-900/30 border border-green-500 rounded">
-                  <div className="text-sm text-green-400 mb-1">Currently Hired:</div>
-                  <div className="font-bold">{hiredJockey.name}</div>
-                  <div className="text-xs th-label">Upkeep: {hiredJockey.upkeepCost}g/round</div>
-                </div>
-              )}
               {shopJockeys.length === 0 ? (
                 <div className="text-center th-label py-4">No jockeys available</div>
               ) : (

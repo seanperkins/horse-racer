@@ -3,11 +3,13 @@
 
 :root {
   --bg-deep: #0e0d1b;
+  --bg-primary: #1a1729;
   --bg-track: #1f1b2e;
   --bg-panel: #2a2540;
   --bg-panel-strong: #342d52;
   --text-main: #f7f2e8;
-  --text-dim: #b7aebf;
+  --text-dim: #d4cfe0;
+  --text-muted: #9b92ab;
   --accent-gold: #f4c04b;
   --accent-red: #ef5d5d;
   --accent-green: #5bd08a;
@@ -60,6 +62,19 @@ body {
 .th-label {
   color: var(--text-dim);
   letter-spacing: 1px;
+}
+
+.th-muted {
+  color: var(--text-muted);
+}
+
+.th-card {
+  background: var(--bg-primary);
+  border: 2px solid var(--outline);
+}
+
+.th-border {
+  border-color: var(--outline);
 }
 
 .th-button {

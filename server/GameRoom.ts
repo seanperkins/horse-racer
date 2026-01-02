@@ -19,8 +19,8 @@ const EXACTA_ODDS_CAP = 60
 const PHASE_DURATIONS: Record<GamePhase, number> = {
   lobby: 0,
   shop: 45,
-  preparation: 30,
-  betting: 20,
+  preparation: 60,
+  betting: 60,
   race: 70, // Increased to allow for full race completion (max 60s + 2s buffer + safety margin)
   results: 60, // Increased to allow players to review results and ready up
 }
@@ -404,6 +404,24 @@ export class GameRoom {
       this.advancePhase()
     }
 
+    // Preparation phase: advance to next phase when all ready
+    if (this.currentPhase === 'preparation' && this.shouldAdvancePhase()) {
+      console.log(`All players ready in preparation phase, advancing to next phase`)
+      if (this.phaseTimer) {
+        clearTimeout(this.phaseTimer)
+      }
+      this.advancePhase()
+    }
+
+    // Betting phase: advance to next phase when all ready
+    if (this.currentPhase === 'betting' && this.shouldAdvancePhase()) {
+      console.log(`All players ready in betting phase, advancing to next phase`)
+      if (this.phaseTimer) {
+        clearTimeout(this.phaseTimer)
+      }
+      this.advancePhase()
+    }
+
     // Results phase: advance to next phase when all ready
     if (this.currentPhase === 'results' && this.shouldAdvancePhase()) {
       console.log(`All players ready in results phase, advancing to next round`)
@@ -436,11 +454,13 @@ export class GameRoom {
   startPhase(phase: GamePhase): void {
     this.currentPhase = phase
     const duration = PHASE_DURATIONS[phase] || 30
+    const alivePlayers = Array.from(this.players.values()).filter((p) => !p.eliminated)
+    const isSinglePlayer = alivePlayers.length === 1
 
-    console.log(`Room ${this.roomId}: Starting ${phase} phase (${duration}s)`)
+    console.log(`Room ${this.roomId}: Starting ${phase} phase (${duration}s)${isSinglePlayer ? ' - single player mode' : ''}`)
 
-    // Reset ready state when starting shop or results phase
-    if (phase === 'shop' || phase === 'results') {
+    // Reset ready state when starting shop, preparation, betting, or results phase
+    if (phase === 'shop' || phase === 'preparation' || phase === 'betting' || phase === 'results') {
       this.players.forEach((player) => {
         player.ready = false
       })
@@ -475,9 +495,13 @@ export class GameRoom {
       clearTimeout(this.phaseTimer)
     }
 
-    this.phaseTimer = setTimeout(() => {
-      this.advancePhase()
-    }, duration * 1000)
+    // Single player mode: skip timer for most phases, wait for ready
+    // Race phase still uses timer as it's automatic
+    if (!isSinglePlayer || phase === 'race') {
+      this.phaseTimer = setTimeout(() => {
+        this.advancePhase()
+      }, duration * 1000)
+    }
   }
 
   advancePhase(): void {
@@ -997,8 +1021,18 @@ export class GameRoom {
 
     if (unitType === 'horse') {
       player.horses.push(unit)
+      // Remove from shop inventory
+      const horseIndex = shopInventory.horses.findIndex((h: Horse) => h.id === message.unitId)
+      if (horseIndex !== -1) {
+        shopInventory.horses.splice(horseIndex, 1)
+      }
     } else if (unitType === 'equipment') {
       player.equipment.push(unit)
+      // Remove from shop inventory
+      const equipmentIndex = shopInventory.equipment.findIndex((e: Equipment) => e.id === message.unitId)
+      if (equipmentIndex !== -1) {
+        shopInventory.equipment.splice(equipmentIndex, 1)
+      }
     }
     // Note: Jockeys are hired through the hire_jockey message, not purchase_unit
 
@@ -1016,6 +1050,24 @@ export class GameRoom {
       },
       wins: player.wins,
       currentRound: this.currentRound,
+    })
+
+    // Send updated shop state to reflect removed item
+    const units = [
+      ...shopInventory.horses.map((h: Horse) => ({ id: h.id, type: 'horse' as const, name: h.name, cost: h.cost, data: h })),
+      ...shopInventory.jockeys.map((j: Jockey) => ({ id: j.id, type: 'jockey' as const, name: j.name, cost: j.hireCost, data: j })),
+      ...shopInventory.equipment.map((e: Equipment) => ({ id: e.id, type: 'equipment' as const, name: e.name, cost: e.cost, data: e })),
+    ]
+
+    this.sendToPlayer(playerId, {
+      type: 'shop_state',
+      units,
+      playerGold: player.gold,
+      playerUnits: {
+        horses: player.horses,
+        hiredJockey: player.hiredJockey,
+        equipment: player.equipment,
+      },
     })
   }
 
@@ -1213,6 +1265,12 @@ export class GameRoom {
     player.gold -= jockey.hireCost
     player.hiredJockey = jockey
 
+    // Remove from shop inventory
+    const jockeyIndex = shopInventory.jockeys.findIndex((j: Jockey) => j.id === message.jockeyId)
+    if (jockeyIndex !== -1) {
+      shopInventory.jockeys.splice(jockeyIndex, 1)
+    }
+
     console.log(`Player ${playerId} hired jockey ${jockey.name} for ${jockey.hireCost}g (${jockey.upkeepCost}g/round upkeep)`)
 
     // Send updated player state
@@ -1227,6 +1285,24 @@ export class GameRoom {
       },
       wins: player.wins,
       currentRound: this.currentRound,
+    })
+
+    // Send updated shop state to reflect removed jockey
+    const units = [
+      ...shopInventory.horses.map((h: Horse) => ({ id: h.id, type: 'horse' as const, name: h.name, cost: h.cost, data: h })),
+      ...shopInventory.jockeys.map((j: Jockey) => ({ id: j.id, type: 'jockey' as const, name: j.name, cost: j.hireCost, data: j })),
+      ...shopInventory.equipment.map((e: Equipment) => ({ id: e.id, type: 'equipment' as const, name: e.name, cost: e.cost, data: e })),
+    ]
+
+    this.sendToPlayer(playerId, {
+      type: 'shop_state',
+      units,
+      playerGold: player.gold,
+      playerUnits: {
+        horses: player.horses,
+        hiredJockey: player.hiredJockey,
+        equipment: player.equipment,
+      },
     })
   }
 
@@ -1286,11 +1362,19 @@ export class GameRoom {
       strategy: message.strategy,
     }
 
+    // Mark player as ready after submitting race entry
+    player.ready = true
+    this.broadcast({
+      type: 'player_ready',
+      playerId,
+      ready: true,
+    })
+
     console.log(`Player ${playerId} set up race entry`)
 
-    // Check if all players have set up their race entries during preparation phase
-    if (this.currentPhase === 'preparation' && this.allPlayersHaveRaceEntries()) {
-      console.log(`All players have submitted race entries, advancing from preparation phase`)
+    // Check if all players are ready during preparation phase
+    if (this.currentPhase === 'preparation' && this.shouldAdvancePhase()) {
+      console.log(`All players ready in preparation phase, advancing to next phase`)
       if (this.phaseTimer) {
         clearTimeout(this.phaseTimer)
       }
@@ -1392,12 +1476,22 @@ export class GameRoom {
 
     // Mark player as ready after placing bet
     player.ready = true
-    this.broadcastPlayerReady(playerId, true)
+    this.broadcast({
+      type: 'player_ready',
+      playerId,
+      ready: true,
+    })
 
     console.log(`Player ${playerId} placed ${message.betType} bet for ${message.amount} gold`)
 
-    // Check if all players are ready (placed bet or skipped)
-    this.checkAllPlayersReady()
+    // Check if all players are ready during betting phase
+    if (this.currentPhase === 'betting' && this.shouldAdvancePhase()) {
+      console.log(`All players ready in betting phase, advancing to next phase`)
+      if (this.phaseTimer) {
+        clearTimeout(this.phaseTimer)
+      }
+      this.advancePhase()
+    }
   }
 
   broadcast(message: Record<string, unknown>): void {

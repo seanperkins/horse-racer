@@ -4,8 +4,14 @@ import { useEffect, useState } from 'react'
 import { useGameStore } from '@/lib/store/gameStore'
 
 export function PhaseTimer() {
-  const { phaseDuration, phaseStartTime } = useGameStore()
+  const { phaseDuration, phaseStartTime, players, currentPhase } = useGameStore()
   const [timeLeft, setTimeLeft] = useState(phaseDuration)
+
+  // Check if this is a single-player game
+  const isSinglePlayer = players.length === 1
+
+  // In single-player mode, hide timer for all phases except race
+  const shouldHideTimer = isSinglePlayer && currentPhase !== 'race'
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -22,6 +28,17 @@ export function PhaseTimer() {
 
   const safeDuration = Math.max(phaseDuration, 1)
   const percentage = (timeLeft / safeDuration) * 100
+
+  // Don't render timer in single-player mode (except race phase)
+  if (shouldHideTimer) {
+    return (
+      <div className="flex items-center gap-3">
+        <div className="text-lg font-semibold th-label">
+          Ready when you are!
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex items-center gap-3">

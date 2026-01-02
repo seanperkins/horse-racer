@@ -95,7 +95,7 @@ export function UniversalHeader() {
   }
 
   return (
-    <div className="sticky top-0 z-50 th-card border-b th-border shadow-lg">
+    <div className="sticky top-0 z-50 th-card border-b th-border shadow-lg backdrop-blur-sm bg-[var(--bg-primary)]">
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between gap-4">
           {/* Left section: Round, Phase, Timer */}

@@ -70,19 +70,27 @@ app.prepare().then(() => {
   })
 
   // Graceful shutdown
-  process.on('SIGTERM', () => {
-    console.log('SIGTERM signal received: closing HTTP server')
-    server.close(() => {
-      console.log('HTTP server closed')
-      process.exit(0)
-    })
-  })
+  const shutdown = () => {
+    console.log('Shutdown signal received: closing connections')
 
-  process.on('SIGINT', () => {
-    console.log('SIGINT signal received: closing HTTP server')
+    // Close all WebSocket connections
+    wss.clients.forEach((ws) => {
+      ws.close(1000, 'Server shutting down')
+    })
+
+    // Close the HTTP server
     server.close(() => {
       console.log('HTTP server closed')
       process.exit(0)
     })
-  })
+
+    // Force exit after 5 seconds if graceful shutdown fails
+    setTimeout(() => {
+      console.error('Forced shutdown after timeout')
+      process.exit(1)
+    }, 5000)
+  }
+
+  process.on('SIGTERM', shutdown)
+  process.on('SIGINT', shutdown)
 })
