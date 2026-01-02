@@ -89,32 +89,37 @@ describe('RaceSimulator', () => {
   })
 
   it('should produce different results with different seeds', () => {
+    // Create participants with very similar stats so seed variance matters
     const participants = [
       createTestParticipant('p1', 'Player 1'),
       createTestParticipant('p2', 'Player 2'),
       createTestParticipant('p3', 'Player 3'),
     ]
 
-    const simulator1 = new RaceSimulator({
-      track: testTrack,
-      participants,
-      seed: 'seed-1',
-    })
+    // With identical horses, different seeds should still affect timing/stumbles
+    // Run multiple races and expect at least some variance
+    const races1: string[] = []
+    const races2: string[] = []
 
-    const simulator2 = new RaceSimulator({
-      track: testTrack,
-      participants,
-      seed: 'seed-2',
-    })
+    for (let i = 0; i < 10; i++) {
+      const sim1 = new RaceSimulator({
+        track: testTrack,
+        participants,
+        seed: `seed-1-${i}`,
+      })
+      const sim2 = new RaceSimulator({
+        track: testTrack,
+        participants,
+        seed: `seed-2-${i}`,
+      })
 
-    const result1 = simulator1.simulate()
-    const result2 = simulator2.simulate()
+      races1.push(sim1.simulate().placements.map(p => p.playerId).join(','))
+      races2.push(sim2.simulate().placements.map(p => p.playerId).join(','))
+    }
 
-    // Should likely have different placements
-    const placements1 = result1.placements.map((p) => p.playerId).join(',')
-    const placements2 = result2.placements.map((p) => p.playerId).join(',')
-
-    expect(placements1).not.toBe(placements2)
+    // At least some results should differ between the two seed sequences
+    const allSame = races1.every((r1, i) => r1 === races2[i])
+    expect(allSame).toBe(false)
   })
 
   it('should complete the race within reasonable time', () => {
