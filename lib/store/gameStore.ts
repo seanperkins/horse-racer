@@ -145,8 +145,8 @@ export const useGameStore = create<GameState>((set) => ({
       phaseStartTime: Date.now(),
     }
 
-    // Reset player ready status when entering results or shop phase
-    if (phase === 'results' || phase === 'shop') {
+    // Reset player ready status when entering results, shop, or betting phase
+    if (phase === 'results' || phase === 'shop' || phase === 'betting') {
       updates.playerReadyStatus = {}
     }
 
