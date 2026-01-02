@@ -3,9 +3,16 @@ set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# Source nvm to ensure node/npm/pm2 are in PATH
+export NVM_DIR="$HOME/.nvm"
+if [ -s "$NVM_DIR/nvm.sh" ]; then
+  source "$NVM_DIR/nvm.sh"
+fi
+
+# Check if pm2 is available
 if ! command -v pm2 >/dev/null 2>&1; then
-  echo "pm2 not found. Install with: npm install -g pm2"
-  exit 1
+  echo "pm2 not found. Attempting to install globally..."
+  npm install -g pm2
 fi
 
 cd "$APP_DIR"
