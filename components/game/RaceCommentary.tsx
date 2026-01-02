@@ -48,10 +48,14 @@ export function RaceCommentary({ events, playerNames, className = '' }: RaceComm
 
   const getEventIcon = (type: string) => {
     switch (type) {
+      case 'start':
+        return '🏁'
       case 'stumble':
         return '💥'
       case 'surge':
         return '⚡'
+      case 'position':
+        return '🐎'
       case 'ability':
         return '✨'
       case 'trait':
@@ -69,9 +73,12 @@ export function RaceCommentary({ events, playerNames, className = '' }: RaceComm
 
   const getEventColor = (type: string) => {
     switch (type) {
+      case 'start':
+        return 'text-blue-400'
       case 'stumble':
         return 'text-red-400'
       case 'surge':
+      case 'position':
       case 'ability':
       case 'trait':
         return 'text-green-400'

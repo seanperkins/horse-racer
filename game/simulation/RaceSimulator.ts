@@ -105,9 +105,20 @@ export class RaceSimulator {
   public simulate(): RaceOutcome {
     const maxTicks = 600 // 60 seconds max at 10 ticks/sec
 
+    // Add race start events for all participants
+    for (const participant of this.config.participants) {
+      const state = this.states.get(participant.playerId)!
+      this.addEvent(state, 'start', 'Off to a strong start!')
+    }
+
     while (this.currentTick < maxTicks && !this.isRaceComplete()) {
       this.tick()
       this.currentTick++
+
+      // Add position updates every 2 seconds (20 ticks)
+      if (this.currentTick % 20 === 0) {
+        this.addPositionUpdates()
+      }
     }
 
     return this.generateOutcome()
@@ -547,6 +558,41 @@ export class RaceSimulator {
       type,
       description,
     })
+  }
+
+  /**
+   * Add position update commentary every few seconds
+   */
+  private addPositionUpdates(): void {
+    // Get current standings sorted by position
+    const standings = Array.from(this.states.entries())
+      .sort(([, a], [, b]) => b.position - a.position)
+      .map(([playerId], index) => ({ playerId, position: index + 1 }))
+
+    // Add commentary for leaders
+    if (standings.length > 0) {
+      const leader = standings[0]
+      const leaderState = this.states.get(leader.playerId)!
+      const raceProgress = this.getRaceProgress()
+
+      if (raceProgress < 0.3) {
+        this.addEvent(leaderState, 'surge', 'Taking the early lead!')
+      } else if (raceProgress < 0.7) {
+        this.addEvent(leaderState, 'surge', 'Maintaining position at the front!')
+      } else {
+        this.addEvent(leaderState, 'surge', 'Charging towards the finish!')
+      }
+    }
+
+    // Add commentary for horses making moves
+    if (standings.length > 2) {
+      const midPack = standings[Math.floor(standings.length / 2)]
+      const midPackState = this.states.get(midPack.playerId)!
+
+      if (this.rng() < 0.3) { // 30% chance of mid-pack commentary
+        this.addEvent(midPackState, 'position', 'Making a move through the pack!')
+      }
+    }
   }
 
   /**

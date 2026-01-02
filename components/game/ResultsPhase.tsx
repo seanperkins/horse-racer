@@ -28,6 +28,7 @@ export function ResultsPhase() {
     sendMessage({
       type: 'ready_up',
       ready: newReadyState,
+      userId: playerId,
     })
   }
 

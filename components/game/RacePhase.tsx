@@ -1,28 +1,16 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useGameStore } from '@/lib/store/gameStore'
 import { PixiRaceRenderer } from './PixiRaceRenderer'
-import { RaceCommentary } from './RaceCommentary'
 import type { RaceOutcome } from '@/types/game'
 
 export function RacePhase() {
-  const { currentRound, raceInputs, raceResults } = useGameStore()
+  const { currentRound, raceInputs } = useGameStore()
   const [simulationResult, setSimulationResult] = useState<RaceOutcome | null>(null)
-  const [raceEvents, setRaceEvents] = useState<any[]>([])
 
-  // Build player name mapping from race inputs
-  const playerNames = useMemo(() => {
-    if (!raceInputs) return {}
-    const mapping: Record<string, string> = {}
-    raceInputs.entries.forEach((entry) => {
-      mapping[entry.playerId] = entry.playerName
-    })
-    return mapping
-  }, [raceInputs])
-
-  const handleRaceEvent = (events: any[]) => {
-    setRaceEvents(events)
+  const handleRaceEvent = (_events: any[]) => {
+    // Commentary hidden for now
   }
 
   const handleRaceComplete = (result: { placements: any[]; events: any[] }) => {
@@ -30,7 +18,6 @@ export function RacePhase() {
       placements: result.placements,
       events: result.events,
     })
-    setRaceEvents(result.events)
   }
 
   return (
@@ -41,25 +28,12 @@ export function RacePhase() {
         </h1>
 
         {raceInputs && !simulationResult && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Race visualization - takes up 2/3 of width on large screens */}
-            <div className="lg:col-span-2">
-              <div className="th-panel rounded-lg p-8">
-                <PixiRaceRenderer
-                  raceInputs={raceInputs}
-                  onRaceComplete={handleRaceComplete}
-                  onRaceEvent={handleRaceEvent}
-                />
-              </div>
-            </div>
-
-            {/* Race commentary - takes up 1/3 of width on large screens */}
-            <div className="lg:col-span-1">
-              <RaceCommentary
-                events={raceEvents}
-                playerNames={playerNames}
-              />
-            </div>
+          <div className="th-panel rounded-lg p-8">
+            <PixiRaceRenderer
+              raceInputs={raceInputs}
+              onRaceComplete={handleRaceComplete}
+              onRaceEvent={handleRaceEvent}
+            />
           </div>
         )}
 
