@@ -10,6 +10,7 @@ import { TrackInfo, RaceCanvas, RaceSidebar, RaceEventLog } from "./race";
 interface PixiRaceRendererProps {
   raceInputs: RaceInputs;
   onRaceComplete: (result: { placements: any[]; events: any[] }) => void;
+  onRaceEvent?: (events: RaceEvent[]) => void;
 }
 
 interface RaceEvent {
@@ -35,6 +36,7 @@ interface HorseSprite {
 export function PixiRaceRenderer({
   raceInputs,
   onRaceComplete,
+  onRaceEvent,
 }: PixiRaceRendererProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<PIXI.Application | null>(null);
@@ -341,7 +343,7 @@ export function PixiRaceRenderer({
           mid: "react",
           finish: "sprint",
         },
-        bloodlineBonuses: entry.bloodlineBonuses || undefined,
+        bloodlineBonuses: (entry as any).bloodlineBonuses || undefined,
       })) as any,
       seed: raceInputs.seed || "default-seed",
     });
@@ -411,6 +413,18 @@ export function PixiRaceRenderer({
 
       // Update current tick for display
       setCurrentTick(state.tick);
+
+      // Send live events to parent if callback provided
+      if (onRaceEvent) {
+        const outcome = simulator.getOutcome();
+        onRaceEvent(outcome.events.map(e => ({
+          tick: e.tick,
+          playerId: e.playerId,
+          playerName: raceInputs.entries.find(entry => entry.playerId === e.playerId)?.playerName || e.playerId,
+          type: e.type as string,
+          description: e.description,
+        })));
+      }
 
       // Collect new events
       const newEvents: RaceEvent[] = [];

@@ -21,6 +21,10 @@ export function RacePhase() {
     return mapping
   }, [raceInputs])
 
+  const handleRaceEvent = (events: any[]) => {
+    setRaceEvents(events)
+  }
+
   const handleRaceComplete = (result: { placements: any[]; events: any[] }) => {
     setSimulationResult({
       placements: result.placements,
@@ -41,7 +45,11 @@ export function RacePhase() {
             {/* Race visualization - takes up 2/3 of width on large screens */}
             <div className="lg:col-span-2">
               <div className="th-panel rounded-lg p-8">
-                <PixiRaceRenderer raceInputs={raceInputs} onRaceComplete={handleRaceComplete} />
+                <PixiRaceRenderer
+                  raceInputs={raceInputs}
+                  onRaceComplete={handleRaceComplete}
+                  onRaceEvent={handleRaceEvent}
+                />
               </div>
             </div>
 
