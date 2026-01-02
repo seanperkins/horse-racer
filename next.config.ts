@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
     },
   },
 
+  // Add empty turbopack config to silence the error
+  turbopack: {},
+
   webpack: (config, { dev }) => {
     if (dev) {
       config.infrastructureLogging = {
