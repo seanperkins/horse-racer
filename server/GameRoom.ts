@@ -1390,7 +1390,14 @@ export class GameRoom {
 
     player.gold -= message.amount
 
+    // Mark player as ready after placing bet
+    player.ready = true
+    this.broadcastPlayerReady(playerId, true)
+
     console.log(`Player ${playerId} placed ${message.betType} bet for ${message.amount} gold`)
+
+    // Check if all players are ready (placed bet or skipped)
+    this.checkAllPlayersReady()
   }
 
   broadcast(message: Record<string, unknown>): void {
