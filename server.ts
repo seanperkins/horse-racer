@@ -48,15 +48,8 @@ app.prepare().then(() => {
         wss.emit('connection', ws, request, user)
       })
     }
-    // Let Next.js handle its own HMR WebSocket connections
-    else if (pathname?.startsWith('/_next/webpack-hmr')) {
-      // Next.js will handle this internally
-      // We just need to not interfere
-    }
-    // Destroy any other upgrade requests
-    else {
-      socket.destroy()
-    }
+    // For HMR and other requests, do nothing - Next.js handles them internally
+    // Don't destroy the socket, just let Next.js's internal upgrade handler process it
   })
 
   server.once('error', (err) => {
