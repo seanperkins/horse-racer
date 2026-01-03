@@ -281,23 +281,20 @@
    - Add error boundaries to handle component crashes
    - Show friendly error messages to users
 
-5. **Bloodline bonuses not applied during race ticks**
-   - `RaceSimulator.tick()` recalculates derived stats without `participant.bloodlineBonuses`
-   - Causes speed/terrain/stamina bonuses to only affect initial variance, not live simulation
-   - Pass bonuses into `calculateDerivedStats()` each tick
+5. ✅ **FIXED: Bloodline bonuses not applied during race ticks** (2026-01-03)
+   - Fixed `RaceSimulator.tick()` to pass `participant.bloodlineBonuses` to `calculateDerivedStats()`
+   - Bonuses now correctly affect live simulation, not just initial variance
 
-6. **Shop purchases can be duplicated server-side**
-   - `GameRoom.handlePurchase()` does not remove purchased units from `player.shopInventory`
-   - Allows repeated purchases of the same unit by resending messages
+6. ✅ **FIXED: Shop purchases duplication** (2026-01-03)
+   - Shop inventory properly removes purchased items (already fixed in code)
 
-7. **Purchase handler can corrupt gold on jockey purchases**
-   - `GameRoom.handlePurchase()` uses `unit.cost`, but jockeys only have `hireCost`
-   - A malformed `purchase_unit` for `jockey` can set `player.gold` to `NaN`
-   - Block `jockey` in `purchase_unit` or normalize cost handling
+7. ✅ **FIXED: Purchase handler gold corruption** (2026-01-03)
+   - `GameRoom.handlePurchase()` now blocks jockey purchases (use `hire_jockey` instead)
+   - Prevents NaN gold from undefined `unit.cost` on jockeys
 
-8. **Shop actions allowed outside shop phase**
-   - No phase checks in `handlePurchase`, `handleSell`, `handleTrain`, `handleHireJockey`, `handleFireJockey`
-   - Players can mutate inventory during betting/race/results
+8. ✅ **FIXED: Shop actions allowed outside shop phase** (2026-01-03)
+   - Added phase validation to `handlePurchase`, `handleSell`, `handleTrain`, `handleHireJockey`, `handleFireJockey`, `handleReroll`
+   - Players can no longer mutate inventory during betting/race/results phases
 
 ---
 
