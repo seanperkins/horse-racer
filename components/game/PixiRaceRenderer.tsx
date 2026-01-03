@@ -54,8 +54,15 @@ export function PixiRaceRenderer({
   const [isInitialized, setIsInitialized] = useState(false);
   const [raceEvents, setRaceEvents] = useState<RaceEvent[]>([]);
   const [currentTick, setCurrentTick] = useState(0);
-  const [podium, setPodium] = useState<
-    Array<{ playerId: string; playerName: string; horseName: string }>
+  const [liveStandings, setLiveStandings] = useState<
+    Array<{
+      playerId: string;
+      playerName: string;
+      horseName: string;
+      position: number; // Current race position (1st, 2nd, 3rd)
+      isFinished: boolean; // Has this horse crossed the finish line?
+      distance: number; // Distance covered in meters
+    }>
   >([]);
   const finishersRef = useRef<Set<string>>(new Set());
   const [canvasSize, setCanvasSize] = useState({ width: 1200, height: 600 });
@@ -218,13 +225,15 @@ export function PixiRaceRenderer({
     farBackgroundRef.current = farBackground;
 
     const hills = new PIXI.Graphics();
-    // Wider background for parallax
-    hills.rect(0, 0, CANVAS_WIDTH * 3, CANVAS_HEIGHT);
+    // Background extends just past the finish line
+    const backgroundWidth = trackLengthPixels + CANVAS_WIDTH;
+    hills.rect(0, 0, backgroundWidth, CANVAS_HEIGHT);
     hills.fill(0x1a3a1a); // Dark green background
 
     // Add some distant hill shapes for depth
-    for (let i = 0; i < 8; i++) {
-      const hillX = (CANVAS_WIDTH * 3 / 8) * i;
+    const numHills = Math.ceil(backgroundWidth / (CANVAS_WIDTH / 4));
+    for (let i = 0; i < numHills; i++) {
+      const hillX = (backgroundWidth / numHills) * i;
       const hillY = CANVAS_HEIGHT - 80;
       hills.moveTo(hillX - 100, CANVAS_HEIGHT);
       hills.bezierCurveTo(
@@ -243,8 +252,8 @@ export function PixiRaceRenderer({
     midBackgroundRef.current = midBackground;
 
     const trees = new PIXI.Graphics();
-    // Make trees span a wider area for parallax
-    const treeAreaWidth = trackLengthPixels * 1.5;
+    // Trees extend just past the finish line
+    const treeAreaWidth = trackLengthPixels + CANVAS_WIDTH;
     for (let i = 0; i < treeAreaWidth / 150; i++) {
       const treeX = i * 150 + Math.random() * 50;
       const treeY = CANVAS_HEIGHT - 100;
@@ -432,7 +441,7 @@ export function PixiRaceRenderer({
       }
     });
     nameText.anchor.set(0.5, 1);
-    nameText.position.set(0, -HORSE_HEIGHT/2 + 5); // Moved closer (was -5, now +5)
+    nameText.position.set(0, -HORSE_HEIGHT/2 + 15); // Lower, closer to the sprite
     container.addChild(nameText);
 
     // Add status text below horse
@@ -507,7 +516,7 @@ export function PixiRaceRenderer({
     });
     horsesRef.current.clear();
     finishersRef.current.clear();
-    setPodium([]);
+    setLiveStandings([]);
 
     console.log(
       "Creating simulator with",
@@ -669,30 +678,17 @@ export function PixiRaceRenderer({
         const trackLengthPixels = raceDistanceMeters * METERS_TO_PIXELS;
         let targetPosition = p.position * METERS_TO_PIXELS;
 
-        // For finished horses, adjust their position to reflect finish order
+        // For finished horses, keep them at the finish line
         if (p.finishTick !== null) {
-          const finishIndex = finishedParticipants.findIndex(fp => fp.playerId === p.playerId);
-          // Place finished horses just past the finish line, spaced by finish order
-          targetPosition = trackLengthPixels + (finishIndex * 100); // 100px spacing
+          // Keep finished horses at the finish line
+          targetPosition = trackLengthPixels;
         }
 
         horse.targetX = TRACK_PADDING + targetPosition;
 
-        // Track finishers and update podium
+        // Track finishers
         if (p.finishTick !== null && !finishersRef.current.has(p.playerId)) {
           finishersRef.current.add(p.playerId);
-
-          // Update podium based on actual simulation results
-          const outcome = simulator.getOutcome();
-          const top3 = outcome.placements.slice(0, 3);
-          setPodium(top3.map(placement => {
-            const entry = raceInputs.entries.find(e => e.playerId === placement.playerId);
-            return {
-              playerId: placement.playerId,
-              playerName: placement.playerName,
-              horseName: entry?.horse?.name || 'Unknown',
-            };
-          }));
         }
 
         // Update status
@@ -704,6 +700,20 @@ export function PixiRaceRenderer({
           horse.isStumbled = false;
         }
       });
+
+      // Update live standings (all horses sorted by position)
+      const sortedByDistance = [...state.participants].sort((a, b) => b.position - a.position);
+      setLiveStandings(sortedByDistance.map((p, index) => {
+        const entry = raceInputs.entries.find(e => e.playerId === p.playerId);
+        return {
+          playerId: p.playerId,
+          playerName: entry?.playerName || 'Unknown',
+          horseName: entry?.horse?.name || 'Unknown',
+          position: index + 1, // 1st, 2nd, 3rd, etc.
+          isFinished: p.finishTick !== null,
+          distance: p.position,
+        };
+      }));
 
       // Smooth interpolation of positions and animate sprites
       horsesRef.current.forEach((horse) => {
@@ -763,7 +773,7 @@ export function PixiRaceRenderer({
 
         // Clamp camera so we don't show before start or too far past finish
         const trackLengthPixels = raceDistanceMeters * METERS_TO_PIXELS;
-        const maxCameraX = trackLengthPixels; // Stop at the finish line
+        const maxCameraX = trackLengthPixels - (CANVAS_WIDTH * 0.7); // Stop slightly past finish line
         cameraRef.current.targetX = Math.max(0, Math.min(idealCameraOffset, maxCameraX));
 
         // Smooth camera movement
@@ -843,7 +853,7 @@ export function PixiRaceRenderer({
         </div>
 
         {/* Right Panel: Tabbed Standings/Horses */}
-        <RaceSidebar podium={podium} entries={raceInputs.entries} />
+        <RaceSidebar liveStandings={liveStandings} entries={raceInputs.entries} />
       </div>
 
       {/* Bottom Section: Event Log (full width) */}

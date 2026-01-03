@@ -5,7 +5,14 @@ import { StandingsPanel } from "./StandingsPanel";
 import { HorsesList } from "./HorsesList";
 
 interface RaceSidebarProps {
-  podium: Array<{ playerId: string; playerName: string; horseName: string }>;
+  liveStandings: Array<{
+    playerId: string;
+    playerName: string;
+    horseName: string;
+    position: number;
+    isFinished: boolean;
+    distance: number;
+  }>;
   entries: Array<{
     playerId: string;
     playerName: string;
@@ -24,13 +31,13 @@ interface RaceSidebarProps {
   }>;
 }
 
-export function RaceSidebar({ podium, entries }: RaceSidebarProps) {
+export function RaceSidebar({ liveStandings, entries }: RaceSidebarProps) {
   const [activeTab, setActiveTab] = useState<"standings" | "horses">(
     "standings"
   );
 
   return (
-    <div className="w-full md:w-80 flex-shrink-0">
+    <div className="w-full md:w-80 shrink-0">
       <div className="th-panel-strong rounded-lg overflow-hidden">
       {/* Tabs */}
       <div className="flex border-b border-gray-700">
@@ -57,9 +64,9 @@ export function RaceSidebar({ podium, entries }: RaceSidebarProps) {
       </div>
 
       {/* Tab Content */}
-      <div className="p-4 max-h-[500px] md:max-h-[600px] overflow-y-auto">
+      <div className="p-4 max-h-125 md:max-h-150 overflow-y-auto">
         {activeTab === "standings" ? (
-          <StandingsPanel podium={podium} />
+          <StandingsPanel liveStandings={liveStandings} />
         ) : (
           <HorsesList entries={entries} />
         )}

@@ -12,11 +12,26 @@ export default function TestRacePage() {
   const [raceDistance, setRaceDistance] = useState<number>(6) // Default 6 furlongs
 
   const startTestRace = () => {
-    // Generate 8 test horses and jockeys
+    // Generate 8 test horses and jockeys with unique names
+    const usedHorseNames = new Set<string>()
+    const usedJockeyNames = new Set<string>()
+
     const entries = Array.from({ length: 8 }, (_, i) => {
       const tier = Math.min(4, Math.floor(i / 2) + 1) as 1 | 2 | 3 | 4
-      const horse = generateHorse(tier)
-      const jockey = generateJockey()
+
+      // Generate unique horse
+      let horse = generateHorse(tier)
+      while (usedHorseNames.has(horse.name)) {
+        horse = generateHorse(tier)
+      }
+      usedHorseNames.add(horse.name)
+
+      // Generate unique jockey
+      let jockey = generateJockey()
+      while (usedJockeyNames.has(jockey.name)) {
+        jockey = generateJockey()
+      }
+      usedJockeyNames.add(jockey.name)
 
       return {
         playerId: `player-${i + 1}`,
@@ -32,14 +47,39 @@ export default function TestRacePage() {
       }
     })
 
-    // Generate a test track with configurable distance
+    // Randomize track surface
+    const surfaces: Array<'dry_dirt' | 'wet_muddy' | 'turf_grass' | 'rocky' | 'sand' | 'frozen'> = [
+      'dry_dirt',
+      'wet_muddy',
+      'turf_grass',
+      'rocky',
+      'sand',
+      'frozen',
+    ]
+    const randomSurface = surfaces[Math.floor(Math.random() * surfaces.length)]
+
+    // Randomize track category based on distance
+    const categories: Array<'sprint' | 'mixed' | 'distance' | 'cross_country'> =
+      raceDistance <= 4 ? ['sprint'] :
+      raceDistance <= 8 ? ['sprint', 'mixed'] :
+      ['mixed', 'distance', 'cross_country']
+    const randomCategory = categories[Math.floor(Math.random() * categories.length)]
+
+    // Generate a test track with randomized properties
+    const trackNames = [
+      'Thunder Downs', 'Sprint Circuit', 'Championship Mile', 'Victory Valley',
+      'Royal Raceway', 'Golden Gate Track', 'Desert Speedway', 'Mountain Ridge',
+      'Coastal Course', 'Frozen Fields', 'Storm Track', 'Sunset Strip'
+    ]
+    const randomTrackName = trackNames[Math.floor(Math.random() * trackNames.length)]
+
     const track: Track = {
       id: 'test-track-1',
-      name: raceDistance <= 4 ? 'Sprint Circuit' : raceDistance <= 8 ? 'Thunder Downs' : 'Championship Mile',
-      category: 'mixed',
+      name: randomTrackName,
+      category: randomCategory,
       distance: raceDistance,
-      surface: 'dry_dirt',
-      description: `A ${raceDistance} furlong test track`,
+      surface: randomSurface,
+      description: `A ${raceDistance} furlong ${randomSurface.replace('_', ' ')} track`,
       obstacles: [],
     }
 
@@ -165,11 +205,12 @@ export default function TestRacePage() {
 
             <div className="mt-4 p-3 bg-blue-900/30 rounded-lg">
               <div className="font-bold text-sm mb-2">Track Info</div>
-              <div className="text-xs th-label">
+              <div className="text-xs th-label space-y-1">
                 <div>📍 {raceInputs.track.name}</div>
-                <div>📏 Distance: {raceInputs.track.distance} furlongs</div>
-                <div>🌍 Surface: {raceInputs.track.surface}</div>
-                {raceInputs.track.obstacles && (
+                <div>🏁 Category: {raceInputs.track.category}</div>
+                <div>📏 Distance: {raceInputs.track.distance} furlongs ({(raceInputs.track.distance * 201.168).toFixed(0)}m)</div>
+                <div>🌍 Surface: {raceInputs.track.surface.replace('_', ' ')}</div>
+                {raceInputs.track.obstacles && raceInputs.track.obstacles.length > 0 && (
                   <div>🚧 Obstacles: {raceInputs.track.obstacles.length}</div>
                 )}
               </div>
