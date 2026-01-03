@@ -315,7 +315,7 @@ export function PixiRaceRenderer({
 
     // Add name text above horse
     const nameText = new PIXI.Text({
-      text: participant.playerName,
+      text: participant.horse.name,
       style: {
         fontSize: 12,
         fill: 0xffffff,
