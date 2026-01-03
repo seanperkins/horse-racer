@@ -19,9 +19,9 @@
       "mcp__chrome-devtools__*",
       "Bash(npm run test:*)",
       "Bash(xargs kill:*)",
-      "Bash(timeout 360 npx playwright test:*)",
       "Bash(tee:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(file:*)"
     ]
   }
 }
