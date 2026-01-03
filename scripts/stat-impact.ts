@@ -2,6 +2,7 @@ import { RaceSimulator } from '@/game/simulation/RaceSimulator'
 import type { Horse, Jockey, RaceParticipant, Track } from '@/types/game'
 
 const RACES = Number(process.env.RACES ?? '500')
+const PLAYERS = Math.max(2, Number(process.env.PLAYERS ?? '2'))
 const DISTANCES = (process.env.DISTANCES ?? '4,10')
   .split(',')
   .map((value) => Number(value.trim()))
@@ -97,6 +98,19 @@ const createParticipant = (
   bloodlineBonuses: undefined,
 })
 
+const createRaceField = (boostedHorse: Horse, boostedJockey: Jockey) => {
+  const participants: RaceParticipant[] = []
+
+  participants.push(createParticipant('baseline', baseHorse, baseJockey))
+  participants.push(createParticipant('boosted', boostedHorse, boostedJockey))
+
+  for (let i = 0; i < PLAYERS - 2; i++) {
+    participants.push(createParticipant(`field-${i + 1}`, baseHorse, baseJockey))
+  }
+
+  return participants
+}
+
 const applyStatDelta = (config: StatConfig) => {
   const horse = { ...baseHorse, stats: { ...baseHorse.stats } }
   const jockey = { ...baseJockey, stats: { ...baseJockey.stats } }
@@ -135,19 +149,16 @@ const runScenario = (surface: string, distance: number) => {
     for (let raceIndex = 0; raceIndex < RACES; raceIndex++) {
       const { horse: boostedHorse, jockey: boostedJockey } = applyStatDelta(stat)
 
-      const baseParticipant = createParticipant('base', baseHorse, baseJockey)
-      const boostedParticipant = createParticipant('boosted', boostedHorse, boostedJockey)
-
       const simulator = new RaceSimulator({
         track,
-        participants: [baseParticipant, boostedParticipant],
+        participants: createRaceField(boostedHorse, boostedJockey),
         seed: `impact-${surface}-${distance}-${stat.id}-${raceIndex}`,
       })
 
       const outcome = simulator.simulate()
       const placements = outcome.placements
       const boostedPlacement = placements.find((p) => p.playerId === 'boosted')
-      const basePlacement = placements.find((p) => p.playerId === 'base')
+      const basePlacement = placements.find((p) => p.playerId === 'baseline')
 
       if (boostedPlacement && basePlacement) {
         if (boostedPlacement.position < basePlacement.position) {
