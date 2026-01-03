@@ -218,29 +218,33 @@ export default function TestRacePage() {
           </div>
         )}
 
-        {results && (
+        {results && raceInputs && (
           <div className="mt-6 th-panel rounded-lg p-6">
             <h2 className="text-xl font-bold mb-4">Final Results</h2>
             <div className="space-y-2">
-              {results.map((placement, idx) => (
-                <div
-                  key={placement.playerId}
-                  className="th-panel-strong rounded-lg p-4 flex justify-between items-center"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="text-2xl font-bold w-8">{placement.position}</div>
-                    <div>
-                      <div className="font-semibold">{placement.playerName}</div>
-                      <div className="text-sm th-label">
-                        Time: {(placement.finishTime / 1000).toFixed(2)}s
+              {results.map((placement, idx) => {
+                const entry = raceInputs.entries.find((e: any) => e.playerId === placement.playerId);
+                return (
+                  <div
+                    key={placement.playerId}
+                    className="th-panel-strong rounded-lg p-4 flex justify-between items-center"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="text-2xl font-bold w-8">{placement.position}</div>
+                      <div>
+                        <div className="font-semibold">{entry?.horse?.name || 'Unknown'}</div>
+                        <div className="text-xs th-label">@{placement.playerName}</div>
+                        <div className="text-sm th-label">
+                          Time: {(placement.finishTime / 1000).toFixed(2)}s
+                        </div>
                       </div>
                     </div>
+                    {placement.position === 1 && <div className="text-3xl">🏆</div>}
+                    {placement.position === 2 && <div className="text-2xl">🥈</div>}
+                    {placement.position === 3 && <div className="text-2xl">🥉</div>}
                   </div>
-                  {placement.position === 1 && <div className="text-3xl">🏆</div>}
-                  {placement.position === 2 && <div className="text-2xl">🥈</div>}
-                  {placement.position === 3 && <div className="text-2xl">🥉</div>}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

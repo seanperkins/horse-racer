@@ -701,9 +701,26 @@ export function PixiRaceRenderer({
         }
       });
 
-      // Update live standings (all horses sorted by position)
-      const sortedByDistance = [...state.participants].sort((a, b) => b.position - a.position);
-      setLiveStandings(sortedByDistance.map((p, index) => {
+      // Update live standings (sorted by finish time, then distance)
+      // This matches the logic in RaceSimulator.generateOutcome()
+      const sortedParticipants = [...state.participants].sort((a, b) => {
+        // If both finished, compare finish ticks
+        if (a.finishTick !== null && b.finishTick !== null) {
+          const tickDiff = a.finishTick - b.finishTick;
+          // If they finished on the same tick, use exact finish position
+          if (tickDiff === 0) {
+            return (b.finishPosition || b.position) - (a.finishPosition || a.position);
+          }
+          return tickDiff;
+        }
+        // If only one finished, they win
+        if (a.finishTick !== null) return -1;
+        if (b.finishTick !== null) return 1;
+        // If neither finished, sort by distance
+        return b.position - a.position;
+      });
+
+      setLiveStandings(sortedParticipants.map((p, index) => {
         const entry = raceInputs.entries.find(e => e.playerId === p.playerId);
         return {
           playerId: p.playerId,
@@ -798,6 +815,12 @@ export function PixiRaceRenderer({
         // Small delay to show final positions before showing results
         setTimeout(() => {
           const result = simulator.getOutcome();
+          console.log('[Race Complete] Final placements:', result.placements.map(p => ({
+            position: p.position,
+            playerName: p.playerName,
+            finishTime: p.finishTime,
+            distance: p.distance
+          })));
           onRaceComplete({
             placements: result.placements,
             events: result.events,

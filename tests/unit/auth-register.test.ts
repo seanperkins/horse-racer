@@ -45,7 +45,16 @@ describe('Registration API', () => {
       vi.mocked(bcrypt.hash).mockResolvedValue('hashed_password' as any)
 
       // Mock user creation (returns only selected fields, no passwordHash)
-      vi.mocked(prisma.user.create).mockResolvedValue(mockUser as any)
+      const completeUser = {
+        ...mockUser,
+        passwordHash: 'hashed_password',
+        updatedAt: new Date(),
+        xp: 0,
+        level: 1,
+        totalMatches: 0,
+        totalWins: 0,
+      }
+      vi.mocked(prisma.user.create).mockResolvedValue(completeUser)
 
       const request = new Request('http://localhost/api/auth/register', {
         method: 'POST',
@@ -89,6 +98,10 @@ describe('Registration API', () => {
         passwordHash: 'hash',
         createdAt: new Date(),
         updatedAt: new Date(),
+        xp: 0,
+        level: 1,
+        totalMatches: 0,
+        totalWins: 0,
       })
 
       const request = new Request('http://localhost/api/auth/register', {
@@ -118,6 +131,10 @@ describe('Registration API', () => {
         passwordHash: 'hash',
         createdAt: new Date(),
         updatedAt: new Date(),
+        xp: 0,
+        level: 1,
+        totalMatches: 0,
+        totalWins: 0,
       })
 
       const request = new Request('http://localhost/api/auth/register', {
@@ -248,6 +265,10 @@ describe('Registration API', () => {
         passwordHash: 'hashed_password',
         createdAt: new Date(),
         updatedAt: new Date(),
+        xp: 0,
+        level: 1,
+        totalMatches: 0,
+        totalWins: 0,
       })
 
       const request = new Request('http://localhost/api/auth/register', {
@@ -272,8 +293,14 @@ describe('Registration API', () => {
         id: 'user-123',
         email: 'test@example.com',
         username: 'testuser',
+        passwordHash: 'hashed_password',
         createdAt: new Date(),
-      } as any)
+        updatedAt: new Date(),
+        xp: 0,
+        level: 1,
+        totalMatches: 0,
+        totalWins: 0,
+      })
 
       const request = new Request('http://localhost/api/auth/register', {
         method: 'POST',

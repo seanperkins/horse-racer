@@ -50,8 +50,14 @@ describe('Auth Flow Integration Tests', () => {
         id: 'new-user-id',
         email: userData.email,
         username: userData.username,
+        passwordHash: 'hashed_password',
         createdAt: new Date(),
-      } as any)
+        updatedAt: new Date(),
+        xp: 0,
+        level: 1,
+        totalMatches: 0,
+        totalWins: 0,
+      })
 
       const registerRequest = new Request('http://localhost/api/auth/register', {
         method: 'POST',
@@ -130,6 +136,10 @@ describe('Auth Flow Integration Tests', () => {
         passwordHash: 'hashed_password',
         createdAt: new Date(),
         updatedAt: new Date(),
+        xp: 0,
+        level: 1,
+        totalMatches: 0,
+        totalWins: 0,
       })
 
       const registerRequest = new Request('http://localhost/api/auth/register', {

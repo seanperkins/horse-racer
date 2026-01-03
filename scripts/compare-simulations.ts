@@ -24,6 +24,14 @@ const testParticipants: RaceParticipant[] = [
       id: 'horse-1',
       name: 'Test Horse 1',
       bloodline: 'Desert Wind',
+      tier: 1,
+      potential: {
+        speed: 10,
+        stamina: 10,
+        grit: 10,
+        temper: 10,
+      },
+      cost: 0,
       stats: {
         speed: 6,
         stamina: 5,
@@ -34,6 +42,8 @@ const testParticipants: RaceParticipant[] = [
     jockey: {
       id: 'jockey-1',
       name: 'Test Jockey 1',
+      hireCost: 0,
+      upkeepCost: 0,
       stats: {
         skill: 6,
         timing: 6,
@@ -73,6 +83,14 @@ const testParticipants: RaceParticipant[] = [
       id: 'horse-2',
       name: 'AI Horse 1',
       bloodline: 'Mudblood',
+      tier: 1,
+      potential: {
+        speed: 10,
+        stamina: 10,
+        grit: 10,
+        temper: 10,
+      },
+      cost: 0,
       stats: {
         speed: 5,
         stamina: 5,
@@ -83,6 +101,8 @@ const testParticipants: RaceParticipant[] = [
     jockey: {
       id: 'jockey-2',
       name: 'AI Jockey 1',
+      hireCost: 0,
+      upkeepCost: 0,
       stats: {
         skill: 5,
         timing: 6,
@@ -121,6 +141,14 @@ const testParticipants: RaceParticipant[] = [
       id: 'horse-3',
       name: 'AI Horse 2',
       bloodline: 'Northern Storm',
+      tier: 1,
+      potential: {
+        speed: 10,
+        stamina: 10,
+        grit: 10,
+        temper: 10,
+      },
+      cost: 0,
       stats: {
         speed: 6,
         stamina: 7,
@@ -131,6 +159,8 @@ const testParticipants: RaceParticipant[] = [
     jockey: {
       id: 'jockey-3',
       name: 'AI Jockey 2',
+      hireCost: 0,
+      upkeepCost: 0,
       stats: {
         skill: 5,
         timing: 6,

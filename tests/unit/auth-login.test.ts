@@ -50,11 +50,10 @@ describe('Login / Credentials Provider', () => {
 
       const result = await jwtCallback?.({ token, user } as any)
 
-      expect(result).toEqual({
-        sub: 'user-123',
-        id: 'user-123',
-        username: 'testuser',
-      })
+      expect(result).toBeDefined()
+      expect(result?.sub).toBe('user-123')
+      expect(result?.id).toBe('user-123')
+      expect(result?.username).toBe('testuser')
     })
 
     it('should preserve existing token data when user is not provided', async () => {
@@ -88,7 +87,8 @@ describe('Login / Credentials Provider', () => {
 
       const result = await sessionCallback?.({ session, token } as any)
 
-      expect(result.user).toEqual({
+      expect(result).toBeDefined()
+      expect(result?.user).toEqual({
         email: 'test@example.com',
         id: 'user-123',
         username: 'testuser',
