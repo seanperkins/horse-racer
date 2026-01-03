@@ -71,9 +71,8 @@ export function PixiRaceRenderer({
   const TRACK_PADDING = 20;
   const HORSE_WIDTH = 80;  // Fixed size for better visibility
   const HORSE_HEIGHT = 80; // Fixed size for better visibility
-  // Scale: 1 meter = 2 pixels for better visual representation
-  const METERS_TO_PIXELS = 2;
-  const TRACK_LENGTH_PIXELS = CANVAS_WIDTH - TRACK_PADDING * 2; // Viewport width
+  // Scale: 1 meter = 3 pixels for better visual representation
+  const METERS_TO_PIXELS = 3;
 
   // Calculate responsive canvas size
   useEffect(() => {
@@ -134,13 +133,14 @@ export function PixiRaceRenderer({
       appRef.current.renderer.resize(CANVAS_WIDTH, CANVAS_HEIGHT);
 
       // Redraw track with new size
+      const raceDistanceMeters = simulatorRef.current?.getRaceDistance() || 1000;
       appRef.current.stage.removeChildren();
-      drawTrack(appRef.current);
+      drawTrack(appRef.current, raceDistanceMeters);
 
       // Recreate horses if race is running
-      if (simulatorRef.current && raceInputs) {
+      if (simulatorRef.current && raceInputs && trackContainerRef.current) {
         horsesRef.current.forEach((horse) => {
-          appRef.current!.stage.addChild(horse.container);
+          trackContainerRef.current!.addChild(horse.container);
         });
       }
     }
@@ -190,15 +190,53 @@ export function PixiRaceRenderer({
       galloping: { width: gallopingTexture?.width, height: gallopingTexture?.height }
     });
 
-    // Draw track
-    drawTrack(app);
+    // Draw placeholder track (will be redrawn when race starts)
+    drawTrack(app, 1000); // Default 1000m track for initialization
   };
 
-  const drawTrack = (app: PIXI.Application) => {
+  const drawTrack = (app: PIXI.Application, raceDistanceMeters: number = 1000) => {
+    // Calculate actual track length based on race distance
+    const trackLengthPixels = raceDistanceMeters * METERS_TO_PIXELS;
+
+    // Create main track container that will scroll
+    const trackContainer = new PIXI.Container();
+    trackContainerRef.current = trackContainer;
+
+    // Create parallax background layers
+    // Layer 1: Far background (sky/mountains) - slowest
+    const farBackground = new PIXI.Graphics();
+    farBackground.rect(0, 0, CANVAS_WIDTH * 2, CANVAS_HEIGHT);
+    farBackground.fill(0x87ceeb); // Sky blue
+
+    // Add some cloud shapes for visual interest
+    for (let i = 0; i < 5; i++) {
+      const cloudX = (CANVAS_WIDTH * 2 / 5) * i;
+      const cloudY = 20 + Math.random() * 40;
+      farBackground.circle(cloudX, cloudY, 20);
+      farBackground.circle(cloudX + 15, cloudY, 15);
+      farBackground.circle(cloudX + 25, cloudY, 18);
+      farBackground.fill({ color: 0xffffff, alpha: 0.6 });
+    }
+    app.stage.addChild(farBackground);
+
+    // Layer 2: Mid background (trees/scenery) - medium speed
+    const midBackground = new PIXI.Graphics();
+    for (let i = 0; i < trackLengthPixels / 200; i++) {
+      const treeX = i * 200 + Math.random() * 50;
+      const treeY = CANVAS_HEIGHT - 100;
+      // Simple tree shapes
+      midBackground.rect(treeX, treeY, 8, 30); // Trunk
+      midBackground.fill(0x8b4513);
+      midBackground.circle(treeX + 4, treeY - 10, 15); // Foliage
+      midBackground.fill(0x228b22);
+    }
+    trackContainer.addChild(midBackground);
+
+    // Layer 3: Track surface - full scroll speed
     const trackGraphics = new PIXI.Graphics();
 
-    // Draw track background
-    trackGraphics.rect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    // Draw track background (green grass)
+    trackGraphics.rect(0, 0, trackLengthPixels + TRACK_PADDING * 2, CANVAS_HEIGHT);
     trackGraphics.fill(0x2a4a2a);
 
     // Draw racing lanes
@@ -208,9 +246,29 @@ export function PixiRaceRenderer({
     for (let i = 0; i <= numLanes; i++) {
       const y = laneY + i * LANE_HEIGHT;
       trackGraphics.moveTo(TRACK_PADDING, y);
-      trackGraphics.lineTo(CANVAS_WIDTH - TRACK_PADDING, y);
+      trackGraphics.lineTo(trackLengthPixels + TRACK_PADDING, y);
     }
     trackGraphics.stroke({ width: 2, color: 0x4a6a4a, alpha: 0.5 });
+
+    // Draw distance markers every 200 meters
+    for (let distance = 0; distance <= raceDistanceMeters; distance += 200) {
+      const x = TRACK_PADDING + distance * METERS_TO_PIXELS;
+      trackGraphics.moveTo(x, TRACK_PADDING);
+      trackGraphics.lineTo(x, TRACK_PADDING + numLanes * LANE_HEIGHT);
+      trackGraphics.stroke({ width: 1, color: 0xffffff, alpha: 0.3 });
+
+      // Add distance text
+      const distanceText = new PIXI.Text({
+        text: `${distance}m`,
+        style: {
+          fontSize: 10,
+          fill: 0xffffff,
+        }
+      });
+      distanceText.alpha = 0.5;
+      distanceText.position.set(x - 15, TRACK_PADDING - 15);
+      trackGraphics.addChild(distanceText);
+    }
 
     // Draw start line
     trackGraphics.rect(
@@ -222,7 +280,7 @@ export function PixiRaceRenderer({
     trackGraphics.fill(0xffffff);
 
     // Draw finish line (checkered pattern)
-    const finishX = CANVAS_WIDTH - TRACK_PADDING;
+    const finishX = TRACK_PADDING + trackLengthPixels;
     const checkerSize = 10;
     for (let i = 0; i < (numLanes * LANE_HEIGHT) / checkerSize; i++) {
       for (let j = 0; j < 2; j++) {
@@ -237,7 +295,10 @@ export function PixiRaceRenderer({
       }
     }
 
-    app.stage.addChild(trackGraphics);
+    trackContainer.addChild(trackGraphics);
+    app.stage.addChild(trackContainer);
+
+    return trackLengthPixels;
   };
 
   const createHorseSprite = (
@@ -432,6 +493,12 @@ export function PixiRaceRenderer({
     });
     simulatorRef.current = simulator;
 
+    // Get race distance and redraw track with correct length
+    const raceDistanceMeters = simulator.getRaceDistance();
+    console.log("Redrawing track for race distance:", raceDistanceMeters, "meters");
+    appRef.current.stage.removeChildren();
+    drawTrack(appRef.current, raceDistanceMeters);
+
     // Create horse sprites
     console.log("Creating horse sprites...");
     raceInputs.entries.forEach((entry: any, index: number) => {
@@ -452,8 +519,8 @@ export function PixiRaceRenderer({
         index
       );
       horsesRef.current.set(entry.playerId, horse);
-      appRef.current!.stage.addChild(horse.container);
-      console.log(`[PIXI] Added ${entry.playerName} to stage`, {
+      trackContainerRef.current!.addChild(horse.container);
+      console.log(`[PIXI] Added ${entry.playerName} to track container`, {
         position: horse.container.position,
         stageChildren: appRef.current!.stage.children.length,
         containerChildren: horse.container.children.length,
@@ -550,19 +617,18 @@ export function PixiRaceRenderer({
         const horse = horsesRef.current.get(p.playerId);
         if (!horse) return;
 
-        // Calculate target X position based on distance covered
-        let progress = p.position / raceDistanceMeters;
+        // Calculate target X position based on actual distance covered in meters
+        const trackLengthPixels = raceDistanceMeters * METERS_TO_PIXELS;
+        let targetPosition = p.position * METERS_TO_PIXELS;
 
         // For finished horses, adjust their position to reflect finish order
         if (p.finishTick !== null) {
           const finishIndex = finishedParticipants.findIndex(fp => fp.playerId === p.playerId);
           // Place finished horses just past the finish line, spaced by finish order
-          // This ensures visual order matches actual finish order
-          progress = 1.0 + (finishIndex * 0.02); // Small spacing past finish line
+          targetPosition = trackLengthPixels + (finishIndex * 100); // 100px spacing
         }
 
-        horse.targetX =
-          TRACK_PADDING + Math.min(progress, 1.05) * TRACK_LENGTH_PIXELS;
+        horse.targetX = TRACK_PADDING + targetPosition;
 
         // Track finishers and update podium
         if (p.finishTick !== null && !finishersRef.current.has(p.playerId)) {
@@ -628,6 +694,38 @@ export function PixiRaceRenderer({
           }
         }
       });
+
+      // Update camera to follow the lead pack
+      if (trackContainerRef.current && state.participants.length > 0) {
+        // Find the average position of the top 3 horses (or all if fewer)
+        const sortedByPosition = [...state.participants].sort((a, b) => b.position - a.position);
+        const leadPack = sortedByPosition.slice(0, Math.min(3, sortedByPosition.length));
+        const avgLeadPosition = leadPack.reduce((sum, p) => sum + p.position, 0) / leadPack.length;
+
+        // Convert to pixels and add padding
+        const targetCameraX = avgLeadPosition * METERS_TO_PIXELS + TRACK_PADDING;
+
+        // Keep camera centered on lead pack, with some padding ahead
+        // Camera target should keep the lead pack in the center-left of screen
+        const idealCameraOffset = targetCameraX - (CANVAS_WIDTH * 0.3);
+
+        // Clamp camera so we don't show before start or too far past finish
+        const trackLengthPixels = raceDistanceMeters * METERS_TO_PIXELS;
+        const maxCameraX = trackLengthPixels + TRACK_PADDING - CANVAS_WIDTH + 200; // Allow some overscroll past finish
+        cameraRef.current.targetX = Math.max(0, Math.min(idealCameraOffset, maxCameraX));
+
+        // Smooth camera movement
+        cameraRef.current.x += (cameraRef.current.targetX - cameraRef.current.x) * 0.15;
+
+        // Apply camera position to track container (negative because we're moving the world)
+        trackContainerRef.current.position.x = -cameraRef.current.x;
+
+        // Parallax effect on far background (moves slower)
+        const farBg = app.stage.children[0];
+        if (farBg) {
+          farBg.position.x = -cameraRef.current.x * 0.2; // 20% camera movement
+        }
+      }
 
       // Check if race is complete
       if (!raceOngoing) {

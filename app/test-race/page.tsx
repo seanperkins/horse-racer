@@ -9,6 +9,7 @@ import { useState } from 'react'
 export default function TestRacePage() {
   const [raceInputs, setRaceInputs] = useState<RaceInputs | null>(null)
   const [results, setResults] = useState<any[] | null>(null)
+  const [raceDistance, setRaceDistance] = useState<number>(6) // Default 6 furlongs
 
   const startTestRace = () => {
     // Generate 8 test horses and jockeys
@@ -31,14 +32,14 @@ export default function TestRacePage() {
       }
     })
 
-    // Generate a test track
+    // Generate a test track with configurable distance
     const track: Track = {
       id: 'test-track-1',
-      name: 'Thunder Downs',
+      name: raceDistance <= 4 ? 'Sprint Circuit' : raceDistance <= 8 ? 'Thunder Downs' : 'Championship Mile',
       category: 'mixed',
-      distance: 2, // 2 furlongs for quick testing (~30 seconds)
+      distance: raceDistance,
       surface: 'dry_dirt',
-      description: 'A classic dirt track for testing',
+      description: `A ${raceDistance} furlong test track`,
       obstacles: [],
     }
 
@@ -72,12 +73,29 @@ export default function TestRacePage() {
           </p>
 
           {!raceInputs && (
-            <button
-              onClick={startTestRace}
-              className="th-button px-8 py-3 rounded-lg font-bold text-lg"
-            >
-              🎬 Start Test Race
-            </button>
+            <div className="space-y-4">
+              <div className="flex items-center justify-center gap-4">
+                <label className="font-bold th-label">Race Distance:</label>
+                <select
+                  value={raceDistance}
+                  onChange={(e) => setRaceDistance(Number(e.target.value))}
+                  className="px-4 py-2 rounded-lg th-panel font-bold"
+                >
+                  <option value={2}>2 furlongs (Sprint - ~402m)</option>
+                  <option value={4}>4 furlongs (Short - ~805m)</option>
+                  <option value={6}>6 furlongs (Medium - ~1207m)</option>
+                  <option value={8}>8 furlongs (Mile - ~1609m)</option>
+                  <option value={10}>10 furlongs (Long - ~2012m)</option>
+                  <option value={12}>12 furlongs (Classic - ~2414m)</option>
+                </select>
+              </div>
+              <button
+                onClick={startTestRace}
+                className="th-button px-8 py-3 rounded-lg font-bold text-lg"
+              >
+                🎬 Start Test Race
+              </button>
+            </div>
           )}
 
           {raceInputs && !results && (
