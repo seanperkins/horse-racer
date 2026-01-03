@@ -5,7 +5,7 @@ import { StandingsPanel } from "./StandingsPanel";
 import { HorsesList } from "./HorsesList";
 
 interface RaceSidebarProps {
-  podium: Array<{ playerId: string; playerName: string }>;
+  podium: Array<{ playerId: string; playerName: string; horseName: string }>;
   entries: Array<{
     playerId: string;
     playerName: string;

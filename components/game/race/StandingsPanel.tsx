@@ -1,7 +1,7 @@
 'use client'
 
 interface StandingsPanelProps {
-  podium: Array<{ playerId: string; playerName: string }>
+  podium: Array<{ playerId: string; playerName: string; horseName: string }>
 }
 
 export function StandingsPanel({ podium }: StandingsPanelProps) {
@@ -13,7 +13,10 @@ export function StandingsPanel({ podium }: StandingsPanelProps) {
         <div className="flex-1 min-w-0">
           <div className="font-bold text-sm">1st Place</div>
           {podium[0] ? (
-            <div className="text-xs th-label truncate">{podium[0].playerName}</div>
+            <>
+              <div className="text-sm font-semibold truncate">{podium[0].horseName}</div>
+              <div className="text-xs th-label truncate">@{podium[0].playerName}</div>
+            </>
           ) : (
             <div className="text-xs th-label">Waiting...</div>
           )}
@@ -26,7 +29,10 @@ export function StandingsPanel({ podium }: StandingsPanelProps) {
         <div className="flex-1 min-w-0">
           <div className="font-bold text-sm">2nd Place</div>
           {podium[1] ? (
-            <div className="text-xs th-label truncate">{podium[1].playerName}</div>
+            <>
+              <div className="text-sm font-semibold truncate">{podium[1].horseName}</div>
+              <div className="text-xs th-label truncate">@{podium[1].playerName}</div>
+            </>
           ) : (
             <div className="text-xs th-label">Waiting...</div>
           )}
@@ -39,7 +45,10 @@ export function StandingsPanel({ podium }: StandingsPanelProps) {
         <div className="flex-1 min-w-0">
           <div className="font-bold text-sm">3rd Place</div>
           {podium[2] ? (
-            <div className="text-xs th-label truncate">{podium[2].playerName}</div>
+            <>
+              <div className="text-sm font-semibold truncate">{podium[2].horseName}</div>
+              <div className="text-xs th-label truncate">@{podium[2].playerName}</div>
+            </>
           ) : (
             <div className="text-xs th-label">Waiting...</div>
           )}

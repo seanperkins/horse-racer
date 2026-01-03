@@ -55,7 +55,7 @@ export function PixiRaceRenderer({
   const [raceEvents, setRaceEvents] = useState<RaceEvent[]>([]);
   const [currentTick, setCurrentTick] = useState(0);
   const [podium, setPodium] = useState<
-    Array<{ playerId: string; playerName: string }>
+    Array<{ playerId: string; playerName: string; horseName: string }>
   >([]);
   const finishersRef = useRef<Set<string>>(new Set());
   const [canvasSize, setCanvasSize] = useState({ width: 1200, height: 600 });
@@ -212,25 +212,29 @@ export function PixiRaceRenderer({
     };
     const colors = surfaceColors[surface] || surfaceColors.dry_dirt;
 
-    // Layer 1: Far background (sky/mountains) - slowest parallax
+    // Layer 1: Far background - grass/hills behind the track (slowest parallax)
     // This container stays independent and moves at 20% camera speed
     const farBackground = new PIXI.Container();
     farBackgroundRef.current = farBackground;
 
-    const sky = new PIXI.Graphics();
-    sky.rect(0, 0, CANVAS_WIDTH * 3, CANVAS_HEIGHT); // Extra wide for parallax
-    sky.fill(0x87ceeb); // Sky blue
+    const hills = new PIXI.Graphics();
+    // Wider background for parallax
+    hills.rect(0, 0, CANVAS_WIDTH * 3, CANVAS_HEIGHT);
+    hills.fill(0x1a3a1a); // Dark green background
 
-    // Add some cloud shapes for visual interest
-    for (let i = 0; i < 15; i++) {
-      const cloudX = (CANVAS_WIDTH * 3 / 15) * i;
-      const cloudY = 20 + Math.random() * 60;
-      sky.circle(cloudX, cloudY, 25);
-      sky.circle(cloudX + 20, cloudY, 18);
-      sky.circle(cloudX + 35, cloudY, 22);
-      sky.fill({ color: 0xffffff, alpha: 0.7 });
+    // Add some distant hill shapes for depth
+    for (let i = 0; i < 8; i++) {
+      const hillX = (CANVAS_WIDTH * 3 / 8) * i;
+      const hillY = CANVAS_HEIGHT - 80;
+      hills.moveTo(hillX - 100, CANVAS_HEIGHT);
+      hills.bezierCurveTo(
+        hillX - 50, hillY - 30,
+        hillX + 50, hillY - 30,
+        hillX + 100, CANVAS_HEIGHT
+      );
+      hills.fill({ color: 0x234a23, alpha: 0.6 });
     }
-    farBackground.addChild(sky);
+    farBackground.addChild(hills);
     app.stage.addChild(farBackground);
 
     // Layer 2: Mid background (trees/scenery) - medium parallax (50% camera speed)
@@ -418,7 +422,7 @@ export function PixiRaceRenderer({
       console.log('[PIXI] Created fallback graphics for', participant.playerName);
     }
 
-    // Add name text above horse
+    // Add name text above horse (closer to the sprite)
     const nameText = new PIXI.Text({
       text: participant.horse.name,
       style: {
@@ -428,7 +432,7 @@ export function PixiRaceRenderer({
       }
     });
     nameText.anchor.set(0.5, 1);
-    nameText.position.set(0, -HORSE_HEIGHT/2 - 5);
+    nameText.position.set(0, -HORSE_HEIGHT/2 + 5); // Moved closer (was -5, now +5)
     container.addChild(nameText);
 
     // Add status text below horse
@@ -681,10 +685,14 @@ export function PixiRaceRenderer({
           // Update podium based on actual simulation results
           const outcome = simulator.getOutcome();
           const top3 = outcome.placements.slice(0, 3);
-          setPodium(top3.map(placement => ({
-            playerId: placement.playerId,
-            playerName: placement.playerName,
-          })));
+          setPodium(top3.map(placement => {
+            const entry = raceInputs.entries.find(e => e.playerId === placement.playerId);
+            return {
+              playerId: placement.playerId,
+              playerName: placement.playerName,
+              horseName: entry?.horse?.name || 'Unknown',
+            };
+          }));
         }
 
         // Update status
@@ -755,7 +763,7 @@ export function PixiRaceRenderer({
 
         // Clamp camera so we don't show before start or too far past finish
         const trackLengthPixels = raceDistanceMeters * METERS_TO_PIXELS;
-        const maxCameraX = trackLengthPixels + TRACK_PADDING - CANVAS_WIDTH + 200; // Allow some overscroll past finish
+        const maxCameraX = trackLengthPixels; // Stop at the finish line
         cameraRef.current.targetX = Math.max(0, Math.min(idealCameraOffset, maxCameraX));
 
         // Smooth camera movement
