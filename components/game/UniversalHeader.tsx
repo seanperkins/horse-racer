@@ -61,7 +61,12 @@ export function UniversalHeader() {
   const canReady = currentPhase === 'shop' || currentPhase === 'results' || currentPhase === 'betting'
 
   const handleToggleReady = () => {
-    if (!playerId || !canReady) return
+    if (!playerId || !canReady) {
+      console.warn('Cannot ready up: playerId=', playerId, 'canReady=', canReady)
+      return
+    }
+
+    console.log('Sending ready_up:', { playerId, isReady, currentPhase })
 
     // For betting phase, we need to handle skip differently
     if (currentPhase === 'betting') {

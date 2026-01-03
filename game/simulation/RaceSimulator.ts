@@ -34,6 +34,7 @@ interface ParticipantState {
   isStumbled: boolean
   stumbleRecoveryTicks: number
   finishTick: number | null // Tick when horse crossed finish line
+  finishPosition: number | null // Exact position when crossed (for sub-tick precision)
   events: Array<{ tick: number; type: string; description: string }>
 }
 
@@ -94,6 +95,7 @@ export class RaceSimulator {
         isStumbled: false,
         stumbleRecoveryTicks: 0,
         finishTick: null,
+        finishPosition: null,
         events: [],
       })
     }
@@ -227,9 +229,10 @@ export class RaceSimulator {
    */
   private isRaceComplete(): boolean {
     for (const state of this.states.values()) {
-      // Record finish tick if horse just crossed the line
+      // Record finish tick and exact position if horse just crossed the line
       if (state.position >= this.raceDistance && state.finishTick === null) {
         state.finishTick = this.currentTick
+        state.finishPosition = state.position // Capture exact position for sub-tick precision
       }
 
       if (state.position < this.raceDistance) {
@@ -609,13 +612,28 @@ export class RaceSimulator {
         // Sort by finish tick (earliest finisher = 1st place)
         // If both finished, compare finish ticks
         if (a.finishTick !== null && b.finishTick !== null) {
-          return a.finishTick - b.finishTick
+          const tickDiff = a.finishTick - b.finishTick
+          // If they finished on the same tick, use exact finish position for sub-tick precision
+          if (tickDiff === 0) {
+            // Horse that went further past the finish line crossed first
+            const finishPosDiff = (b.finishPosition || b.position) - (a.finishPosition || a.position)
+            // If still exactly tied (extremely rare), use playerId for deterministic ordering
+            if (Math.abs(finishPosDiff) < 0.001) {
+              return a.playerId.localeCompare(b.playerId)
+            }
+            return finishPosDiff
+          }
+          return tickDiff
         }
         // If only one finished, they win
         if (a.finishTick !== null) return -1
         if (b.finishTick !== null) return 1
-        // If neither finished, sort by distance
-        return b.position - a.position
+        // If neither finished, sort by distance, then playerId for ties
+        const distDiff = b.position - a.position
+        if (Math.abs(distDiff) < 0.001) {
+          return a.playerId.localeCompare(b.playerId)
+        }
+        return distDiff
       })
       .map((state, index) => {
         const participant = this.config.participants.find(
@@ -669,6 +687,8 @@ export class RaceSimulator {
         currentSpeed: state.currentSpeed,
         stamina: state.stamina,
         isStumbled: state.isStumbled,
+        finishTick: state.finishTick,
+        finishPosition: state.finishPosition,
         events: state.events
           .filter((e) => e.tick > this.currentTick - 30)
           .map((e) => e.description),

@@ -214,6 +214,8 @@ export interface RaceState {
     currentSpeed: number
     stamina: number
     isStumbled: boolean
+    finishTick: number | null // Tick when crossed finish line (null if not finished)
+    finishPosition: number | null // Exact position when crossed (for sub-tick precision)
     events: string[] // Recent events for this participant
   }>
 }

@@ -589,8 +589,17 @@ export function PixiRaceRenderer({
 
       // Smooth interpolation of positions and animate sprites
       horsesRef.current.forEach((horse) => {
-        // Lerp current position toward target (increased from 0.3 to 0.7 for more accurate positions)
-        horse.currentX += (horse.targetX - horse.currentX) * 0.7;
+        // Check if this horse has finished
+        const participant = state.participants.find(p => p.playerId === horse.playerId);
+        const hasFinished = participant?.finishTick !== null;
+
+        // For finished horses, snap to exact position (no interpolation)
+        // For running horses, use high lerp factor for accurate positioning
+        if (hasFinished) {
+          horse.currentX = horse.targetX; // Instant snap for finished horses
+        } else {
+          horse.currentX += (horse.targetX - horse.currentX) * 0.9; // Higher lerp for better accuracy
+        }
         horse.container.position.x = horse.currentX;
 
         // Animate galloping frames when moving

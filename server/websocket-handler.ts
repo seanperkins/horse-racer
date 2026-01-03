@@ -93,7 +93,8 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
           case 'ready_up':
             // Enforce sender identity - use connection-bound playerId, reject mismatched userId
             if (!playerId) {
-              sendError(ws, 'Player not identified')
+              console.error(`❌ ready_up message received but playerId not set. Message:`, validatedMessage)
+              sendError(ws, 'Player not identified (ready_up)')
               break
             }
             if (validatedMessage.userId !== playerId) {
@@ -227,7 +228,8 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
 
           case 'setup_race_entry':
             if (!playerId) {
-              sendError(ws, 'Player not identified')
+              console.error(`❌ setup_race_entry message received but playerId not set. Message:`, validatedMessage)
+              sendError(ws, 'Player not identified (setup_race_entry)')
               break
             }
             if (!currentRoom) {
@@ -245,7 +247,8 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
 
           case 'place_bet':
             if (!playerId) {
-              sendError(ws, 'Player not identified')
+              console.error(`❌ place_bet message received but playerId not set. Message:`, validatedMessage)
+              sendError(ws, 'Player not identified (place_bet)')
               break
             }
             if (!currentRoom) {

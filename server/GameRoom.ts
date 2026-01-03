@@ -62,6 +62,7 @@ export class GameRoom {
   phaseTimer: NodeJS.Timeout | null
   isPrivate: boolean
   lastRaceSeed: string | null
+  lastRaceEntries: any[] | null
   lastBettingOdds: Map<string, { win: number; place: number }>
   lastBettingStrengths: Map<string, number>
   lastBettingTotalStrength: number
@@ -81,6 +82,7 @@ export class GameRoom {
     this.phaseTimer = null
     this.isPrivate = !!friendCode
     this.lastRaceSeed = null
+    this.lastRaceEntries = null
     this.lastBettingOdds = new Map()
     this.lastBettingStrengths = new Map()
     this.lastBettingTotalStrength = 0
@@ -518,25 +520,11 @@ export class GameRoom {
         break
 
       case 'race':
-        // Send race inputs if available
-        if (this.lastRaceSeed && this.currentTrack) {
-          const entries = Array.from(this.players.values())
-            .filter((p) => p.raceEntry)
-            .map((p) => {
-              const entry = p.raceEntry!
-              return {
-                playerId: p.id,
-                playerName: p.username,
-                horse: entry.horse,
-                jockey: entry.jockey,
-                equipment: entry.equipment,
-                strategy: entry.strategy,
-              }
-            })
-
+        // Send race inputs if available - use stored entries to ensure consistency
+        if (this.lastRaceSeed && this.currentTrack && this.lastRaceEntries) {
           this.sendToPlayer(playerId, {
             type: 'race_inputs',
-            entries,
+            entries: this.lastRaceEntries,
             track: this.currentTrack,
             seed: this.lastRaceSeed,
           })
@@ -848,48 +836,63 @@ export class GameRoom {
     const entries = this.getRaceEntries()
     this.lastRaceSeed = `race-${this.roomId}-${this.currentRound}`
 
+    // Add bloodline bonuses to entries
+    const track = this.currentTrack || generateTrackForRound(this.currentRound)
+    const entriesWithBonuses = entries.map(entry => {
+      const player = this.players.get(entry.playerId)
+      const playerStable = player?.horses || []
+      const bloodlineBonuses = calculateBloodlineBonuses(
+        entry.horse,
+        playerStable,
+        track.surface,
+      )
+
+      return {
+        ...entry,
+        bloodlineBonuses,
+      }
+    })
+
+    // Store entries for use in processRaceResults
+    this.lastRaceEntries = entriesWithBonuses
+
     const raceInputs = {
       type: 'race_inputs',
-      entries,
-      track: this.currentTrack || generateTrackForRound(this.currentRound),
+      entries: entriesWithBonuses,
+      track,
       seed: this.lastRaceSeed,
     }
+
+    console.log('Broadcasting race inputs with seed:', this.lastRaceSeed)
+    console.log('Entries with bloodline bonuses:', entriesWithBonuses.map(e => ({
+      name: e.playerName,
+      bloodlineBonuses: e.bloodlineBonuses
+    })))
 
     this.broadcast(raceInputs)
 
     // Run the race simulation to determine actual duration
-    const track = this.currentTrack || generateTrackForRound(this.currentRound)
     const seed = this.lastRaceSeed
 
     const simulator = new RaceSimulator({
       track,
-      participants: entries.map(entry => {
-        const player = this.players.get(entry.playerId)
-        const playerStable = player?.horses || []
-        const bloodlineBonuses = calculateBloodlineBonuses(
-          entry.horse,
-          playerStable,
-          track.surface,
-        )
-
-        return {
-          playerId: entry.playerId,
-          playerName: entry.playerName,
-          horse: entry.horse,
-          jockey: entry.jockey,
-          equipment: entry.equipment as any || {},
-          strategy: entry.strategy as any || { start: 'steady', mid: 'react', finish: 'maintain' },
-          derivedStats: {
-            baseSpeed: 0,
-            staminaPool: 0,
-            burnRate: 0,
-            terrainMod: 0,
-            efficiency: 0,
-            consistency: { variance: 0, isStable: true },
-          },
-          bloodlineBonuses,
-        }
-      }),
+      participants: entriesWithBonuses.map(entry => ({
+        playerId: entry.playerId,
+        playerName: entry.playerName,
+        horse: entry.horse,
+        jockey: entry.jockey,
+        equipment: entry.equipment as any || {},
+        strategy: entry.strategy as any || { start: 'steady', mid: 'react', finish: 'maintain' },
+        derivedStats: {
+          baseSpeed: 0,
+          staminaPool: 0,
+          burnRate: 0,
+          terrainMod: 0,
+          efficiency: 0,
+          consistency: { variance: 0, isStable: true },
+        },
+        bloodlineBonuses: entry.bloodlineBonuses,
+      })),
       seed,
     })
 
@@ -911,27 +914,20 @@ export class GameRoom {
   }
 
   processRaceResults(): void {
-    // Get race entries (participants with valid race setups)
-    const entries = this.getRaceEntries()
+    // Use the stored race entries with bloodline bonuses (same as sent to clients)
+    const entries = this.lastRaceEntries || this.getRaceEntries()
 
     // Run the actual race simulation
     const seed = this.lastRaceSeed || `race-${this.roomId}-${this.currentRound}`
     const track = this.currentTrack || generateTrackForRound(this.currentRound)
 
+    console.log('Server simulation - Processing results with seed:', seed)
+
     const simulator = new RaceSimulator({
       track,
       participants: entries.map(entry => {
-        // Get player's full stable for bloodline bonus calculation
         const player = this.players.get(entry.playerId)
-        const playerStable = player?.horses || []
         const playerName = player?.username || entry.playerName
-
-        // Calculate bloodline bonuses based on stable composition
-        const bloodlineBonuses = calculateBloodlineBonuses(
-          entry.horse,
-          playerStable,
-          track.surface,
-        )
 
         // Calculate derived stats (note: RaceSimulator will recalculate with bloodline bonuses)
         const derivedStats = {
@@ -951,7 +947,7 @@ export class GameRoom {
           equipment: entry.equipment as any || {},
           strategy: entry.strategy as any || { start: 'steady', mid: 'react', finish: 'maintain' },
           derivedStats,
-          bloodlineBonuses,
+          bloodlineBonuses: entry.bloodlineBonuses,
         }
       }),
       seed,

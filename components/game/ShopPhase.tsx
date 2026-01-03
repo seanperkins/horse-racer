@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useGameStore } from '@/lib/store/gameStore'
 import { HorizontalStatBars } from './HorizontalStatBars'
 import { InfoTooltip } from './InfoTooltip'
@@ -101,9 +101,61 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
   const shopJockeys = shopUnits.filter((u) => u.type === 'jockey') as ShopUnit[]
   const shopEquipment = shopUnits.filter((u) => u.type === 'equipment') as ShopUnit[]
 
+  // Debug: Auto-buy and auto-ready with Ctrl+D
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Ctrl+D or Cmd+D for quick race
+      if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        e.preventDefault()
+        console.log('[DEBUG] Quick race triggered!')
+
+        // Buy first horse if we don't have one
+        if (horses.length === 0 && shopHorses.length > 0) {
+          const firstHorse = shopHorses[0]
+          console.log('[DEBUG] Buying first horse:', firstHorse.name)
+          sendMessage({
+            type: 'purchase_unit',
+            unitId: firstHorse.id,
+            unitType: 'horse',
+          })
+        }
+
+        // Hire first jockey if we don't have one
+        if (!hiredJockey && shopJockeys.length > 0) {
+          const firstJockey = shopJockeys[0]
+          console.log('[DEBUG] Hiring first jockey:', firstJockey.name)
+          sendMessage({
+            type: 'hire_jockey',
+            jockeyId: firstJockey.id,
+          })
+        }
+
+        // Auto-ready after a brief delay to let purchases process
+        setTimeout(() => {
+          if (playerId) {
+            console.log('[DEBUG] Auto-readying player')
+            sendMessage({
+              type: 'ready_up',
+              ready: true,
+              userId: playerId
+            })
+          }
+        }, 100)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyPress)
+    return () => window.removeEventListener('keydown', handleKeyPress)
+  }, [horses, hiredJockey, shopHorses, shopJockeys, playerId, sendMessage])
+
   return (
     <div className="min-h-screen p-4 md:p-8 th-bg">
       <div className="max-w-7xl mx-auto">
+        {/* Debug hint */}
+        <div className="text-center text-xs th-muted mb-2">
+          Press <kbd className="px-1 py-0.5 rounded th-panel">Ctrl+D</kbd> to quick-start race
+        </div>
+
         {/* Tab Navigation with Reroll Button */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex gap-2">
