@@ -46,7 +46,7 @@ export function HorizontalStatBars({
               {/* Stat row */}
               <div className="flex gap-1">
                 {/* Stat label */}
-                <div className="w-12 text-sm font-bold th-label text-right">
+                <div className="w-14 text-sm font-bold th-label text-right">
                   {label}
                 </div>
 

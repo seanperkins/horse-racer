@@ -143,11 +143,13 @@ export function UniversalHeader() {
               <>
                 <span className="text-xs th-muted">•</span>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs th-muted">Next Race:</span>
-                  <span className="text-sm font-medium th-label">{currentTrack.name}</span>
-                  <span className="text-xs th-muted">
-                    ({currentTrack.category}, {currentTrack.distance}m)
-                  </span>
+                  <span className="text-xs th-muted">🏁</span>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold th-label">{currentTrack.name}</span>
+                    <span className="text-xs th-muted">
+                      {currentTrack.category} • {currentTrack.distance}m • {currentTrack.surface}
+                    </span>
+                  </div>
                 </div>
               </>
             )}

@@ -28,7 +28,7 @@ body {
       rgba(58, 45, 82, 0) 55%
     ),
     linear-gradient(180deg, #151225 0%, #0e0d1b 45%, #1b1325 100%);
-  font-family: "VT323", "IBM Plex Mono", monospace;
+  font-family: "IBM Plex Mono", monospace;
   letter-spacing: 0.3px;
 }
 
@@ -54,9 +54,13 @@ body {
 }
 
 .th-title {
-  font-family: "Press Start 2P", "VT323", monospace;
+  font-family: "Press Start 2P", "IBM Plex Mono", monospace;
   text-transform: uppercase;
   letter-spacing: 1px;
+}
+
+.th-retro {
+  font-family: "VT323", monospace;
 }
 
 .th-label {

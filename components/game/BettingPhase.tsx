@@ -249,10 +249,10 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
                 <>
                   {betType === 'exacta' ? (
                     <div className="mb-4 p-4 bg-[var(--bg-secondary)] rounded">
-                      <h3 className="font-semibold mb-2 text-sm">Select 1st and 2nd Place</h3>
+                      <h3 className="font-semibold mb-3 text-base">Select 1st and 2nd Place</h3>
                       <div className="flex gap-4">
                         <div className="flex-1">
-                          <label className="text-xs opacity-70 mb-1 block">1st Place</label>
+                          <label className="text-sm th-muted mb-2 block font-semibold">1st Place</label>
                           <select
                             value={exactaFirst || ''}
                             onChange={(e) => setExactaFirst(e.target.value)}
@@ -269,7 +269,7 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
                           </select>
                         </div>
                         <div className="flex-1">
-                          <label className="text-xs opacity-70 mb-1 block">2nd Place</label>
+                          <label className="text-sm th-muted mb-2 block font-semibold">2nd Place</label>
                           <select
                             value={exactaSecond || ''}
                             onChange={(e) => setExactaSecond(e.target.value)}
@@ -328,10 +328,10 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
                             </div>
                             {!isOwnHorse && betType !== 'exacta' && (
                               <div className="text-right">
-                                <div className="text-sm opacity-70">
+                                <div className="text-sm th-muted font-semibold">
                                   {betType === 'win' ? 'Win' : 'Place'} Odds
                                 </div>
-                                <div className="font-bold text-lg text-[var(--accent-gold)]">
+                                <div className="font-bold text-xl text-[var(--accent-gold)]">
                                   {betType === 'win' ? `${entry.odds.toFixed(1)}x` : `${entry.placeOdds.toFixed(1)}x`}
                                 </div>
                               </div>
@@ -340,8 +340,8 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
 
                           <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
-                              <div className="opacity-70 text-xs mb-1">Horse Stats</div>
-                              <div className="grid grid-cols-2 gap-1 text-xs">
+                              <div className="th-muted text-sm mb-1 font-semibold">Horse Stats</div>
+                              <div className="grid grid-cols-2 gap-1 text-sm">
                                 <div>SPD: {entry.horse.stats.speed}</div>
                                 <div>STA: {entry.horse.stats.stamina}</div>
                                 <div>GRT: {entry.horse.stats.grit}</div>
@@ -349,9 +349,9 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
                               </div>
                             </div>
                             <div>
-                              <div className="opacity-70 text-xs mb-1">Jockey</div>
-                              <div className="text-xs">
-                                {entry.jockey.name}
+                              <div className="th-muted text-sm mb-1 font-semibold">Jockey</div>
+                              <div className="text-sm">
+                                <div className="font-semibold">{entry.jockey.name}</div>
                                 <div className="grid grid-cols-3 gap-1 mt-1">
                                   <div>SKL: {entry.jockey.stats.skill}</div>
                                   <div>TMG: {entry.jockey.stats.timing}</div>
@@ -362,7 +362,7 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
                           </div>
 
                           {!isOwnHorse && (
-                            <div className="mt-2 text-xs opacity-60">
+                            <div className="mt-2 text-sm th-muted font-semibold">
                               Win Probability: {(entry.winProbability * 100).toFixed(1)}%
                             </div>
                           )}

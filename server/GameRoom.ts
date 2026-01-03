@@ -513,8 +513,17 @@ export class GameRoom {
 
       const alivePlayers = Array.from(this.players.values()).filter((p) => !p.eliminated)
 
-      if (alivePlayers.length === 1) {
+      // In multiplayer, end game when only one player remains
+      // In single-player, continue until player is eliminated (0 hearts)
+      const isMultiplayer = this.players.size > 1
+      if (isMultiplayer && alivePlayers.length === 1) {
         this.endGame(alivePlayers[0])
+        return
+      }
+
+      // In single-player, end game if player is eliminated
+      if (!isMultiplayer && alivePlayers.length === 0) {
+        this.endGame()
         return
       }
 
@@ -525,6 +534,15 @@ export class GameRoom {
   }
 
   setupShopPhase(): void {
+    // Generate track for this round so players can see what's coming
+    this.currentTrack = generateTrackForRound(this.currentRound)
+
+    // Broadcast track info to all players
+    this.broadcast({
+      type: 'track_info',
+      track: this.currentTrack,
+    })
+
     // Deduct jockey upkeep at start of each round (except round 1)
     if (this.currentRound > 1) {
       for (const [playerId, player] of this.players) {
@@ -572,13 +590,14 @@ export class GameRoom {
   }
 
   setupPreparationPhase(): void {
-    // Generate track for this round
-    this.currentTrack = generateTrackForRound(this.currentRound)
-
-    this.broadcast({
-      type: 'track_info',
-      track: this.currentTrack,
-    })
+    // Track was already generated in shop phase
+    // Just broadcast it again in case players joined late
+    if (this.currentTrack) {
+      this.broadcast({
+        type: 'track_info',
+        track: this.currentTrack,
+      })
+    }
   }
 
   setupBettingPhase(): void {
