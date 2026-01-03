@@ -61,6 +61,8 @@ export function PixiRaceRenderer({
   const [canvasSize, setCanvasSize] = useState({ width: 1200, height: 600 });
   const cameraRef = useRef<CameraState>({ x: 0, targetX: 0 });
   const trackContainerRef = useRef<PIXI.Container | null>(null);
+  const farBackgroundRef = useRef<PIXI.Container | null>(null);
+  const midBackgroundRef = useRef<PIXI.Container | null>(null);
   const horseSpriteTextureRef = useRef<PIXI.Texture | null>(null);
   const gallopingSpriteTextureRef = useRef<PIXI.Texture | null>(null);
 
@@ -198,41 +200,52 @@ export function PixiRaceRenderer({
     // Calculate actual track length based on race distance
     const trackLengthPixels = raceDistanceMeters * METERS_TO_PIXELS;
 
-    // Create main track container that will scroll
+    // Layer 1: Far background (sky/mountains) - slowest parallax
+    // This container stays independent and moves at 20% camera speed
+    const farBackground = new PIXI.Container();
+    farBackgroundRef.current = farBackground;
+
+    const sky = new PIXI.Graphics();
+    sky.rect(0, 0, CANVAS_WIDTH * 3, CANVAS_HEIGHT); // Extra wide for parallax
+    sky.fill(0x87ceeb); // Sky blue
+
+    // Add some cloud shapes for visual interest
+    for (let i = 0; i < 15; i++) {
+      const cloudX = (CANVAS_WIDTH * 3 / 15) * i;
+      const cloudY = 20 + Math.random() * 60;
+      sky.circle(cloudX, cloudY, 25);
+      sky.circle(cloudX + 20, cloudY, 18);
+      sky.circle(cloudX + 35, cloudY, 22);
+      sky.fill({ color: 0xffffff, alpha: 0.7 });
+    }
+    farBackground.addChild(sky);
+    app.stage.addChild(farBackground);
+
+    // Layer 2: Mid background (trees/scenery) - medium parallax (50% camera speed)
+    // This container moves independently at 50% camera speed
+    const midBackground = new PIXI.Container();
+    midBackgroundRef.current = midBackground;
+
+    const trees = new PIXI.Graphics();
+    // Make trees span a wider area for parallax
+    const treeAreaWidth = trackLengthPixels * 1.5;
+    for (let i = 0; i < treeAreaWidth / 150; i++) {
+      const treeX = i * 150 + Math.random() * 50;
+      const treeY = CANVAS_HEIGHT - 100;
+      // Simple tree shapes
+      trees.rect(treeX, treeY, 8, 30); // Trunk
+      trees.fill(0x8b4513);
+      trees.circle(treeX + 4, treeY - 10, 15); // Foliage
+      trees.fill(0x228b22);
+    }
+    midBackground.addChild(trees);
+    app.stage.addChild(midBackground);
+
+    // Layer 3: Track container - full camera scroll speed (100%)
     const trackContainer = new PIXI.Container();
     trackContainerRef.current = trackContainer;
 
-    // Create parallax background layers
-    // Layer 1: Far background (sky/mountains) - slowest
-    const farBackground = new PIXI.Graphics();
-    farBackground.rect(0, 0, CANVAS_WIDTH * 2, CANVAS_HEIGHT);
-    farBackground.fill(0x87ceeb); // Sky blue
-
-    // Add some cloud shapes for visual interest
-    for (let i = 0; i < 5; i++) {
-      const cloudX = (CANVAS_WIDTH * 2 / 5) * i;
-      const cloudY = 20 + Math.random() * 40;
-      farBackground.circle(cloudX, cloudY, 20);
-      farBackground.circle(cloudX + 15, cloudY, 15);
-      farBackground.circle(cloudX + 25, cloudY, 18);
-      farBackground.fill({ color: 0xffffff, alpha: 0.6 });
-    }
-    app.stage.addChild(farBackground);
-
-    // Layer 2: Mid background (trees/scenery) - medium speed
-    const midBackground = new PIXI.Graphics();
-    for (let i = 0; i < trackLengthPixels / 200; i++) {
-      const treeX = i * 200 + Math.random() * 50;
-      const treeY = CANVAS_HEIGHT - 100;
-      // Simple tree shapes
-      midBackground.rect(treeX, treeY, 8, 30); // Trunk
-      midBackground.fill(0x8b4513);
-      midBackground.circle(treeX + 4, treeY - 10, 15); // Foliage
-      midBackground.fill(0x228b22);
-    }
-    trackContainer.addChild(midBackground);
-
-    // Layer 3: Track surface - full scroll speed
+    // Track surface graphics
     const trackGraphics = new PIXI.Graphics();
 
     // Draw track background (green grass)
@@ -249,6 +262,24 @@ export function PixiRaceRenderer({
       trackGraphics.lineTo(trackLengthPixels + TRACK_PADDING, y);
     }
     trackGraphics.stroke({ width: 2, color: 0x4a6a4a, alpha: 0.5 });
+
+    // Draw top barrier/fence for depth perception
+    const fenceY = TRACK_PADDING - 5;
+    const fenceHeight = 15;
+
+    // Fence posts every 100 pixels
+    for (let x = TRACK_PADDING; x <= trackLengthPixels + TRACK_PADDING; x += 100) {
+      // Fence post
+      trackGraphics.rect(x - 2, fenceY, 4, fenceHeight);
+      trackGraphics.fill(0x8b4513); // Brown
+    }
+
+    // Horizontal rails
+    trackGraphics.moveTo(TRACK_PADDING, fenceY + 3);
+    trackGraphics.lineTo(trackLengthPixels + TRACK_PADDING, fenceY + 3);
+    trackGraphics.moveTo(TRACK_PADDING, fenceY + fenceHeight - 3);
+    trackGraphics.lineTo(trackLengthPixels + TRACK_PADDING, fenceY + fenceHeight - 3);
+    trackGraphics.stroke({ width: 2, color: 0x654321 }); // Dark brown
 
     // Draw distance markers every 200 meters
     for (let distance = 0; distance <= raceDistanceMeters; distance += 200) {
@@ -720,10 +751,12 @@ export function PixiRaceRenderer({
         // Apply camera position to track container (negative because we're moving the world)
         trackContainerRef.current.position.x = -cameraRef.current.x;
 
-        // Parallax effect on far background (moves slower)
-        const farBg = app.stage.children[0];
-        if (farBg) {
-          farBg.position.x = -cameraRef.current.x * 0.2; // 20% camera movement
+        // Parallax effect on backgrounds (moves slower than camera)
+        if (farBackgroundRef.current) {
+          farBackgroundRef.current.position.x = -cameraRef.current.x * 0.2; // 20% camera movement
+        }
+        if (midBackgroundRef.current) {
+          midBackgroundRef.current.position.x = -cameraRef.current.x * 0.5; // 50% camera movement
         }
       }
 
