@@ -8,6 +8,22 @@ export type Bloodline =
   | 'Mudblood'
   | 'Royal Line'
 
+export type HorseVariant =
+  | 'regular'
+  | 'pegasus'
+  | 'unicorn'
+  | 'zombie'
+  | 'skeleton'
+  | 'kelpie'
+
+export type JockeyStyle =
+  | 'classic'
+  | 'lightweight'
+  | 'veteran'
+  | 'mudder'
+  | 'royal'
+  | 'lucky'
+
 export type JockeyTrait =
   | 'Mudder'
   | 'Closer'
@@ -41,6 +57,7 @@ export interface Horse {
   name: string
   tier: 1 | 2 | 3 | 4
   bloodline: Bloodline
+  variant?: HorseVariant // Defaults to 'regular'
 
   // Base stats (1-10 scale)
   stats: {
@@ -81,6 +98,8 @@ export interface Jockey {
   }
 
   trait?: JockeyTrait
+  style?: JockeyStyle // Visual style, defaults to 'classic'
+  color?: number // Optional team color tint (hex)
   hireCost: number // One-time cost to hire
   upkeepCost: number // Per-round cost to keep employed
 }

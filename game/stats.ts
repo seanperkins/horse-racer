@@ -52,18 +52,25 @@ export function calculateDerivedStats(
     }
   }
 
-  // Base Speed = Horse.Speed + (10 - Jockey.Weight) × 0.5
-  // Multiply by 4 to scale to realistic meters/second (20-40 m/s range for racehorses)
+  // Base Speed = Horse.Speed + f(Jockey.Weight)
+  // Apply diminishing returns to reduce speed/weight dominance
+  const weightFactor =
+    Math.pow(Math.max(0, 10 - modifiedJockeyStats.weight), 0.6) * 0.2
+  const rawBaseSpeed = modifiedHorseStats.speed * 2.0 + weightFactor
   const baseSpeed =
-    (modifiedHorseStats.speed + (10 - modifiedJockeyStats.weight) * 0.5) * 4
+    rawBaseSpeed > 22
+      ? Math.max(5, rawBaseSpeed * (1 - (rawBaseSpeed - 22) * 0.03))
+      : rawBaseSpeed
 
-  // Stamina Pool = Horse.Stamina × (1 + Jockey.Timing × 0.1)
+  // Stamina Pool = Horse.Stamina × (1 + Jockey.Timing × 0.2)
   const staminaPool =
-    modifiedHorseStats.stamina * (1 + modifiedJockeyStats.timing * 0.1)
+    modifiedHorseStats.stamina * (1 + modifiedJockeyStats.timing * 0.2)
 
   // Burn Rate = Base cost per tick, reduced by Jockey.Timing
-  // Base burn rate is 1.0, reduced by 5% per timing point
-  const burnRate = 1.0 * (1 - modifiedJockeyStats.timing * 0.05)
+  // Base burn rate is 1.0, reduced by 2.5% per timing point
+  let burnRate = 1.0 * (1 - modifiedJockeyStats.timing * 0.025)
+  const weightPenalty = Math.max(0, modifiedJockeyStats.weight - 6) * 0.02
+  burnRate *= 1 + weightPenalty
 
   // Check if equipment ignores terrain penalty
   const shouldIgnoreTerrain = checkEquipmentIgnoresTerrain(equipment, terrain)
@@ -82,7 +89,7 @@ export function calculateDerivedStats(
 
   // Efficiency = Jockey.Skill reduces wasted movement, improves jumps
   // PRD Section 3.5
-  const efficiency = 1 + modifiedJockeyStats.skill * 0.02 // Pathing bonus
+  const efficiency = 1 + modifiedJockeyStats.skill * 0.01 // Pathing bonus
 
   // Apply Horse Whisperer trait: -3 effective Temper
   let effectiveTemper = modifiedHorseStats.temper
@@ -123,17 +130,17 @@ function calculateConsistency(
   temper: number,
   weight: number,
 ): { variance: number; isStable: boolean } {
-  const temperThreshold = weight + 2
+  const temperThreshold = weight + 1
 
   if (temper <= temperThreshold) {
     // High consistency
     return {
-      variance: 0.05, // ±5%
+      variance: 0.04, // ±4%
       isStable: true,
     }
   } else {
     // Low consistency - variance increases with gap
-    const variance = (temper - temperThreshold) * 0.08
+    const variance = 0.04 + (temper - temperThreshold) * 0.06
     return {
       variance,
       isStable: false,
@@ -256,8 +263,11 @@ function applyEquipmentModifiers(
 export function calculateObstacleTimeCost(
   baseTimeCost: number,
   jockeySkill: number,
+  horseGrit: number,
 ): number {
-  return baseTimeCost * (1 - jockeySkill * 0.05)
+  const skillFactor = 1 - jockeySkill * 0.05
+  const gritFactor = 1 - horseGrit * 0.02
+  return baseTimeCost * Math.max(0.5, skillFactor * gritFactor)
 }
 
 /**
@@ -267,8 +277,11 @@ export function calculateObstacleTimeCost(
 export function calculateStumbleRecovery(
   baseRecoveryTime: number,
   jockeySkill: number,
+  horseGrit: number,
 ): number {
-  return baseRecoveryTime * (1 - jockeySkill * 0.08)
+  const skillFactor = 1 - jockeySkill * 0.08
+  const gritFactor = 1 - horseGrit * 0.02
+  return baseRecoveryTime * Math.max(0.4, skillFactor * gritFactor)
 }
 
 /**
@@ -333,8 +346,8 @@ export function applyStrategyModifiers(
   if (phase === 'start') {
     switch (strategy) {
       case 'burst':
-        speedMod = 1.3
-        burnMod = 1.5
+        speedMod = 1.2
+        burnMod = 1.65
         break
       case 'hang_back':
         speedMod = 0.8
@@ -348,8 +361,8 @@ export function applyStrategyModifiers(
   } else if (phase === 'mid') {
     switch (strategy) {
       case 'push':
-        speedMod = 1.15
-        burnMod = 1.25
+        speedMod = 1.1
+        burnMod = 1.35
         break
       case 'conserve':
         speedMod = 0.9
@@ -366,8 +379,11 @@ export function applyStrategyModifiers(
       case 'sprint':
         // Burn all remaining stamina for max speed
         const staminaBoost = Math.min(currentStamina / maxStamina, 1.0)
-        speedMod = 1.0 + staminaBoost * 0.5
-        burnMod = 3.0 // Burn stamina fast
+        speedMod = 1.0 + staminaBoost * 0.3
+        if (staminaBoost < 0.2) {
+          speedMod = Math.min(speedMod, 1.1)
+        }
+        burnMod = 3.2 // Burn stamina fast
         break
       case 'gamble':
         // High variance - uses temper for outcome
