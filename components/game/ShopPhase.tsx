@@ -28,7 +28,7 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
   const handlePurchase = (unit: ShopUnit) => {
     // Jockeys use hire_jockey message instead
     if (unit.type === 'jockey') {
-      handleHireJockey(unit.id)
+      handleHireJockey(unit.id, unit.cost)
       return
     }
 
@@ -44,9 +44,14 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
     })
   }
 
-  const handleHireJockey = (jockeyId: string) => {
+  const handleHireJockey = (jockeyId: string, cost: number) => {
     if (hiredJockey) {
       alert('You already have a jockey. Fire them first to hire another.')
+      return
+    }
+
+    if (gold < cost) {
+      alert('Not enough gold!')
       return
     }
 
@@ -421,7 +426,7 @@ function HorseCard({
                 <span>
                   {stat}: {current} → {potential}
                 </span>
-                <span className="text-(--accent-gold)">{trainCost}g</span>
+                <span className="text-[var(--accent-gold)]">{trainCost}g</span>
               </button>
             )
           })}

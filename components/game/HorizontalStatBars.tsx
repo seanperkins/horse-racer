@@ -21,6 +21,8 @@ export function HorizontalStatBars({
 }: HorizontalStatBarsProps) {
   const [hoveredStat, setHoveredStat] = useState<string | null>(null);
   const statKeys = Object.keys(stats);
+  const safeMaxValue = maxValue > 0 ? maxValue : 1;
+  const clampPercent = (value: number) => Math.max(0, Math.min(100, value));
 
   return (
     <div className={`relative ${className}`}>
@@ -33,8 +35,12 @@ export function HorizontalStatBars({
           const isHovered = hoveredStat === key;
 
           // Calculate percentages for bar widths
-          const currentPercent = (currentValue / maxValue) * 100;
-          const maxPercent = maxStatValue ? (maxStatValue / maxValue) * 100 : 0;
+          const currentPercent = clampPercent(
+            (currentValue / safeMaxValue) * 100
+          );
+          const maxPercent = maxStatValue !== undefined
+            ? clampPercent((maxStatValue / safeMaxValue) * 100)
+            : 0;
 
           return (
             <div

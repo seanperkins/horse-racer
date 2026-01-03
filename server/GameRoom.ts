@@ -9,7 +9,7 @@ import {
 } from '@/game/stats'
 import { generateShopInventory } from '@/game/shop'
 import { generateTrackForRound } from '@/game/tracks'
-// AI players are now created as full PlayerData objects in initializeAIPlayers()
+import { generateHorse, generateJockey } from '@/game/generators'
 
 const MAX_PLAYERS = 8
 const HOUSE_EDGE = 0.95
