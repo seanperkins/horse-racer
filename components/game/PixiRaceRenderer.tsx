@@ -136,8 +136,9 @@ export function PixiRaceRenderer({
 
       // Redraw track with new size
       const raceDistanceMeters = simulatorRef.current?.getRaceDistance() || 1000;
+      const surface = raceInputs?.track?.surface || 'dry_dirt';
       appRef.current.stage.removeChildren();
-      drawTrack(appRef.current, raceDistanceMeters);
+      drawTrack(appRef.current, raceDistanceMeters, surface);
 
       // Recreate horses if race is running
       if (simulatorRef.current && raceInputs && trackContainerRef.current) {
@@ -196,9 +197,20 @@ export function PixiRaceRenderer({
     drawTrack(app, 1000); // Default 1000m track for initialization
   };
 
-  const drawTrack = (app: PIXI.Application, raceDistanceMeters: number = 1000) => {
+  const drawTrack = (app: PIXI.Application, raceDistanceMeters: number = 1000, surface: string = 'dry_dirt') => {
     // Calculate actual track length based on race distance
     const trackLengthPixels = raceDistanceMeters * METERS_TO_PIXELS;
+
+    // Surface-specific colors and styling
+    const surfaceColors: Record<string, { track: number; lane: number; name: string }> = {
+      dry_dirt: { track: 0x8b6f47, lane: 0x6b5437, name: 'Dry Dirt' },
+      wet_muddy: { track: 0x6b5437, lane: 0x4a3c28, name: 'Wet & Muddy' },
+      turf_grass: { track: 0x2a5a2a, lane: 0x1a4a1a, name: 'Turf Grass' },
+      rocky: { track: 0x787878, lane: 0x585858, name: 'Rocky' },
+      sand: { track: 0xe6d7b8, lane: 0xc6b798, name: 'Sand' },
+      frozen: { track: 0xb8d4e6, lane: 0x98b4c6, name: 'Frozen' },
+    };
+    const colors = surfaceColors[surface] || surfaceColors.dry_dirt;
 
     // Layer 1: Far background (sky/mountains) - slowest parallax
     // This container stays independent and moves at 20% camera speed
@@ -248,9 +260,9 @@ export function PixiRaceRenderer({
     // Track surface graphics
     const trackGraphics = new PIXI.Graphics();
 
-    // Draw track background (green grass)
+    // Draw track background with surface-specific color
     trackGraphics.rect(0, 0, trackLengthPixels + TRACK_PADDING * 2, CANVAS_HEIGHT);
-    trackGraphics.fill(0x2a4a2a);
+    trackGraphics.fill(colors.track);
 
     // Draw racing lanes
     const numLanes = 8;
@@ -261,7 +273,7 @@ export function PixiRaceRenderer({
       trackGraphics.moveTo(TRACK_PADDING, y);
       trackGraphics.lineTo(trackLengthPixels + TRACK_PADDING, y);
     }
-    trackGraphics.stroke({ width: 2, color: 0x4a6a4a, alpha: 0.5 });
+    trackGraphics.stroke({ width: 2, color: colors.lane, alpha: 0.5 });
 
     // Draw top barrier/fence for depth perception
     const fenceY = TRACK_PADDING - 5;
@@ -282,13 +294,14 @@ export function PixiRaceRenderer({
     trackGraphics.stroke({ width: 2, color: 0x654321 }); // Dark brown
 
     // Draw distance markers every 200 meters
+    const trackBottomY = TRACK_PADDING + numLanes * LANE_HEIGHT;
     for (let distance = 0; distance <= raceDistanceMeters; distance += 200) {
       const x = TRACK_PADDING + distance * METERS_TO_PIXELS;
       trackGraphics.moveTo(x, TRACK_PADDING);
-      trackGraphics.lineTo(x, TRACK_PADDING + numLanes * LANE_HEIGHT);
+      trackGraphics.lineTo(x, trackBottomY);
       trackGraphics.stroke({ width: 1, color: 0xffffff, alpha: 0.3 });
 
-      // Add distance text
+      // Add distance text at bottom
       const distanceText = new PIXI.Text({
         text: `${distance}m`,
         style: {
@@ -297,7 +310,7 @@ export function PixiRaceRenderer({
         }
       });
       distanceText.alpha = 0.5;
-      distanceText.position.set(x - 15, TRACK_PADDING - 15);
+      distanceText.position.set(x - 15, trackBottomY + 5);
       trackGraphics.addChild(distanceText);
     }
 
@@ -528,7 +541,7 @@ export function PixiRaceRenderer({
     const raceDistanceMeters = simulator.getRaceDistance();
     console.log("Redrawing track for race distance:", raceDistanceMeters, "meters");
     appRef.current.stage.removeChildren();
-    drawTrack(appRef.current, raceDistanceMeters);
+    drawTrack(appRef.current, raceDistanceMeters, raceInputs.track.surface);
 
     // Create horse sprites
     console.log("Creating horse sprites...");
