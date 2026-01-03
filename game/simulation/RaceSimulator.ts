@@ -150,6 +150,7 @@ export class RaceSimulator {
         participant.jockey,
         participant.equipment,
         this.config.track.surface,
+        participant.bloodlineBonuses, // Pass bloodline bonuses to tick calculations
       )
 
       // Skip if stumbled and still recovering
@@ -175,6 +176,10 @@ export class RaceSimulator {
         state.maxStamina,
         this.rng,
       )
+      const speedRatio = derivedStats.baseSpeed > 0 ? speed / derivedStats.baseSpeed : 1
+      const speedBurnFactor = Math.max(0.8, 1 + (speedRatio - 1) * 0.8)
+      const baseSpeedBurnFactor = 1 + Math.max(0, (derivedStats.baseSpeed - 18) * 0.03)
+      const adjustedBurn = burn * speedBurnFactor * baseSpeedBurnFactor
 
       // Apply terrain modifier
       let terrainSpeed = speed * derivedStats.terrainMod
@@ -196,25 +201,43 @@ export class RaceSimulator {
         phase,
       )
 
+      // Apply consistency penalties (high temper can cause brief nerves)
+      if (!derivedStats.consistency.isStable) {
+        const nervesChance = derivedStats.consistency.variance * 0.12
+        if (this.rng() < nervesChance) {
+          terrainSpeed *= 0.92
+          if (
+            !state.events.some(
+              (e) => e.description.includes('nerves') && e.tick > this.currentTick - 20,
+            )
+          ) {
+            this.addEvent(state, 'strategy_change', 'Nerves cause a brief slowdown')
+          }
+        }
+      }
+
       // Apply efficiency bonus
       const finalSpeed = terrainSpeed * derivedStats.efficiency
 
       // Check for stamina depletion
       if (state.stamina <= 0) {
         // Exhausted - move at 50% speed, no stamina burn
-        state.currentSpeed = finalSpeed * 0.5
+        state.currentSpeed = finalSpeed * 0.3
       } else {
-        state.currentSpeed = finalSpeed
+        const staminaRatio = state.stamina / state.maxStamina
+        const staminaSpeedMod = 0.7 + 0.3 * staminaRatio
+        state.currentSpeed = finalSpeed * staminaSpeedMod
 
         // Burn stamina (modified by surface conditions and horse abilities)
         let surfaceStaminaMod = this.getSurfaceStaminaModifier()
+        surfaceStaminaMod *= this.getDistanceStaminaModifier()
 
         // Apply Endurance ability (Iron Heart): stamina drains 15% slower
         if (participant.horse.ability?.name === 'Endurance') {
           surfaceStaminaMod *= 0.85
         }
 
-        state.stamina = Math.max(0, state.stamina - burn * surfaceStaminaMod)
+        state.stamina = Math.max(0, state.stamina - adjustedBurn * surfaceStaminaMod)
       }
 
       // Check for obstacles
@@ -472,6 +495,7 @@ export class RaceSimulator {
         const actualCost = calculateObstacleTimeCost(
           baseCost,
           participant.jockey.stats.skill,
+          participant.horse.stats.grit,
         )
 
         // Slow down for obstacle
@@ -531,6 +555,7 @@ export class RaceSimulator {
       state.stumbleRecoveryTicks = calculateStumbleRecovery(
         baseRecovery,
         participant.jockey.stats.skill,
+        participant.horse.stats.grit,
       )
 
       this.addEvent(state, 'stumble', 'Stumbled!')
@@ -571,6 +596,13 @@ export class RaceSimulator {
       default:
         return 1.0
     }
+  }
+
+  /**
+   * Get stamina modifier based on race distance (furlongs)
+   */
+  private getDistanceStaminaModifier(): number {
+    return Math.min(1.5, 0.9 + this.config.track.distance * 0.035)
   }
 
   /**
