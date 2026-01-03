@@ -1209,6 +1209,12 @@ export class GameRoom {
 
     const ws = this.playerSockets.get(playerId)
 
+    // Only allow purchases during shop phase
+    if (this.currentPhase !== 'shop') {
+      if (ws) this.sendError(ws, 'Can only purchase during shop phase')
+      return
+    }
+
     // Get this player's shop inventory
     const shopInventory = player.shopInventory
     if (!shopInventory) {
@@ -1223,7 +1229,9 @@ export class GameRoom {
     if (unitType === 'horse') {
       unit = shopInventory.horses.find((h: Horse) => h.id === message.unitId)
     } else if (unitType === 'jockey') {
-      unit = shopInventory.jockeys.find((j: Jockey) => j.id === message.unitId)
+      // Jockeys should be hired through handleHireJockey, not purchased
+      if (ws) this.sendError(ws, 'Use hire_jockey to hire jockeys')
+      return
     } else if (unitType === 'equipment') {
       unit = shopInventory.equipment.find((e: Equipment) => e.id === message.unitId)
     }
@@ -1233,7 +1241,7 @@ export class GameRoom {
       return
     }
 
-    // Check if player can afford it
+    // Check if player can afford it (unit.cost is guaranteed to exist for horses/equipment)
     if (player.gold < unit.cost) {
       if (ws) this.sendError(ws, 'Not enough gold')
       return
@@ -1300,6 +1308,12 @@ export class GameRoom {
 
     const ws = this.playerSockets.get(playerId)
 
+    // Only allow selling during shop phase
+    if (this.currentPhase !== 'shop') {
+      if (ws) this.sendError(ws, 'Can only sell during shop phase')
+      return
+    }
+
     // Find and remove the unit from player's inventory
     let soldUnit: any = null
     let unitType: 'horse' | 'jockey' | 'equipment' | null = null
@@ -1356,6 +1370,12 @@ export class GameRoom {
 
     const ws = this.playerSockets.get(playerId)
 
+    // Only allow reroll during shop phase
+    if (this.currentPhase !== 'shop') {
+      if (ws) this.sendError(ws, 'Can only reroll during shop phase')
+      return
+    }
+
     if (player.gold < 2) {
       if (ws) this.sendError(ws, 'Not enough gold to reroll')
       return
@@ -1391,6 +1411,12 @@ export class GameRoom {
     if (!player) return
 
     const ws = this.playerSockets.get(playerId)
+
+    // Only allow training during shop phase
+    if (this.currentPhase !== 'shop') {
+      if (ws) this.sendError(ws, 'Can only train during shop phase')
+      return
+    }
 
     // Find the horse
     const horse = player.horses.find(h => h.id === message.horseId)
@@ -1456,6 +1482,12 @@ export class GameRoom {
     if (!player) return
 
     const ws = this.playerSockets.get(playerId)
+
+    // Only allow hiring during shop phase
+    if (this.currentPhase !== 'shop') {
+      if (ws) this.sendError(ws, 'Can only hire jockeys during shop phase')
+      return
+    }
 
     // Check if player already has a jockey
     if (player.hiredJockey) {
@@ -1534,6 +1566,12 @@ export class GameRoom {
     if (!player) return
 
     const ws = this.playerSockets.get(playerId)
+
+    // Only allow firing during shop phase
+    if (this.currentPhase !== 'shop') {
+      if (ws) this.sendError(ws, 'Can only fire jockeys during shop phase')
+      return
+    }
 
     if (!player.hiredJockey) {
       if (ws) this.sendError(ws, 'No jockey currently hired')
