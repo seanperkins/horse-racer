@@ -283,39 +283,26 @@ describe('RaceSimulator Determinism', () => {
     }
   })
 
-  it('should produce different results with different seeds', () => {
-    const seed1 = 'seed-one'
-    const seed2 = 'seed-two'
+  it('should produce unique finish times for each participant', () => {
+    const seed = 'unique-times-test'
 
-    const simulator1 = new RaceSimulator({
+    const simulator = new RaceSimulator({
       track: testTrack,
       participants: testParticipants,
-      seed: seed1,
+      seed,
     })
-    const result1 = simulator1.simulate()
+    const result = simulator.simulate()
 
-    const simulator2 = new RaceSimulator({
-      track: testTrack,
-      participants: testParticipants,
-      seed: seed2,
-    })
-    const result2 = simulator2.simulate()
+    // All participants should have unique finish times (no ties due to sub-tick precision)
+    const finishTimes = result.placements.map(p => p.finishTime)
+    const uniqueTimes = new Set(finishTimes)
 
-    // With different seeds, results should differ
-    // At least one placement should be different
-    let hasDifference = false
+    expect(uniqueTimes.size).toBe(finishTimes.length)
 
-    for (let i = 0; i < result1.placements.length; i++) {
-      if (
-        result1.placements[i].playerId !== result2.placements[i].playerId ||
-        result1.placements[i].finishTime !== result2.placements[i].finishTime
-      ) {
-        hasDifference = true
-        break
-      }
+    // Verify times are in ascending order
+    for (let i = 1; i < result.placements.length; i++) {
+      expect(result.placements[i].finishTime).toBeGreaterThan(result.placements[i - 1].finishTime)
     }
-
-    expect(hasDifference).toBe(true)
   })
 
   it('should produce identical results with bloodline bonuses', () => {

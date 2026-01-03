@@ -6,6 +6,7 @@ import type { RaceParticipant } from "@/types/game";
 import type { RaceInputs } from "@/types/messages";
 import { RaceSimulator } from "@/game/simulation/RaceSimulator";
 import { TrackInfo, RaceCanvas, RaceSidebar, RaceEventLog } from "./race";
+import { useGameStore } from "@/lib/store/gameStore";
 
 interface PixiRaceRendererProps {
   raceInputs: RaceInputs;
@@ -45,6 +46,7 @@ export function PixiRaceRenderer({
   onRaceComplete,
   onRaceEvent,
 }: PixiRaceRendererProps) {
+  const { playerId } = useGameStore();
   const canvasRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<PIXI.Application | null>(null);
   const horsesRef = useRef<Map<string, HorseSprite>>(new Map());
@@ -774,18 +776,30 @@ export function PixiRaceRenderer({
         }
       });
 
-      // Update camera to follow the lead pack
+      // Update camera to follow the player's horse (or lead pack if player not found)
       if (trackContainerRef.current && state.participants.length > 0) {
-        // Find the average position of the top 3 horses (or all if fewer)
-        const sortedByPosition = [...state.participants].sort((a, b) => b.position - a.position);
-        const leadPack = sortedByPosition.slice(0, Math.min(3, sortedByPosition.length));
-        const avgLeadPosition = leadPack.reduce((sum, p) => sum + p.position, 0) / leadPack.length;
+        let targetPosition: number;
+
+        // Try to find the player's horse
+        const playerHorse = playerId
+          ? state.participants.find(p => p.playerId === playerId)
+          : null;
+
+        if (playerHorse) {
+          // Follow the player's horse
+          targetPosition = playerHorse.position;
+        } else {
+          // Fallback: follow the average position of the top 3 horses
+          const sortedByPosition = [...state.participants].sort((a, b) => b.position - a.position);
+          const leadPack = sortedByPosition.slice(0, Math.min(3, sortedByPosition.length));
+          targetPosition = leadPack.reduce((sum, p) => sum + p.position, 0) / leadPack.length;
+        }
 
         // Convert to pixels and add padding
-        const targetCameraX = avgLeadPosition * METERS_TO_PIXELS + TRACK_PADDING;
+        const targetCameraX = targetPosition * METERS_TO_PIXELS + TRACK_PADDING;
 
-        // Keep camera centered on lead pack, with some padding ahead
-        // Camera target should keep the lead pack in the center-left of screen
+        // Keep camera centered on the target, with some padding ahead
+        // Camera target should keep the horse in the center-left of screen
         const idealCameraOffset = targetCameraX - (CANVAS_WIDTH * 0.3);
 
         // Clamp camera so we don't show before start or too far past finish

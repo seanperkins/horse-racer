@@ -236,8 +236,19 @@ export class RaceSimulator {
     for (const state of this.states.values()) {
       // Record finish tick and exact position if horse just crossed the line
       if (state.position >= this.raceDistance && state.finishTick === null) {
-        state.finishTick = this.currentTick
-        state.finishPosition = state.position // Capture exact position for sub-tick precision
+        // Calculate sub-tick precision: how far past the finish line did we go?
+        const overshoot = state.position - this.raceDistance
+        const tickDistance = state.currentSpeed / this.tickRate
+
+        // Calculate what fraction of this tick had elapsed when crossing the finish
+        // If overshoot = 0, we crossed exactly at the end of previous tick (fraction = 0)
+        // If overshoot = tickDistance, we crossed at the end of this tick (fraction = 1)
+        const tickFraction = tickDistance > 0 ? (tickDistance - overshoot) / tickDistance : 0
+
+        // Store finish time with sub-tick precision
+        // The horse crossed at: (currentTick - 1) + tickFraction
+        state.finishTick = (this.currentTick - 1) + tickFraction
+        state.finishPosition = state.position
       }
 
       if (state.position < this.raceDistance) {
