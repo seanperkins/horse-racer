@@ -9,7 +9,7 @@ import {
 } from '@/game/stats'
 import { generateShopInventory } from '@/game/shop'
 import { generateTrackForRound } from '@/game/tracks'
-import { generateAIRaceEntry } from '@/game/ai-horses'
+// AI players are now created as full PlayerData objects in initializeAIPlayers()
 
 const MAX_PLAYERS = 8
 const HOUSE_EDGE = 0.95
@@ -27,6 +27,7 @@ const PHASE_DURATIONS: Record<GamePhase, number> = {
 
 interface PlayerData extends Player {
   ready: boolean
+  isAI?: boolean  // Flag to identify AI players
   raceEntry?: {
     horse: Horse
     jockey: Jockey
@@ -197,9 +198,17 @@ export class GameRoom {
     this.playerSockets.set(userId, ws)
 
     console.log(`Player ${playerName} joined room ${this.roomId}`)
+
+    // Balance AI players to maintain MAX_PLAYERS total (only in lobby)
+    if (!this.gameStarted) {
+      this.balanceAIPlayers()
+    }
+
+    this.broadcastLobbyState()
   }
 
   removePlayer(playerId: string): void {
+    const player = this.players.get(playerId)
     this.players.delete(playerId)
     this.playerSockets.delete(playerId)
 
@@ -207,7 +216,182 @@ export class GameRoom {
       this.endGame()
     }
 
+    // Balance AI players to maintain MAX_PLAYERS total (only in lobby, only for real players)
+    if (!this.gameStarted && player && !player.isAI) {
+      this.balanceAIPlayers()
+    }
+
     this.broadcastLobbyState()
+  }
+
+  /**
+   * Create AI players to fill empty slots up to MAX_PLAYERS
+   */
+  initializeAIPlayers(): void {
+    const realPlayerCount = Array.from(this.players.values())
+      .filter(p => !p.isAI).length
+    const aiNeeded = MAX_PLAYERS - realPlayerCount
+
+    for (let i = 1; i <= aiNeeded; i++) {
+      const aiId = `ai-player-${i}`
+      const aiPlayer: PlayerData = {
+        id: aiId,
+        userId: aiId,
+        username: `AI Racer ${i}`,
+        gold: 10,
+        hearts: 5,
+        eliminated: false,
+        ready: true,  // AI always ready
+        isAI: true,
+        horses: [generateHorse(2)],  // Start with one Tier 2 horse
+        hiredJockey: generateJockey(2),  // Start with one Quality 2 jockey
+        equipment: [],
+        wins: 0,
+        roundsPlayed: 0,
+        goldEarned: 0,
+        betWins: 0,
+      }
+
+      this.players.set(aiId, aiPlayer)
+      console.log(`Created AI player: ${aiPlayer.username}`)
+    }
+  }
+
+  /**
+   * Maintain exactly MAX_PLAYERS total (real + AI)
+   * Called when players join/leave lobby
+   */
+  balanceAIPlayers(): void {
+    const realPlayerCount = Array.from(this.players.values())
+      .filter(p => !p.isAI).length
+    const currentAICount = Array.from(this.players.values())
+      .filter(p => p.isAI).length
+    const targetAICount = MAX_PLAYERS - realPlayerCount
+
+    if (currentAICount < targetAICount) {
+      // Add AI - find next available AI number
+      const existingAINumbers = Array.from(this.players.values())
+        .filter(p => p.isAI)
+        .map(p => parseInt(p.id.replace('ai-player-', '')))
+        .sort((a, b) => a - b)
+
+      let nextAINumber = 1
+      for (let i = 1; i <= MAX_PLAYERS; i++) {
+        if (!existingAINumbers.includes(i)) {
+          nextAINumber = i
+          break
+        }
+      }
+
+      for (let i = currentAICount; i < targetAICount; i++) {
+        const aiId = `ai-player-${nextAINumber}`
+        const aiPlayer: PlayerData = {
+          id: aiId,
+          userId: aiId,
+          username: `AI Racer ${nextAINumber}`,
+          gold: 10,
+          hearts: 5,
+          eliminated: false,
+          ready: true,
+          isAI: true,
+          horses: [generateHorse(2)],
+          hiredJockey: generateJockey(2),
+          equipment: [],
+          wins: 0,
+          roundsPlayed: 0,
+          goldEarned: 0,
+          betWins: 0,
+        }
+
+        this.players.set(aiId, aiPlayer)
+        console.log(`Added AI player: ${aiPlayer.username}`)
+
+        // Find next available number
+        nextAINumber++
+        while (existingAINumbers.includes(nextAINumber)) {
+          nextAINumber++
+        }
+      }
+    } else if (currentAICount > targetAICount) {
+      // Remove excess AI
+      const aiPlayers = Array.from(this.players.values())
+        .filter(p => p.isAI)
+        .slice(0, currentAICount - targetAICount)
+
+      for (const ai of aiPlayers) {
+        this.players.delete(ai.id)
+        console.log(`Removed AI player: ${ai.username}`)
+      }
+    }
+  }
+
+  /**
+   * Auto-setup race entry for AI player
+   */
+  setupAIRaceEntry(playerId: string): void {
+    const player = this.players.get(playerId)
+    if (!player || !player.isAI) return
+
+    // Select best available horse (highest tier/stats)
+    const horse = player.horses.length > 0
+      ? player.horses.reduce((best, current) =>
+          current.tier > best.tier ? current : best
+        )
+      : generateHorse(2)
+
+    // Use hired jockey or generate default
+    const jockey = player.hiredJockey || generateJockey(2)
+
+    player.raceEntry = {
+      horse,
+      jockey,
+      equipment: {},
+      strategy: { start: 'steady', mid: 'react', finish: 'maintain' }
+    }
+
+    player.ready = true
+  }
+
+  /**
+   * Simple AI shopping: buy cheapest affordable horse or jockey
+   */
+  aiMakeShopPurchases(playerId: string): void {
+    const player = this.players.get(playerId)
+    if (!player || !player.isAI) return
+
+    const shopInventory = player.shopInventory
+    if (!shopInventory) return
+
+    // Try to buy cheapest horse if affordable
+    const affordableHorses = shopInventory.horses
+      .filter(h => h.price <= player.gold)
+      .sort((a, b) => a.price - b.price)
+
+    if (affordableHorses.length > 0) {
+      const horse = affordableHorses[0]
+      player.gold -= horse.price
+      player.horses.push(horse)
+      // Remove from shop inventory
+      shopInventory.horses = shopInventory.horses.filter(h => h.id !== horse.id)
+      console.log(`${player.username} bought ${horse.name} for ${horse.price}g`)
+    }
+
+    // Try to hire cheapest jockey if don't have one or can afford better
+    if (!player.hiredJockey) {
+      const affordableJockeys = shopInventory.jockeys
+        .filter(j => j.hiringCost <= player.gold)
+        .sort((a, b) => a.hiringCost - b.hiringCost)
+
+      if (affordableJockeys.length > 0) {
+        const jockey = affordableJockeys[0]
+        player.gold -= jockey.hiringCost
+        player.hiredJockey = jockey
+        shopInventory.jockeys = shopInventory.jockeys.filter(j => j.id !== jockey.id)
+        console.log(`${player.username} hired ${jockey.name} for ${jockey.hiringCost}g`)
+      }
+    }
+
+    player.ready = true
   }
 
   syncPlayerState(playerId: string): void {
@@ -446,6 +630,10 @@ export class GameRoom {
 
   startGame(): void {
     console.log(`Starting game in room ${this.roomId}`)
+
+    // Initialize AI players to fill remaining slots
+    this.initializeAIPlayers()
+
     this.gameStarted = true
     this.currentRound = 1
     this.startPhase('shop')
@@ -513,16 +701,14 @@ export class GameRoom {
 
       const alivePlayers = Array.from(this.players.values()).filter((p) => !p.eliminated)
 
-      // In multiplayer, end game when only one player remains
-      // In single-player, continue until player is eliminated (0 hearts)
-      const isMultiplayer = this.players.size > 1
-      if (isMultiplayer && alivePlayers.length === 1) {
+      // Game ends when only one participant remains (AI or real player)
+      if (alivePlayers.length === 1) {
         this.endGame(alivePlayers[0])
         return
       }
 
-      // In single-player, end game if player is eliminated
-      if (!isMultiplayer && alivePlayers.length === 0) {
+      // Game ends if all players are eliminated
+      if (alivePlayers.length === 0) {
         this.endGame()
         return
       }
@@ -587,6 +773,13 @@ export class GameRoom {
         },
       })
     }
+
+    // AI players make simple purchases and auto-ready
+    for (const [playerId, player] of this.players) {
+      if (player.isAI && !player.eliminated) {
+        this.aiMakeShopPurchases(playerId)
+      }
+    }
   }
 
   setupPreparationPhase(): void {
@@ -598,9 +791,16 @@ export class GameRoom {
         track: this.currentTrack,
       })
     }
+
+    // AI players auto-setup their race entries
+    for (const [playerId, player] of this.players) {
+      if (player.isAI && !player.eliminated) {
+        this.setupAIRaceEntry(playerId)
+      }
+    }
   }
 
-  setupBettingPhase(): void {
+  setupBettingPhase(): void{
     const entries = this.getRaceEntries()
 
     // Calculate power ratings and odds for each entry
@@ -635,6 +835,13 @@ export class GameRoom {
       type: 'betting_open',
       entries: entriesWithOdds,
     })
+
+    // AI players don't bet, just auto-ready
+    for (const [playerId, player] of this.players) {
+      if (player.isAI && !player.eliminated) {
+        player.ready = true
+      }
+    }
   }
 
   runRace(): void {
@@ -765,10 +972,10 @@ export class GameRoom {
     // Calculate bet results before applying race rewards
     const betResults = this.calculateBetResults(placements)
 
-    // Only apply race rewards to real players, not AI horses
+    // Apply race rewards to all players (including AI)
     for (const placement of placements) {
       const player = this.players.get(placement.playerId)
-      if (!player) continue // Skip AI horses
+      if (!player) continue // Skip if player doesn't exist
 
       player.gold += placement.goldReward
       player.hearts -= placement.heartsDamage
@@ -803,6 +1010,13 @@ export class GameRoom {
         .map((p) => p.id),
       events: raceOutcome.events,
     })
+
+    // AI players auto-ready for next round
+    for (const [playerId, player] of this.players) {
+      if (player.isAI && !player.eliminated) {
+        player.ready = true
+      }
+    }
   }
 
   showResults(): void {
@@ -837,7 +1051,9 @@ export class GameRoom {
     equipment: Record<string, unknown>
     strategy: Record<string, unknown>
   }> {
-    const playerEntries = Array.from(this.players.values())
+    // All players (including AI) are now in this.players
+    // No need to generate temporary AI entries
+    return Array.from(this.players.values())
       .filter((p) => !p.eliminated && p.raceEntry)
       .map((p) => ({
         playerId: p.id,
@@ -847,14 +1063,6 @@ export class GameRoom {
         equipment: p.raceEntry!.equipment,
         strategy: p.raceEntry!.strategy,
       }))
-
-    // Fill remaining slots with AI horses to reach 8 total
-    const aiEntriesNeeded = Math.max(0, MAX_PLAYERS - playerEntries.length)
-    const aiEntries = Array.from({ length: aiEntriesNeeded }, (_, i) =>
-      generateAIRaceEntry(i + 1)
-    )
-
-    return [...playerEntries, ...aiEntries]
   }
 
   calculateBetResults(placements: Array<{ playerId: string; position: number }>): Array<{
@@ -1545,8 +1753,9 @@ export class GameRoom {
   broadcastLobbyState(): void {
     const players = Array.from(this.players.values()).map((p) => ({
       id: p.id,
-      name: p.username,
+      name: p.isAI ? `${p.username} 🤖` : p.username,  // Add robot emoji for AI
       ready: p.ready,
+      isAI: p.isAI || false,
     }))
 
     this.broadcast({

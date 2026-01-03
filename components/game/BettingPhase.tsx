@@ -321,6 +321,7 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
                               <h3 className="font-bold">
                                 {entry.playerName}
                                 {isOwnHorse && ' (You)'}
+                                {entry.playerId.startsWith('ai-player-') && ' 🤖'}
                               </h3>
                               <div className="text-sm opacity-70">
                                 {entry.horse.name} ({entry.horse.bloodline})

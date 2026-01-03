@@ -155,6 +155,7 @@ export function ResultsPhase() {
                         <div className="font-bold">
                           {placement.playerName}
                           {isYou && ' (You)'}
+                          {placement.playerId.startsWith('ai-player-') && ' 🤖'}
                           {wasEliminatedPlayer && (
                             <span className="ml-2 text-[var(--accent-red)] text-sm">
                               💀 Eliminated
