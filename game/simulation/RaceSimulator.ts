@@ -605,7 +605,18 @@ export class RaceSimulator {
    */
   private generateOutcome(): RaceOutcome {
     const placements = Array.from(this.states.values())
-      .sort((a, b) => b.position - a.position) // Sort by position (furthest first)
+      .sort((a, b) => {
+        // Sort by finish tick (earliest finisher = 1st place)
+        // If both finished, compare finish ticks
+        if (a.finishTick !== null && b.finishTick !== null) {
+          return a.finishTick - b.finishTick
+        }
+        // If only one finished, they win
+        if (a.finishTick !== null) return -1
+        if (b.finishTick !== null) return 1
+        // If neither finished, sort by distance
+        return b.position - a.position
+      })
       .map((state, index) => {
         const participant = this.config.participants.find(
           (p) => p.playerId === state.playerId,

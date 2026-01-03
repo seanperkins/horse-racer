@@ -53,9 +53,9 @@ export function calculateDerivedStats(
   }
 
   // Base Speed = Horse.Speed + (10 - Jockey.Weight) × 0.5
-  // Multiply by 2 to scale to realistic meters/second (10-20 m/s range for racehorses)
+  // Multiply by 4 to scale to realistic meters/second (20-40 m/s range for racehorses)
   const baseSpeed =
-    (modifiedHorseStats.speed + (10 - modifiedJockeyStats.weight) * 0.5) * 2
+    (modifiedHorseStats.speed + (10 - modifiedJockeyStats.weight) * 0.5) * 4
 
   // Stamina Pool = Horse.Stamina × (1 + Jockey.Timing × 0.1)
   const staminaPool =
