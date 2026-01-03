@@ -7,6 +7,7 @@ import type { RaceInputs } from "@/types/messages";
 import { RaceSimulator } from "@/game/simulation/RaceSimulator";
 import { TrackInfo, RaceCanvas, RaceSidebar, RaceEventLog } from "./race";
 import { useGameStore } from "@/lib/store/gameStore";
+import { SpriteManager } from "@/lib/sprites/SpriteManager";
 
 interface PixiRaceRendererProps {
   raceInputs: RaceInputs;
@@ -74,6 +75,7 @@ export function PixiRaceRenderer({
   const midBackgroundRef = useRef<PIXI.Container | null>(null);
   const horseSpriteTextureRef = useRef<PIXI.Texture | null>(null);
   const gallopingSpriteTextureRef = useRef<PIXI.Texture | null>(null);
+  const spriteManagerRef = useRef<SpriteManager | null>(null);
 
   // Race configuration (responsive)
   const CANVAS_WIDTH = canvasSize.width;
@@ -193,7 +195,7 @@ export function PixiRaceRenderer({
     console.log('[PIXI] Loading horse sprite sheets...');
     const [staticTexture, gallopingTexture] = await Promise.all([
       PIXI.Assets.load('/sprites/horse-sprites.png'),
-      PIXI.Assets.load('/sprites/galloping-sprites.png')
+      PIXI.Assets.load('/sprites/better-galloping.png')
     ]);
     horseSpriteTextureRef.current = staticTexture;
     gallopingSpriteTextureRef.current = gallopingTexture;
@@ -201,6 +203,17 @@ export function PixiRaceRenderer({
       static: { width: staticTexture?.width, height: staticTexture?.height },
       galloping: { width: gallopingTexture?.width, height: gallopingTexture?.height }
     });
+
+    // Initialize SpriteManager for composite sprites (optional upgrade path)
+    try {
+      const spriteManager = new SpriteManager();
+      await spriteManager.loadAllAssets();
+      spriteManagerRef.current = spriteManager;
+      console.log('[PIXI] SpriteManager initialized successfully');
+    } catch (error) {
+      console.log('[PIXI] SpriteManager not available yet, using legacy sprites:', error);
+      // Fallback to existing sprite system
+    }
 
     // Draw placeholder track (will be redrawn when race starts)
     drawTrack(app, 1000); // Default 1000m track for initialization
@@ -370,12 +383,12 @@ export function PixiRaceRenderer({
 
     // Use galloping sprite sheet if available, otherwise fallback to graphics
     if (gallopingSpriteTextureRef.current) {
-      // Galloping sprite sheet is 96x96 (2 frames x 2 rows, grayscale)
-      // Each sprite is 48x48 pixels
-      const SPRITE_WIDTH = 48;
-      const SPRITE_HEIGHT = 48;
+      // Galloping sprite sheet is 256x256 (4 frames x 4 rows)
+      // Each sprite is 64x64 pixels
+      const SPRITE_WIDTH = 64;
+      const SPRITE_HEIGHT = 64;
 
-      // Use row 0 for all horses (both rows have same animation)
+      // Use row 0 for all horses (we have 4 rows available)
       const row = 0;
       const col = 0; // Start with first frame
 
@@ -749,24 +762,33 @@ export function PixiRaceRenderer({
         }
         horse.container.position.x = horse.currentX;
 
-        // Animate galloping frames when moving
-        const isMoving = !horse.isStumbled && horse.targetX > horse.currentX + 1;
-        if (isMoving && horse.body instanceof PIXI.Sprite && gallopingSpriteTextureRef.current) {
-          // Update animation timer (cycle every 100ms)
+        // Animate galloping frames for all horses (except stumbled ones)
+        // Check if horse has finished
+        const horseParticipant = state.participants.find(p => p.playerId === horse.playerId);
+        const horseFinished = horseParticipant?.finishTick !== null;
+
+        // Animate if not stumbled and not finished
+        const shouldAnimate = !horse.isStumbled && !horseFinished;
+        if (shouldAnimate && horse.body instanceof PIXI.Sprite && gallopingSpriteTextureRef.current) {
+          // Update animation timer (cycle every 50ms for smooth galloping - 16 frames)
           horse.animationTimer += tickInterval;
-          if (horse.animationTimer >= 100) {
+          if (horse.animationTimer >= 50) {
             horse.animationTimer = 0;
-            horse.animationFrame = (horse.animationFrame + 1) % 2; // 2 frames per animation
+            horse.animationFrame = (horse.animationFrame + 1) % 16; // 16 frames total (4x4 grid)
 
             // Update sprite texture to next frame
-            const SPRITE_WIDTH = 48;
-            const SPRITE_HEIGHT = 48;
-            const row = 0; // Use first row for all horses
+            const SPRITE_WIDTH = 64;
+            const SPRITE_HEIGHT = 64;
+            const FRAMES_PER_ROW = 4;
+
+            // Calculate row and column from frame number
+            const row = Math.floor(horse.animationFrame / FRAMES_PER_ROW);
+            const col = horse.animationFrame % FRAMES_PER_ROW;
 
             horse.body.texture = new PIXI.Texture({
               source: gallopingSpriteTextureRef.current.source,
               frame: new PIXI.Rectangle(
-                horse.animationFrame * SPRITE_WIDTH,
+                col * SPRITE_WIDTH,
                 row * SPRITE_HEIGHT,
                 SPRITE_WIDTH,
                 SPRITE_HEIGHT
