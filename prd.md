@@ -16,6 +16,8 @@
 4. [Betting System](#4-betting-system)
 5. [Training & Upgrades](#5-training--upgrades)
 6. [Synergies & Bloodlines](#6-synergies--bloodlines)
+   - [Jockey-Horse Bonding System](#64-jockey-horse-bonding-system)
+   - [Jockey Progression System](#65-jockey-progression-system)
 7. [Tracks & Terrain](#7-tracks--terrain)
 8. [Equipment](#8-equipment)
 9. [Race Strategy](#9-race-strategy)
@@ -189,6 +191,8 @@ Max Total:  28 points (after full training)
 | **Weight** | Physical mass     | Lower = speed bonus; Higher = settles volatile horses    |
 
 **Stat Budget:** 12-22 total points across three stats
+
+**Note:** The Skill stat represents a jockey's technical ability and stamina management during the race. Higher Skill means better stamina conservation, cleaner obstacle navigation, and more efficient overall race execution.
 
 ### 3.3 Derived Stats
 
@@ -410,6 +414,75 @@ Jockeys may have one **trait** that provides conditional bonuses:
 | **Lightweight**     | -1 Weight (stacks with base Weight)                 |
 | **Veteran**         | +2 Timing when Stamina below 30%                    |
 | **Lucky**           | 15% chance to avoid any stumble                     |
+
+### 6.4 Jockey-Horse Bonding System
+
+Jockeys develop bonds with horses they race together. The more races a specific jockey-horse pair completes, the stronger their bond becomes, unlocking performance bonuses.
+
+**Bond Levels:**
+
+| Bond Level | Races Together | Bonus                                                      |
+| ---------- | -------------- | ---------------------------------------------------------- |
+| **Level 0** | 0 races       | No bonus (default)                                         |
+| **Level 1** | 1-2 races     | +1 to Jockey's Timing with this horse                      |
+| **Level 2** | 3-4 races     | +1 Timing, +0.5 effective Skill                            |
+| **Level 3** | 5-7 races     | +1 Timing, +1 Skill, -5% Stamina burn                      |
+| **Level 4** | 8+ races      | +2 Timing, +1 Skill, -5% Stamina burn, +5% consistency     |
+
+**Implementation Notes:**
+
+- Bonding is tracked per jockey-horse pair within a match (resets each new match)
+- Bonuses apply cumulatively with base stats
+- Bonding encourages committing to a stable rather than constantly rotating
+- Visual indicator shows bond level on horse/jockey cards
+- Bond level increases immediately after race completion, applying to the next race
+
+**Strategic Implications:**
+
+- **Early Investment:** Players who find a working jockey-horse pair early and stick with them gain increasing advantages
+- **Loyalty Reward:** Punishes players who constantly swap units trying to "chase the meta"
+- **Comeback Pressure:** Players behind must decide: stick with bonded pair or try new combinations
+- **Synergy with Training:** Encourages investing training into horses you're bonding with
+
+### 6.5 Jockey Progression System
+
+Jockeys gain experience through use, improving their base stats over the course of a match. This rewards players for investing in and retaining jockeys rather than constantly replacing them.
+
+**Experience Gain:**
+
+- **Per Race Completion:** +1 XP
+- **Top 3 Finish:** +1 bonus XP
+- **Win:** +2 bonus XP
+
+**Stat Improvements:**
+
+| Total XP | Improvement                                                |
+| -------- | ---------------------------------------------------------- |
+| 3 XP     | +1 to lowest stat (Skill, Timing, or Weight reduction)     |
+| 6 XP     | +1 to second-lowest stat                                   |
+| 10 XP    | +1 to highest stat                                         |
+| 15 XP    | +1 to any stat of player's choice                          |
+
+**Implementation Notes:**
+
+- XP resets each match (like all progression)
+- Stat improvements are temporary for the match duration
+- Players see progress bar showing XP toward next improvement
+- Improvements apply immediately after the race where XP threshold is reached
+- Weight "improvement" means -1 Weight (lighter is better for speed)
+
+**Balancing Considerations:**
+
+- Early jockeys (hired in rounds 1-3) have more time to gain improvements
+- Late-game jockey purchases are still viable but lack progression bonus
+- Maximum theoretical improvement: ~+3 total stats by final rounds (requires consistent racing)
+- Creates tension: sell experienced jockey for gold, or keep the stat bonuses?
+
+**Interaction with Bonding:**
+
+- Jockey progression and bonding stack multiplicatively
+- A Level 4 bonded jockey with +3 progression stats becomes significantly powerful
+- Encourages finding "your jockey" early and building around them
 
 ---
 
