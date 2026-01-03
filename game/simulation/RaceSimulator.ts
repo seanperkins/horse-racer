@@ -122,8 +122,13 @@ export class RaceSimulator {
       }
 
       // Safety check: if simulation runs too long, something is wrong
-      if (this.currentTick > 10000) {
-        console.error('Race simulation exceeded 10000 ticks (16.7 minutes), stopping')
+      // Increased limit to allow all horses to finish (100k ticks = ~2.7 hours at 10 ticks/sec)
+      if (this.currentTick > 100000) {
+        console.error('Race simulation exceeded 100000 ticks (~2.7 hours), stopping')
+        console.error('Unfinished horses:', Array.from(this.states.values())
+          .filter(s => s.position < this.raceDistance)
+          .map(s => ({ playerId: s.playerId, position: s.position, distance: this.raceDistance }))
+        )
         break
       }
     }
