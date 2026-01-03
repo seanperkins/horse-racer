@@ -23,7 +23,7 @@ interface RaceEvent {
 
 interface HorseSprite {
   container: PIXI.Container;
-  body: PIXI.Graphics;
+  body: PIXI.Sprite | PIXI.Graphics;
   nameText: PIXI.Text;
   statusText: PIXI.Text;
   playerId: string;
@@ -31,6 +31,13 @@ interface HorseSprite {
   targetX: number;
   currentX: number;
   isStumbled: boolean;
+  animationFrame: number;
+  animationTimer: number;
+}
+
+interface CameraState {
+  x: number; // Current camera X position
+  targetX: number; // Target camera X position
 }
 
 export function PixiRaceRenderer({
@@ -52,15 +59,21 @@ export function PixiRaceRenderer({
   >([]);
   const finishersRef = useRef<Set<string>>(new Set());
   const [canvasSize, setCanvasSize] = useState({ width: 1200, height: 600 });
+  const cameraRef = useRef<CameraState>({ x: 0, targetX: 0 });
+  const trackContainerRef = useRef<PIXI.Container | null>(null);
+  const horseSpriteTextureRef = useRef<PIXI.Texture | null>(null);
+  const gallopingSpriteTextureRef = useRef<PIXI.Texture | null>(null);
 
   // Race configuration (responsive)
   const CANVAS_WIDTH = canvasSize.width;
   const CANVAS_HEIGHT = canvasSize.height;
   const LANE_HEIGHT = Math.max(40, CANVAS_HEIGHT / 10);
   const TRACK_PADDING = 20;
-  const HORSE_WIDTH = Math.max(30, CANVAS_WIDTH / 30);
-  const HORSE_HEIGHT = Math.max(30, CANVAS_WIDTH / 30);
-  const TRACK_LENGTH_PIXELS = CANVAS_WIDTH - TRACK_PADDING * 2;
+  const HORSE_WIDTH = 80;  // Fixed size for better visibility
+  const HORSE_HEIGHT = 80; // Fixed size for better visibility
+  // Scale: 1 meter = 2 pixels for better visual representation
+  const METERS_TO_PIXELS = 2;
+  const TRACK_LENGTH_PIXELS = CANVAS_WIDTH - TRACK_PADDING * 2; // Viewport width
 
   // Calculate responsive canvas size
   useEffect(() => {
@@ -164,6 +177,19 @@ export function PixiRaceRenderer({
     canvasRef.current.appendChild(app.canvas as HTMLCanvasElement);
     appRef.current = app;
 
+    // Preload the horse sprite sheets
+    console.log('[PIXI] Loading horse sprite sheets...');
+    const [staticTexture, gallopingTexture] = await Promise.all([
+      PIXI.Assets.load('/sprites/horse-sprites.png'),
+      PIXI.Assets.load('/sprites/galloping-sprites.png')
+    ]);
+    horseSpriteTextureRef.current = staticTexture;
+    gallopingSpriteTextureRef.current = gallopingTexture;
+    console.log('[PIXI] Horse sprites loaded:', {
+      static: { width: staticTexture?.width, height: staticTexture?.height },
+      galloping: { width: gallopingTexture?.width, height: gallopingTexture?.height }
+    });
+
     // Draw track
     drawTrack(app);
   };
@@ -220,62 +246,110 @@ export function PixiRaceRenderer({
   ): HorseSprite => {
     const container = new PIXI.Container();
 
-    // Horse body (simple geometric representation)
-    const body = new PIXI.Graphics();
+    let body: any;
 
-    // Draw horse as rounded rectangle with head
-    const horseColor = getHorseColor(participant.horse.bloodline);
-    body.roundRect(
-      -HORSE_WIDTH / 2,
-      -HORSE_HEIGHT / 2,
-      HORSE_WIDTH,
-      HORSE_HEIGHT,
-      8
-    );
-    body.fill(horseColor);
+    // Use galloping sprite sheet if available, otherwise fallback to graphics
+    if (gallopingSpriteTextureRef.current) {
+      // Galloping sprite sheet is 96x96 (2 frames x 2 rows, grayscale)
+      // Each sprite is 48x48 pixels
+      const SPRITE_WIDTH = 48;
+      const SPRITE_HEIGHT = 48;
 
-    // Draw simple head
-    body.circle(HORSE_WIDTH / 2 - 5, 0, 12);
-    body.fill(horseColor);
+      // Use row 0 for all horses (both rows have same animation)
+      const row = 0;
+      const col = 0; // Start with first frame
 
-    // Add white eye
-    body.circle(HORSE_WIDTH / 2 - 2, -3, 3);
-    body.fill(0xffffff);
+      // Create texture from sprite sheet region (first frame)
+      const texture = new PIXI.Texture({
+        source: gallopingSpriteTextureRef.current.source,
+        frame: new PIXI.Rectangle(
+          col * SPRITE_WIDTH,
+          row * SPRITE_HEIGHT,
+          SPRITE_WIDTH,
+          SPRITE_HEIGHT
+        ),
+      });
 
-    container.addChild(body);
+      const sprite = new PIXI.Sprite(texture);
+      sprite.width = HORSE_WIDTH;
+      sprite.height = HORSE_HEIGHT;
+      sprite.anchor.set(0.5, 0.5); // Center the sprite
 
-    // Player name above horse
+      // Apply simple color tint to differentiate horses
+      // This will tint the entire sprite but is simpler and compatible
+      const bloodlineToTint: Record<string, number> = {
+        "Northern Storm": 0x6b9bd1,  // Blue
+        "Desert Wind": 0xd4a574,     // Sandy brown
+        "Iron Heart": 0x888888,      // Gray
+        "Wild Card": 0xc94d4d,       // Red
+        "Mudblood": 0x8b6f47,        // Brown
+        "Royal Line": 0xd4af37,      // Gold
+      };
+
+      sprite.tint = bloodlineToTint[participant.horse.bloodline] || 0xffffff;
+
+      body = sprite;
+      container.addChild(sprite);
+
+      console.log('[PIXI] Created galloping horse for', participant.playerName, {
+        bloodline: participant.horse.bloodline,
+        row,
+        width: HORSE_WIDTH,
+        height: HORSE_HEIGHT,
+        lane
+      });
+    } else {
+      // Fallback to colored rectangles
+      const graphics = new PIXI.Graphics();
+      const horseColor = getHorseColor(participant.horse.bloodline);
+
+      graphics
+        .rect(-HORSE_WIDTH/2, -HORSE_HEIGHT/2, HORSE_WIDTH, HORSE_HEIGHT)
+        .fill(horseColor);
+
+      body = graphics;
+      container.addChild(graphics);
+
+      console.log('[PIXI] Created fallback graphics for', participant.playerName);
+    }
+
+    // Add name text above horse
     const nameText = new PIXI.Text({
-      text: participant.playerName || participant.playerId.slice(0, 8),
+      text: participant.playerName,
       style: {
-        fontFamily: "Arial",
         fontSize: 12,
-        fontWeight: "bold",
         fill: 0xffffff,
-        stroke: { color: 0x000000, width: 2 },
-      },
+        fontWeight: 'bold',
+      }
     });
     nameText.anchor.set(0.5, 1);
-    nameText.position.set(0, -HORSE_HEIGHT / 2 - 5);
+    nameText.position.set(0, -HORSE_HEIGHT/2 - 5);
     container.addChild(nameText);
 
-    // Status text below horse (for stumbles, etc.)
+    // Add status text below horse
     const statusText = new PIXI.Text({
-      text: "",
+      text: '',
       style: {
-        fontFamily: "Arial",
         fontSize: 10,
-        fill: 0xff4444,
-        stroke: { color: 0x000000, width: 2 },
-      },
+        fill: 0xff0000,
+        fontWeight: 'bold',
+      }
     });
     statusText.anchor.set(0.5, 0);
-    statusText.position.set(0, HORSE_HEIGHT / 2 + 5);
+    statusText.position.set(0, HORSE_HEIGHT/2 + 5);
     container.addChild(statusText);
 
     // Initial position
     const laneY = TRACK_PADDING + lane * LANE_HEIGHT + LANE_HEIGHT / 2;
     container.position.set(TRACK_PADDING, laneY);
+
+    console.log('[PIXI] Container positioned at', {
+      x: TRACK_PADDING,
+      y: laneY,
+      lane,
+      LANE_HEIGHT,
+      TRACK_PADDING
+    });
 
     return {
       container,
@@ -287,6 +361,8 @@ export function PixiRaceRenderer({
       targetX: TRACK_PADDING,
       currentX: TRACK_PADDING,
       isStumbled: false,
+      animationFrame: 0,
+      animationTimer: 0,
     };
   };
 
@@ -329,22 +405,29 @@ export function PixiRaceRenderer({
       raceInputs.entries.length,
       "entries"
     );
+    console.log("Race seed:", raceInputs.seed);
+
+    // Build participants exactly as they'll be passed to simulator
+    const participants = raceInputs.entries.map((entry) => ({
+      playerId: entry.playerId,
+      playerName: entry.playerName,
+      horse: entry.horse,
+      jockey: entry.jockey,
+      equipment: entry.equipment || {},
+      strategy: entry.strategy || {
+        start: "steady",
+        mid: "react",
+        finish: "maintain",
+      },
+      bloodlineBonuses: (entry as any).bloodlineBonuses || undefined,
+    }));
+
+    // Removed verbose simulator input logging - we confirmed it matches server
+
     // Create simulator
     const simulator = new RaceSimulator({
       track: raceInputs.track as any,
-      participants: raceInputs.entries.map((entry) => ({
-        playerId: entry.playerId,
-        playerName: entry.playerName,
-        horse: entry.horse,
-        jockey: entry.jockey,
-        equipment: entry.equipment || {},
-        strategy: entry.strategy || {
-          start: "steady",
-          mid: "react",
-          finish: "sprint",
-        },
-        bloodlineBonuses: (entry as any).bloodlineBonuses || undefined,
-      })) as any,
+      participants: participants as any,
       seed: raceInputs.seed || "default-seed",
     });
     simulatorRef.current = simulator;
@@ -370,10 +453,13 @@ export function PixiRaceRenderer({
       );
       horsesRef.current.set(entry.playerId, horse);
       appRef.current!.stage.addChild(horse.container);
-      console.log(
-        `Horse sprite created at position:`,
-        horse.container.position
-      );
+      console.log(`[PIXI] Added ${entry.playerName} to stage`, {
+        position: horse.container.position,
+        stageChildren: appRef.current!.stage.children.length,
+        containerChildren: horse.container.children.length,
+        visible: horse.container.visible,
+        alpha: horse.container.alpha
+      });
     });
 
     console.log("Starting animation loop...");
@@ -403,10 +489,8 @@ export function PixiRaceRenderer({
 
     console.log("Setting up interval with", tickInterval, "ms");
     const raceInterval = setInterval(() => {
-      console.log("Interval tick running...");
       // Advance simulation by one tick
       const raceOngoing = simulator.advanceTick();
-      console.log("Race ongoing:", raceOngoing);
 
       // Get current state after tick
       const state = simulator.getCurrentState();
@@ -450,30 +534,47 @@ export function PixiRaceRenderer({
         setRaceEvents((prev) => [...newEvents, ...prev].slice(0, 10)); // Keep last 10 events
       }
 
+      // Sort participants by actual finish order for visual accuracy
+      const finishedParticipants = state.participants.filter(p => p.finishTick !== null);
+      const runningParticipants = state.participants.filter(p => p.finishTick === null);
+
+      // Sort finished participants by their actual finish order
+      finishedParticipants.sort((a, b) => {
+        if (a.finishTick !== b.finishTick) return a.finishTick! - b.finishTick!;
+        // If same tick, use exact finish position
+        return (b.finishPosition || b.position) - (a.finishPosition || a.position);
+      });
+
       // Update horse positions
       state.participants.forEach((p) => {
         const horse = horsesRef.current.get(p.playerId);
         if (!horse) return;
 
         // Calculate target X position based on distance covered
-        const progress = p.position / raceDistanceMeters;
+        let progress = p.position / raceDistanceMeters;
 
-        // Stop at finish line (progress = 1.0)
+        // For finished horses, adjust their position to reflect finish order
+        if (p.finishTick !== null) {
+          const finishIndex = finishedParticipants.findIndex(fp => fp.playerId === p.playerId);
+          // Place finished horses just past the finish line, spaced by finish order
+          // This ensures visual order matches actual finish order
+          progress = 1.0 + (finishIndex * 0.02); // Small spacing past finish line
+        }
+
         horse.targetX =
-          TRACK_PADDING + Math.min(progress, 1.0) * TRACK_LENGTH_PIXELS;
+          TRACK_PADDING + Math.min(progress, 1.05) * TRACK_LENGTH_PIXELS;
 
-        // Check if horse just crossed finish line
-        if (progress >= 1.0 && !finishersRef.current.has(p.playerId)) {
+        // Track finishers and update podium
+        if (p.finishTick !== null && !finishersRef.current.has(p.playerId)) {
           finishersRef.current.add(p.playerId);
-          const participant = raceInputs.entries.find(
-            (e: any) => e.playerId === p.playerId
-          );
-          if (participant && finishersRef.current.size <= 3) {
-            setPodium((prev) => [
-              ...prev,
-              { playerId: p.playerId, playerName: participant.playerName },
-            ]);
-          }
+
+          // Update podium based on actual simulation results
+          const outcome = simulator.getOutcome();
+          const top3 = outcome.placements.slice(0, 3);
+          setPodium(top3.map(placement => ({
+            playerId: placement.playerId,
+            playerName: placement.playerName,
+          })));
         }
 
         // Update status
@@ -486,18 +587,36 @@ export function PixiRaceRenderer({
         }
       });
 
-      // Smooth interpolation of positions
+      // Smooth interpolation of positions and animate sprites
       horsesRef.current.forEach((horse) => {
-        // Lerp current position toward target
-        horse.currentX += (horse.targetX - horse.currentX) * 0.3;
+        // Lerp current position toward target (increased from 0.3 to 0.7 for more accurate positions)
+        horse.currentX += (horse.targetX - horse.currentX) * 0.7;
         horse.container.position.x = horse.currentX;
 
-        // Bobbing animation when moving
-        if (!horse.isStumbled && horse.targetX > horse.currentX + 1) {
-          const bob = Math.sin(Date.now() * 0.01) * 3;
-          horse.body.position.y = bob;
-        } else {
-          horse.body.position.y = 0;
+        // Animate galloping frames when moving
+        const isMoving = !horse.isStumbled && horse.targetX > horse.currentX + 1;
+        if (isMoving && horse.body instanceof PIXI.Sprite && gallopingSpriteTextureRef.current) {
+          // Update animation timer (cycle every 100ms)
+          horse.animationTimer += tickInterval;
+          if (horse.animationTimer >= 100) {
+            horse.animationTimer = 0;
+            horse.animationFrame = (horse.animationFrame + 1) % 2; // 2 frames per animation
+
+            // Update sprite texture to next frame
+            const SPRITE_WIDTH = 48;
+            const SPRITE_HEIGHT = 48;
+            const row = 0; // Use first row for all horses
+
+            horse.body.texture = new PIXI.Texture({
+              source: gallopingSpriteTextureRef.current.source,
+              frame: new PIXI.Rectangle(
+                horse.animationFrame * SPRITE_WIDTH,
+                row * SPRITE_HEIGHT,
+                SPRITE_WIDTH,
+                SPRITE_HEIGHT
+              ),
+            });
+          }
         }
       });
 
