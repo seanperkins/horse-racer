@@ -89,6 +89,13 @@ export default function GamePageClient({ userId, username }: GamePageClientProps
           hearts: message.hearts,
           inventory: message.inventory,
         })
+        // Update prestige and stableSlots from server
+        if ('prestige' in message) {
+          useGameStore.getState().setPrestige(message.prestige)
+        }
+        if ('stableSlots' in message) {
+          useGameStore.getState().setStableSlots(message.stableSlots)
+        }
         break
 
       case 'track_info':

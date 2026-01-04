@@ -275,9 +275,9 @@ Add handler for `expand_stable` message.
 - [x] 6. ✅ `UniversalHeader.tsx` - Sync skip action with store
 
 ### Milestone 3: Economy Display
-- [ ] 7. `UniversalHeader.tsx` - Add Prestige display
-- [ ] 8. `StableCapacityBar.tsx` - Create inline expansion component
-- [ ] 9. `GamePageClient.tsx` - Integration
+- [x] 7. ✅ `UniversalHeader.tsx` - Add Prestige display
+- [x] 8. ✅ `StableCapacityBar.tsx` - Create inline expansion component
+- [x] 9. ✅ `GamePageClient.tsx` - Integration
 
 ### Milestone 4: Betting Changes
 - [ ] 10. `server/GameRoom.ts` - Betting pays Prestige not gold
