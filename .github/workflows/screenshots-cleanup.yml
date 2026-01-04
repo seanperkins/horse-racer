@@ -43,19 +43,16 @@ jobs:
           # Remove PR folder
           rm -rf "pr-${PR_NUMBER}"
 
-          # Commit and push
+          # Create a fresh orphan branch with current state to eliminate history
+          git checkout --orphan screenshots-clean
           git add .
-          git commit -m "Cleanup screenshots for closed PR #${PR_NUMBER}" || echo "No changes to commit"
+          git commit -m "Screenshots (cleaned up PR #${PR_NUMBER})" || {
+            # If nothing to commit, the branch is now empty
+            echo "Screenshots branch is now empty"
+            git commit --allow-empty -m "Empty screenshots branch"
+          }
 
-          # Retry push up to 3 times in case of concurrent updates
-          for i in 1 2 3; do
-            if git push origin screenshots; then
-              echo "Push succeeded on attempt $i"
-              break
-            else
-              echo "Push failed on attempt $i, pulling and retrying..."
-              git pull --rebase origin screenshots
-            fi
-          done
+          # Force push to replace the screenshots branch entirely
+          git push origin screenshots-clean:screenshots --force
 
-          echo "Cleaned up screenshots for PR #${PR_NUMBER}"
+          echo "Cleaned up screenshots for PR #${PR_NUMBER} (history removed)"
