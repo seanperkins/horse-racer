@@ -78,9 +78,11 @@ export async function getUserFromRequest(
     })
 
     if (!decoded || !decoded.id) {
-      console.log('🔒 Token decode failed or missing id')
+      console.log('🔒 Token decode failed or missing id', decoded)
       return null
     }
+
+    console.log(`🔒 Successfully decoded token for user: ${decoded.id}`)
 
     return {
       id: decoded.id as string,
@@ -88,7 +90,11 @@ export async function getUserFromRequest(
       email: decoded.email as string | undefined,
     }
   } catch (error) {
-    console.error('Error extracting user from request:', error)
+    console.error('🔒 Error extracting user from request:', error)
+    if (error instanceof Error) {
+      console.error('🔒 Error message:', error.message)
+      console.error('🔒 Error stack:', error.stack)
+    }
     return null
   }
 }
