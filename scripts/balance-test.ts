@@ -69,7 +69,6 @@ function generateTestJockey(index: number): Jockey {
       weight: 5 + Math.floor(Math.random() * 3),
     },
     style: 'classic',
-    cost: 2,
   };
 }
 
