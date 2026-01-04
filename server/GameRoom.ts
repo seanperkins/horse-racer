@@ -1,6 +1,5 @@
-// @ts-nocheck
 import type { WebSocketServer, WebSocket } from 'ws'
-import type { GamePhase, Player, Horse, Jockey, Equipment, Track } from '@/types/game'
+import type { Player, Horse, Jockey, Equipment, Track } from '@/types/game'
 import { RaceSimulator } from '@/game/simulation/RaceSimulator'
 import {
   calculatePowerRating,
@@ -11,6 +10,9 @@ import { generateShopInventory } from '@/game/shop'
 import { generateTrackForRound } from '@/game/tracks'
 import { generateHorse, generateJockey } from '@/game/generators'
 import { prisma } from '@/lib/prisma'
+
+// GameRoom uses string literals for phases, not the enum
+type GamePhase = 'lobby' | 'shop' | 'preparation' | 'betting' | 'race' | 'results'
 
 const MAX_PLAYERS = 8
 const HOUSE_EDGE = 0.95
@@ -26,15 +28,18 @@ const PHASE_DURATIONS: Record<GamePhase, number> = {
   results: 60, // Increased to allow players to review results and ready up
 }
 
-interface PlayerData extends Player {
+interface PlayerData extends Omit<Player, 'userId' | 'raceEntry' | 'currentBet'> {
   ready: boolean
   isAI?: boolean  // Flag to identify AI players
+  userId?: string  // Optional for AI players
+  // Override raceEntry from Player with more flexible types for server-side use
   raceEntry?: {
     horse: Horse
     jockey: Jockey
-    equipment: Record<string, unknown>
-    strategy: Record<string, unknown>
+    equipment: any
+    strategy: any
   }
+  // Override currentBet from Player with more flexible types for server-side use
   currentBet?: {
     type: string
     targetPlayerId?: string
@@ -497,7 +502,11 @@ export class GameRoom {
             .filter((p) => p.raceEntry)
             .map((p) => {
               const entry = p.raceEntry!
-              const bloodlineBonuses = calculateBloodlineBonuses(entry.horse)
+              const bloodlineBonuses = calculateBloodlineBonuses(
+                entry.horse,
+                p.horses,
+                this.currentTrack?.surface
+              )
               const terrainFactor = this.currentTrack ? 1.0 : 1.0 // Default terrain factor
               const powerRating = calculatePowerRating(
                 entry.horse,

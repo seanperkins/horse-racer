@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { WebSocketServer, WebSocket } from 'ws'
 import { ClientMessageSchema } from '@/types/messages'
 import type { ClientMessage } from '@/types/messages'
@@ -69,7 +68,7 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
         // Helper function to ensure currentRoom is set
         const ensureRoom = (): GameRoom | null => {
           if (!currentRoom) {
-            currentRoom = findRoomByPlayerId(playerId)
+            currentRoom = findRoomByPlayerId(playerId) ?? null
             if (currentRoom) {
               console.log(`📍 Restored currentRoom to: ${currentRoom.roomId} for player ${playerId}`)
             }
