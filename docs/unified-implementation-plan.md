@@ -267,7 +267,7 @@ Add handler for `expand_stable` message.
 ### Milestone 1: Core Infrastructure
 - [x] 1. ✅ `types/game.ts` - Add SubmittedEntry type
 - [x] 2. ✅ `lib/store/gameStore.ts` - Add all new state fields
-- [ ] 3. `server/GameRoom.ts` - Add prestige, stableSlots to player state
+- [x] 3. ✅ `server/GameRoom.ts` - Add prestige, stableSlots to player state
 - [ ] 4. `types/messages.ts` - Update message types
 
 ### Milestone 2: UI State Sync (Issue #1)

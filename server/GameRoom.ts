@@ -32,6 +32,8 @@ interface PlayerData extends Omit<Player, 'userId' | 'raceEntry' | 'currentBet'>
   ready: boolean
   isAI?: boolean  // Flag to identify AI players
   userId?: string  // Optional for AI players
+  prestige: number  // Economy currency for progression
+  stableSlots: number  // Number of horse slots (1-3)
   // Override raceEntry from Player with more flexible types for server-side use
   raceEntry?: {
     horse: Horse
@@ -193,6 +195,8 @@ export class GameRoom {
       username: playerName,
       gold: 10,
       hearts: 5,
+      prestige: 0,
+      stableSlots: 1,
       eliminated: false,
       ready: false,
       horses: [],
@@ -250,6 +254,8 @@ export class GameRoom {
         username: `AI Racer ${i}`,
         gold: 10,
         hearts: 5,
+        prestige: 0,
+        stableSlots: 1,
         eliminated: false,
         ready: true,  // AI always ready
         isAI: true,
@@ -301,6 +307,8 @@ export class GameRoom {
           username: `AI Racer ${nextAINumber}`,
           gold: 10,
           hearts: 5,
+          prestige: 0,
+          stableSlots: 1,
           eliminated: false,
           ready: true,
           isAI: true,
@@ -441,6 +449,8 @@ export class GameRoom {
       type: 'player_state',
       gold: player.gold,
       hearts: player.hearts,
+      prestige: player.prestige,
+      stableSlots: player.stableSlots,
       inventory: {
         horses: player.horses,
         hiredJockey: player.hiredJockey,
@@ -1385,6 +1395,8 @@ export class GameRoom {
       type: 'player_state',
       gold: player.gold,
       hearts: player.hearts,
+      prestige: player.prestige,
+      stableSlots: player.stableSlots,
       inventory: {
         horses: player.horses,
         hiredJockey: player.hiredJockey,
@@ -1465,6 +1477,8 @@ export class GameRoom {
       type: 'player_state',
       gold: player.gold,
       hearts: player.hearts,
+      prestige: player.prestige,
+      stableSlots: player.stableSlots,
       inventory: {
         horses: player.horses,
         hiredJockey: player.hiredJockey,
@@ -1578,6 +1592,8 @@ export class GameRoom {
       type: 'player_state',
       gold: player.gold,
       hearts: player.hearts,
+      prestige: player.prestige,
+      stableSlots: player.stableSlots,
       inventory: {
         horses: player.horses,
         hiredJockey: player.hiredJockey,
@@ -1644,6 +1660,8 @@ export class GameRoom {
       type: 'player_state',
       gold: player.gold,
       hearts: player.hearts,
+      prestige: player.prestige,
+      stableSlots: player.stableSlots,
       inventory: {
         horses: player.horses,
         hiredJockey: player.hiredJockey,
@@ -1699,6 +1717,8 @@ export class GameRoom {
       type: 'player_state',
       gold: player.gold,
       hearts: player.hearts,
+      prestige: player.prestige,
+      stableSlots: player.stableSlots,
       inventory: {
         horses: player.horses,
         hiredJockey: player.hiredJockey,
