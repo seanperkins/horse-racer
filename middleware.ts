@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { rateLimiter, RATE_LIMITS, getClientIp } from '@/lib/utils/rateLimiter';
 
-export default function proxy(request: NextRequest) {
+export default function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Apply rate limiting to auth endpoints
