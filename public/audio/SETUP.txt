@@ -1,0 +1,23 @@
+Audio files are not included in the repository.
+
+To enable audio in the game, place MP3 files in the following locations:
+
+Music:
+- public/audio/music/lobby.mp3
+- public/audio/music/shop.mp3
+- public/audio/music/race.mp3
+
+Sound Effects:
+- public/audio/sfx/button_click.mp3
+- public/audio/sfx/purchase.mp3
+- public/audio/sfx/sell.mp3
+- public/audio/sfx/bet_place.mp3
+- public/audio/sfx/race_start.mp3
+- public/audio/sfx/race_finish.mp3
+- public/audio/sfx/stumble.mp3
+- public/audio/sfx/surge.mp3
+- public/audio/sfx/victory.mp3
+- public/audio/sfx/defeat.mp3
+- public/audio/sfx/ready_up.mp3
+
+The audio system will gracefully handle missing files.
