@@ -18,16 +18,23 @@ fi
 cd "$APP_DIR"
 
 echo "Installing dependencies..."
-npm ci
+# Use npm install instead of npm ci - faster for small changes
+npm install --prefer-offline --no-audit
 
 echo "Generating Prisma client..."
-npx prisma generate
+# Only regenerate if schema changed
+if [ prisma/schema.prisma -nt node_modules/.prisma/client/index.js ] 2>/dev/null || [ ! -f node_modules/.prisma/client/index.js ]; then
+  npx prisma generate
+else
+  echo "Prisma client up to date, skipping generation"
+fi
 
 echo "Applying database migrations..."
 npx prisma migrate deploy
 
 echo "Building Next.js app..."
-npm run build
+# Build with optimizations
+NODE_OPTIONS="--max-old-space-size=2048" npm run build
 
 echo "Configuring PM2 log rotation..."
 pm2 install pm2-logrotate >/dev/null 2>&1 || true
