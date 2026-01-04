@@ -1,13 +1,13 @@
 name: PR Screenshots
 
 on:
-  # Trigger on pushes to PR branches (works even for new workflows)
-  push:
-    branches:
-      - 'claude/**'
-      - 'feature/**'
-  # Manual trigger for testing
+  pull_request:
+    types: [opened, synchronize]
   workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   screenshots:
@@ -83,11 +83,108 @@ jobs:
             rm .server-pid
           fi
 
-      - name: List screenshots
-        if: always()
-        run: ls -la screenshots/ || echo "No screenshots directory"
+      - name: Upload screenshots to branch
+        if: success() && github.event_name == 'pull_request'
+        run: |
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Upload screenshots
+          # Create a unique folder for this PR/commit
+          SCREENSHOT_DIR="pr-${{ github.event.pull_request.number }}/${{ github.sha }}"
+
+          # Fetch and checkout screenshots branch (create if doesn't exist)
+          git fetch origin screenshots || true
+          git checkout screenshots || git checkout --orphan screenshots
+
+          # Clean up old files but keep structure
+          git rm -rf . || true
+
+          # Create directory and copy screenshots
+          mkdir -p "$SCREENSHOT_DIR"
+          cp /home/runner/work/horse-racer/horse-racer/screenshots/*.png "$SCREENSHOT_DIR/" || true
+
+          # Commit and push
+          git add .
+          git commit -m "Screenshots for PR #${{ github.event.pull_request.number }} @ ${{ github.sha }}" || true
+          git push origin screenshots --force
+
+      - name: Post screenshots to PR
+        if: success() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            const screenshotDir = 'screenshots';
+            const files = fs.readdirSync(screenshotDir).filter(f => f.endsWith('.png'));
+
+            if (files.length === 0) {
+              console.log('No screenshots found');
+              return;
+            }
+
+            const sha = context.sha;
+            const prNumber = context.payload.pull_request.number;
+            const repo = context.repo.repo;
+            const owner = context.repo.owner;
+            const baseUrl = `https://raw.githubusercontent.com/${owner}/${repo}/screenshots/pr-${prNumber}/${sha}`;
+
+            // Group screenshots by page
+            const pages = {};
+            for (const file of files) {
+              const match = file.match(/^(.+)-(mobile|tablet|desktop)\.png$/);
+              if (match) {
+                const [, page, viewport] = match;
+                if (!pages[page]) pages[page] = {};
+                pages[page][viewport] = `${baseUrl}/${file}`;
+              }
+            }
+
+            // Build markdown comment
+            let body = `## 📱 Screenshot Preview\n\n`;
+            body += `Screenshots for commit ${sha.substring(0, 7)}\n\n`;
+
+            for (const [page, viewports] of Object.entries(pages)) {
+              body += `### ${page.charAt(0).toUpperCase() + page.slice(1).replace(/-/g, ' ')}\n\n`;
+              body += `| Mobile (375px) | Tablet (768px) | Desktop (1280px) |\n`;
+              body += `|:---:|:---:|:---:|\n`;
+              body += `| ${viewports.mobile ? `<img src="${viewports.mobile}" width="200">` : '-'} `;
+              body += `| ${viewports.tablet ? `<img src="${viewports.tablet}" width="200">` : '-'} `;
+              body += `| ${viewports.desktop ? `<img src="${viewports.desktop}" width="200">` : '-'} |\n\n`;
+            }
+
+            // Find existing comment to update
+            const comments = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number: prNumber,
+            });
+
+            const botComment = comments.data.find(c =>
+              c.user.type === 'Bot' && c.body.includes('## 📱 Screenshot Preview')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: botComment.id,
+                body,
+              });
+              console.log('Updated existing comment');
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: prNumber,
+                body,
+              });
+              console.log('Created new comment');
+            }
+
+      - name: Upload screenshots artifact
         uses: actions/upload-artifact@v4
         if: always()
         with:
