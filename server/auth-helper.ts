@@ -64,18 +64,28 @@ export async function getUserFromRequest(
       return null
     }
 
-    // NextAuth v5 uses the cookie name (without prefix) as the salt
-    // Remove __Secure-, __Host- prefixes to get the base cookie name
-    const salt = cookieName.replace(/^__(Secure|Host)-/, '')
-
-    console.log(`🔒 Decoding with salt: ${salt}`)
+    // NextAuth v5 uses the cookie name as the salt
+    // Try with the full cookie name first, then without prefixes if that fails
     console.log(`🔒 Secret available: ${AUTH_SECRET ? 'yes (length: ' + AUTH_SECRET.length + ')' : 'no'}`)
 
-    const decoded = await decode({
+    // Try decoding with the full cookie name as salt
+    console.log(`🔒 Attempting decode with full cookie name as salt: ${cookieName}`)
+    let decoded = await decode({
       token,
       secret: AUTH_SECRET,
-      salt,
+      salt: cookieName,
     })
+
+    // If that fails, try with the base name (without __Secure-/__Host-)
+    if (!decoded || !decoded.id) {
+      const baseSalt = cookieName.replace(/^__(Secure|Host)-/, '')
+      console.log(`🔒 First attempt failed, trying with base salt: ${baseSalt}`)
+      decoded = await decode({
+        token,
+        secret: AUTH_SECRET,
+        salt: baseSalt,
+      })
+    }
 
     if (!decoded || !decoded.id) {
       console.log('🔒 Token decode failed or missing id', decoded)
