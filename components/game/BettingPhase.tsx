@@ -333,7 +333,7 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
                                   {betType === 'win' ? 'Win' : 'Place'}
                                 </div>
                                 <div className="font-bold text-lg sm:text-xl text-[var(--accent-gold)]">
-                                  {betType === 'win' ? `${entry.odds.toFixed(1)}x` : `${entry.placeOdds.toFixed(1)}x`}
+                                  {betType === 'win' ? `${(entry.odds ?? 0).toFixed(1)}x` : `${(entry.placeOdds ?? 0).toFixed(1)}x`}
                                 </div>
                               </div>
                             )}
@@ -365,7 +365,7 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
 
                           {!isOwnHorse && (
                             <div className="mt-1 sm:mt-2 text-xs sm:text-sm th-muted font-semibold">
-                              Win: {(entry.winProbability * 100).toFixed(0)}%
+                              Win: {((entry.winProbability ?? 0) * 100).toFixed(0)}%
                             </div>
                           )}
                         </div>
