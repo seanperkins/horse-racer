@@ -159,33 +159,35 @@ export function Lobby({ sendMessage, roomCode, isConnected }: LobbyProps) {
   // Show join options if not yet joined
   if (!hasJoined) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-8 th-bg">
+      <div className="flex min-h-screen items-center justify-center px-4 py-6 sm:p-8 th-bg">
         <div className="max-w-3xl w-full">
-          <div className="text-center mb-10">
-            <h1 className="text-4xl md:text-6xl th-title mb-4">Neighs of Thunder</h1>
-            <div className="th-label text-lg">Draft. Bet. Race.</div>
+          <div className="text-center mb-6 sm:mb-10">
+            <h1 className="text-3xl sm:text-4xl md:text-6xl th-title mb-2 sm:mb-4">Neighs of Thunder</h1>
+            <div className="th-label text-base sm:text-lg">Draft. Bet. Race.</div>
           </div>
 
-          <div className="th-panel rounded-lg p-8 space-y-6">
+          <div className="th-panel rounded-lg p-4 sm:p-8 space-y-4 sm:space-y-6">
             <div className="th-chip rounded-lg px-4 py-3 text-sm">
               Signed in as <span className="font-semibold">{username || 'Guest'}</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-2 sm:gap-4">
               <button
                 onClick={handleJoinPublic}
                 disabled={!username}
-                className="th-button-blue disabled:bg-gray-600 disabled:cursor-not-allowed px-6 py-4 rounded-lg font-bold transition"
+                className="th-button-blue disabled:bg-gray-600 disabled:cursor-not-allowed px-3 sm:px-6 py-3 sm:py-4 rounded-lg font-bold transition text-sm sm:text-base"
               >
-                Join Public Game
+                <span className="hidden sm:inline">Join Public Game</span>
+                <span className="sm:hidden">Join Public<br />Game</span>
               </button>
 
               <button
                 onClick={handleJoinPrivate}
                 disabled={!username}
-                className="th-button disabled:bg-gray-600 disabled:cursor-not-allowed px-6 py-4 rounded-lg font-bold transition"
+                className="th-button disabled:bg-gray-600 disabled:cursor-not-allowed px-3 sm:px-6 py-3 sm:py-4 rounded-lg font-bold transition text-sm sm:text-base"
               >
-                Create Private Room
+                <span className="hidden sm:inline">Create Private Room</span>
+                <span className="sm:hidden">Create Private<br />Room</span>
               </button>
             </div>
 
@@ -198,29 +200,29 @@ export function Lobby({ sendMessage, roomCode, isConnected }: LobbyProps) {
               </div>
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex gap-2 sm:gap-4">
               <input
                 type="text"
                 value={codeInput}
                 onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
                 placeholder="ABCD"
                 maxLength={4}
-                className="flex-1 px-4 py-3 bg-[#201a33] border-2 border-[var(--outline)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent-green)] text-center text-2xl font-mono tracking-widest"
+                className="flex-1 min-w-0 px-3 sm:px-4 py-3 bg-[#201a33] border-2 border-[var(--outline)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--accent-green)] text-center text-xl sm:text-2xl font-mono tracking-widest"
               />
               <button
                 onClick={handleJoinByCode}
                 disabled={!username || codeInput.length !== 4}
-                className="th-button-green disabled:bg-gray-600 disabled:cursor-not-allowed px-8 py-3 rounded-lg font-bold transition"
+                className="th-button-green disabled:bg-gray-600 disabled:cursor-not-allowed px-4 sm:px-8 py-3 rounded-lg font-bold transition shrink-0"
               >
                 Join
               </button>
             </div>
 
             <div className="th-chip rounded-lg px-4 py-3 text-sm">
-              Tip: Draft for bloodlines. Bet for comebacks.
+              <span className="font-medium">Tip:</span> Draft for bloodlines. Bet for comebacks.
             </div>
 
-            <div className="text-center pt-4">
+            <div className="text-center pt-2 sm:pt-4">
               <Link
                 href="/tutorial"
                 className="inline-block text-blue-400 hover:text-blue-300 text-sm font-semibold transition"
