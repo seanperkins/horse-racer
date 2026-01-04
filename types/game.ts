@@ -51,6 +51,14 @@ export type RaceStrategy = {
   finish: 'sprint' | 'maintain' | 'gamble'
 }
 
+// Submitted race entry for tracking (UI state)
+export type SubmittedEntry = {
+  horse: Horse | null
+  jockey: Jockey | null
+  equipment: { saddle?: Equipment; horseshoes?: Equipment; blinders?: Equipment }
+  strategy: RaceStrategy
+}
+
 // Horse definition
 export interface Horse {
   id: string
