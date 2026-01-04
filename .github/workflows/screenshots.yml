@@ -1,0 +1,100 @@
+name: PR Screenshots
+
+on:
+  # Trigger on pushes to PR branches (works even for new workflows)
+  push:
+    branches:
+      - 'claude/**'
+      - 'feature/**'
+  # Manual trigger for testing
+  workflow_dispatch:
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: horse_racer_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install wait-on
+        run: npm install -g wait-on
+
+      - name: Setup environment
+        run: |
+          echo "DATABASE_URL=postgresql://test:test@localhost:5432/horse_racer_test" >> $GITHUB_ENV
+          echo "NEXTAUTH_SECRET=test-secret-for-screenshots" >> $GITHUB_ENV
+          echo "NEXTAUTH_URL=http://localhost:3000" >> $GITHUB_ENV
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run database migrations
+        run: npx prisma migrate deploy
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Create screenshots directory
+        run: mkdir -p screenshots
+
+      - name: Start server
+        run: |
+          npm run dev &
+          echo $! > .server-pid
+          wait-on http://localhost:3000 --timeout 60000
+
+      - name: Take screenshots
+        run: npx playwright test --project=screenshots
+
+      - name: Stop server
+        if: always()
+        run: |
+          if [ -f .server-pid ]; then
+            kill $(cat .server-pid) 2>/dev/null || true
+            rm .server-pid
+          fi
+
+      - name: List screenshots
+        run: ls -la screenshots/ || echo "No screenshots directory"
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-screenshots-${{ github.sha }}
+          path: screenshots/
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-${{ github.sha }}
+          path: playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore

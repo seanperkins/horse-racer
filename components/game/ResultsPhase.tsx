@@ -25,10 +25,10 @@ export function ResultsPhase() {
 
   if (!raceResults || !raceResults.placements) {
     return (
-      <div className="min-h-screen p-8 th-bg">
+      <div className="min-h-screen p-4 sm:p-8 th-bg">
         <div className="max-w-4xl mx-auto">
-          <div className="th-panel rounded-lg p-8 text-center">
-            <p className="th-label">Loading results...</p>
+          <div className="th-panel rounded-lg p-4 sm:p-8 text-center">
+            <p className="th-label text-sm sm:text-base">Loading results...</p>
           </div>
         </div>
       </div>
@@ -71,16 +71,16 @@ export function ResultsPhase() {
   }
 
   return (
-    <div className="min-h-screen p-4 md:p-8 th-bg">
+    <div className="min-h-screen p-2 sm:p-4 md:p-8 th-bg">
       <div className="max-w-5xl mx-auto">
         {/* Your Performance Summary */}
         {myPlacement && (
-          <div className="th-panel rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-bold mb-4 text-center">Your Performance</h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+          <div className="th-panel rounded-lg p-3 sm:p-4 md:p-6 mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-center">Your Performance</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 text-center">
               <div>
-                <div className="text-sm th-label mb-1">Finish Position</div>
-                <div className="text-3xl font-bold">
+                <div className="text-xs sm:text-sm th-label mb-1">Position</div>
+                <div className="text-xl sm:text-2xl md:text-3xl font-bold">
                   {getPositionMedal(myPlacement.position)} {myPlacement.position}
                   {myPlacement.position === 1
                     ? 'st'
@@ -92,39 +92,39 @@ export function ResultsPhase() {
                 </div>
               </div>
               <div>
-                <div className="text-sm th-label mb-1">Gold Earned</div>
-                <div className="text-3xl font-bold text-[var(--accent-gold)]">
+                <div className="text-xs sm:text-sm th-label mb-1">Gold</div>
+                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-[var(--accent-gold)]">
                   +{myPlacement.goldReward}g
                 </div>
               </div>
               <div>
-                <div className="text-sm th-label mb-1">Hearts Lost</div>
+                <div className="text-xs sm:text-sm th-label mb-1">Hearts</div>
                 <div
-                  className={`text-3xl font-bold ${myPlacement.heartsDamage > 0 ? 'text-[var(--accent-red)]' : 'text-[var(--accent-green)]'}`}
+                  className={`text-xl sm:text-2xl md:text-3xl font-bold ${myPlacement.heartsDamage > 0 ? 'text-[var(--accent-red)]' : 'text-[var(--accent-green)]'}`}
                 >
                   {myPlacement.heartsDamage > 0 ? `-${myPlacement.heartsDamage}` : '0'}
                 </div>
               </div>
               <div>
-                <div className="text-sm th-label mb-1">Finish Time</div>
-                <div className="text-2xl font-bold">{(myPlacement.time / 1000).toFixed(2)}s</div>
+                <div className="text-xs sm:text-sm th-label mb-1">Time</div>
+                <div className="text-lg sm:text-xl md:text-2xl font-bold">{(myPlacement.time / 1000).toFixed(2)}s</div>
               </div>
             </div>
 
             {/* Bet Result */}
             {myBetResult && (
-              <div className="mt-4 p-4 bg-[var(--bg-secondary)] rounded">
+              <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-[var(--bg-secondary)] rounded">
                 {myBetResult.won ? (
                   <div className="flex items-center justify-between">
-                    <div className="font-bold text-[var(--accent-green)]">✓ Bet Won!</div>
-                    <div className="text-lg font-bold text-[var(--accent-gold)]">
+                    <div className="font-bold text-sm sm:text-base text-[var(--accent-green)]">✓ Bet Won!</div>
+                    <div className="text-base sm:text-lg font-bold text-[var(--accent-gold)]">
                       +{myBetResult.payout}g
                     </div>
                   </div>
                 ) : myBetResult.payout < 0 ? (
                   <div className="flex items-center justify-between">
-                    <div className="font-bold text-[var(--accent-red)]">✗ Bet Lost</div>
-                    <div className="text-lg font-bold text-[var(--accent-red)]">
+                    <div className="font-bold text-sm sm:text-base text-[var(--accent-red)]">✗ Bet Lost</div>
+                    <div className="text-base sm:text-lg font-bold text-[var(--accent-red)]">
                       {myBetResult.payout}g
                     </div>
                   </div>
@@ -134,21 +134,21 @@ export function ResultsPhase() {
 
             {/* Elimination Warning */}
             {wasEliminated && (
-              <div className="mt-4 p-4 bg-[var(--accent-red)]/20 border-2 border-[var(--accent-red)] rounded text-center">
-                <div className="text-2xl font-bold text-[var(--accent-red)] mb-2">
+              <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-[var(--accent-red)]/20 border-2 border-[var(--accent-red)] rounded text-center">
+                <div className="text-xl sm:text-2xl font-bold text-[var(--accent-red)] mb-1 sm:mb-2">
                   💀 ELIMINATED
                 </div>
-                <div className="text-sm">You have been eliminated from the match!</div>
+                <div className="text-xs sm:text-sm">You have been eliminated from the match!</div>
               </div>
             )}
           </div>
         )}
 
         {/* Full Race Results */}
-        <div className="th-panel rounded-lg p-6 mb-6">
-          <h2 className="text-2xl font-bold mb-6 text-center">Final Standings</h2>
+        <div className="th-panel rounded-lg p-3 sm:p-4 md:p-6 mb-4 sm:mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-center">Final Standings</h2>
 
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {placements
               .sort((a, b) => a.position - b.position)
               .map((placement) => {
@@ -158,36 +158,36 @@ export function ResultsPhase() {
                 return (
                   <div
                     key={placement.playerId}
-                    className={`flex items-center justify-between px-4 md:px-6 py-4 rounded-lg border-2 ${
+                    className={`flex items-center justify-between px-3 sm:px-4 md:px-6 py-3 sm:py-4 rounded-lg border-2 ${
                       getPositionColor(placement.position)
                     } ${isYou ? 'ring-2 ring-[var(--accent-green)]' : ''}`}
                   >
-                    <div className="flex items-center gap-3 md:gap-4 flex-1">
-                      <div className="text-xl md:text-2xl font-bold min-w-[2rem]">
+                    <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0">
+                      <div className="text-lg sm:text-xl md:text-2xl font-bold flex-shrink-0">
                         {getPositionMedal(placement.position)} {placement.position}
                       </div>
-                      <div className="flex-1">
-                        <div className="font-bold">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-sm sm:text-base truncate">
                           {placement.playerName}
                           {isYou && ' (You)'}
                           {placement.playerId.startsWith('ai-player-') && ' 🤖'}
                           {wasEliminatedPlayer && (
-                            <span className="ml-2 text-[var(--accent-red)] text-sm">
-                              💀 Eliminated
+                            <span className="ml-1 sm:ml-2 text-[var(--accent-red)] text-xs sm:text-sm">
+                              💀
                             </span>
                           )}
                         </div>
-                        <div className="text-xs md:text-sm th-label">
+                        <div className="text-xs th-label hidden sm:block">
                           Time: {(placement.time / 1000).toFixed(2)}s
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-bold text-lg text-[var(--accent-gold)]">
+                    <div className="text-right flex-shrink-0 ml-2">
+                      <div className="font-bold text-sm sm:text-lg text-[var(--accent-gold)]">
                         +{placement.goldReward}g
                       </div>
                       {placement.heartsDamage > 0 && (
-                        <div className="text-sm text-[var(--accent-red)]">
+                        <div className="text-xs sm:text-sm text-[var(--accent-red)]">
                           -{placement.heartsDamage} ❤️
                         </div>
                       )}
@@ -200,8 +200,8 @@ export function ResultsPhase() {
 
         {/* Other Eliminated Players */}
         {eliminatedPlayers.length > 0 && (
-          <div className="th-panel rounded-lg p-6 mb-6">
-            <h3 className="text-lg font-bold mb-3 text-center text-[var(--accent-red)]">
+          <div className="th-panel rounded-lg p-3 sm:p-4 md:p-6 mb-4 sm:mb-6">
+            <h3 className="text-base sm:text-lg font-bold mb-2 sm:mb-3 text-center text-[var(--accent-red)]">
               Eliminated This Round
             </h3>
             <div className="flex flex-wrap gap-2 justify-center">
@@ -210,7 +210,7 @@ export function ResultsPhase() {
                 return (
                   <div
                     key={playerIdElim}
-                    className="px-4 py-2 bg-[var(--accent-red)]/20 border border-[var(--accent-red)] rounded"
+                    className="px-3 sm:px-4 py-1.5 sm:py-2 bg-[var(--accent-red)]/20 border border-[var(--accent-red)] rounded text-sm"
                   >
                     {player?.playerName || 'Unknown'}
                   </div>
@@ -222,11 +222,11 @@ export function ResultsPhase() {
 
         {/* Player Ready Status */}
         {!wasEliminated && playerReadyStatus && Object.keys(playerReadyStatus).length > 0 && (
-          <div className="th-panel rounded-lg p-6 mt-6">
-            <div className="th-label text-sm mb-3 text-center">
+          <div className="th-panel rounded-lg p-3 sm:p-4 md:p-6 mt-4 sm:mt-6">
+            <div className="th-label text-xs sm:text-sm mb-2 sm:mb-3 text-center">
               Waiting for players...
             </div>
-            <div className="flex flex-wrap gap-2 justify-center">
+            <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-center">
               {Object.entries(playerReadyStatus).map(([pid, ready]) => {
                 const player = placements.find((p) => p.playerId === pid)
                 if (!player) return null
@@ -234,7 +234,7 @@ export function ResultsPhase() {
                 return (
                   <div
                     key={pid}
-                    className={`px-3 py-1 rounded text-sm font-semibold ${
+                    className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm font-semibold ${
                       ready
                         ? 'bg-[var(--accent-green)]/20 text-[var(--accent-green)] border border-[var(--accent-green)]'
                         : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--outline)]'
@@ -248,7 +248,7 @@ export function ResultsPhase() {
           </div>
         )}
 
-        <div className="text-center th-label mt-6">
+        <div className="text-center th-label text-xs sm:text-sm mt-4 sm:mt-6 px-2">
           {wasEliminated
             ? 'You can spectate the remaining rounds...'
             : 'Next round starts when all players are ready or after 60 seconds'}

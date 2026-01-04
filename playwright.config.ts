@@ -17,6 +17,14 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
+    {
+      name: 'screenshots',
+      testMatch: /screenshots\.spec\.ts/,
+      use: {
+        ...devices['iPhone 13'],
+        screenshot: 'on',
+      },
+    },
   ],
 
   webServer: {

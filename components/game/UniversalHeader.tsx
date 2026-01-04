@@ -41,12 +41,12 @@ export function UniversalHeader() {
   const safeDuration = Math.max(phaseDuration, 1)
   const percentage = (timeLeft / safeDuration) * 100
 
-  // Format phase name
+  // Format phase name - shorter on mobile
   const phaseNames: Record<string, string> = {
-    shop: 'Shop Phase',
-    preparation: 'Preparation Phase',
-    betting: 'Betting Phase',
-    race: 'Race In Progress',
+    shop: 'Shop',
+    preparation: 'Prep',
+    betting: 'Betting',
+    race: 'Race',
     results: 'Results'
   }
 
@@ -54,8 +54,6 @@ export function UniversalHeader() {
 
   // Player count
   const activePlayers = players.filter(p => {
-    // In a real game, you'd check elimination status from game state
-    // For now, just count all players
     return true
   }).length
 
@@ -99,11 +97,11 @@ export function UniversalHeader() {
   // Get button text based on phase
   const getReadyButtonText = () => {
     if (currentPhase === 'betting') {
-      if (bettingStatus === 'submitted') return '✓ Bet Placed'
-      if (bettingStatus === 'skipped') return '✓ Skipped'
-      return 'Skip Betting'
+      if (bettingStatus === 'submitted') return '✓ Bet'
+      if (bettingStatus === 'skipped') return '✓ Skip'
+      return 'Skip'
     }
-    return isReady ? '✓ Ready' : 'Ready Up'
+    return isReady ? '✓ Ready' : 'Ready'
   }
 
   // Determine if button should be disabled
@@ -120,22 +118,25 @@ export function UniversalHeader() {
 
   return (
     <div className="sticky top-0 z-50 th-card border-b th-border shadow-lg backdrop-blur-sm bg-[var(--bg-primary)]">
-      <div className="container mx-auto px-4 py-3">
-        <div className="flex items-center justify-between gap-4">
-          {/* Left section: Round, Phase, Timer */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold th-label">Round {currentRound}</span>
-              <span className="text-xs th-muted">•</span>
-              <span className="text-sm th-label">{phaseName}</span>
+      <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-3">
+        {/* Mobile: Two rows, Desktop: Single row */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+
+          {/* Top row on mobile / Left section on desktop: Round, Phase, Timer, Resources */}
+          <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-4">
+            {/* Round & Phase */}
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="text-xs sm:text-sm font-semibold th-label">R{currentRound}</span>
+              <span className="text-xs th-muted hidden sm:inline">•</span>
+              <span className="text-xs sm:text-sm th-label">{phaseName}</span>
             </div>
 
             {/* Timer */}
-            <div className="flex items-center gap-2">
-              <div className="text-sm font-mono th-label">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="text-xs sm:text-sm font-mono th-label">
                 {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
               </div>
-              <div className="w-20 h-2 rounded-full overflow-hidden th-timer-bar">
+              <div className="w-12 sm:w-16 md:w-20 h-1.5 sm:h-2 rounded-full overflow-hidden th-timer-bar">
                 <div
                   className={`h-full transition-all ${
                     percentage > 50
@@ -148,50 +149,57 @@ export function UniversalHeader() {
                 />
               </div>
             </div>
-          </div>
 
-          {/* Center section: Resources and Track */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <span className="text-base">💰</span>
-                <span className="text-sm font-semibold th-label">{gold}g</span>
+            {/* Resources - visible on mobile */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex items-center gap-1">
+                <span className="text-sm sm:text-base">💰</span>
+                <span className="text-xs sm:text-sm font-semibold th-label">{gold}</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-base">❤️</span>
-                <span className="text-sm font-semibold th-label">{hearts}</span>
+              <div className="flex items-center gap-1">
+                <span className="text-sm sm:text-base">❤️</span>
+                <span className="text-xs sm:text-sm font-semibold th-label">{hearts}</span>
               </div>
             </div>
+          </div>
 
+          {/* Bottom row on mobile / Right section on desktop */}
+          <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3">
+            {/* Track info - hidden on mobile, shown on tablet+ */}
             {currentTrack && (currentPhase === 'shop' || currentPhase === 'preparation') && (
-              <>
-                <span className="text-xs th-muted">•</span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs th-muted">🏁</span>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold th-label">{currentTrack.name}</span>
-                    <span className="text-xs th-muted">
-                      {currentTrack.category} • {currentTrack.distance}m • {currentTrack.surface}
-                    </span>
-                  </div>
+              <div className="hidden md:flex items-center gap-1.5">
+                <span className="text-xs th-muted">🏁</span>
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold th-label">{currentTrack.name}</span>
+                  <span className="text-xs th-muted">
+                    {currentTrack.category} • {currentTrack.distance}m • {currentTrack.surface}
+                  </span>
                 </div>
-              </>
+              </div>
             )}
-          </div>
 
-          {/* Right section: Player count, Audio settings, and Ready button */}
-          <div className="flex items-center gap-3">
-            <div className="text-sm th-muted">
-              {activePlayers} player{activePlayers !== 1 ? 's' : ''}
+            {/* Mobile track info - condensed */}
+            {currentTrack && (currentPhase === 'shop' || currentPhase === 'preparation') && (
+              <div className="flex md:hidden items-center gap-1 text-xs th-muted">
+                <span>🏁</span>
+                <span className="truncate max-w-[100px]">{currentTrack.name}</span>
+              </div>
+            )}
+
+            {/* Player count - hidden on small mobile */}
+            <div className="hidden sm:block text-xs sm:text-sm th-muted">
+              {activePlayers} {activePlayers === 1 ? 'player' : 'players'}
             </div>
 
+            {/* Audio settings */}
             <AudioSettings />
 
+            {/* Ready button - larger touch target */}
             {canReady && (
               <button
                 onClick={handleToggleReady}
                 disabled={isButtonDisabled()}
-                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${
+                className={`min-h-[44px] px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-colors ${
                   isReady || isBettingDone
                     ? 'th-button-green'
                     : 'th-button'

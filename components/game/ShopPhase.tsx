@@ -155,19 +155,19 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
   }, [horses, hiredJockey, shopHorses, shopJockeys, playerId, sendMessage])
 
   return (
-    <div className="min-h-screen p-4 md:p-8 th-bg">
+    <div className="min-h-screen p-2 sm:p-4 md:p-8 th-bg">
       <div className="max-w-7xl mx-auto">
-        {/* Debug hint */}
-        <div className="text-center text-xs th-muted mb-2">
+        {/* Debug hint - hidden on mobile */}
+        <div className="hidden sm:block text-center text-xs th-muted mb-2">
           Press <kbd className="px-1 py-0.5 rounded th-panel">Ctrl+D</kbd> to quick-start race
         </div>
 
-        {/* Tab Navigation with Reroll Button */}
-        <div className="flex items-center justify-between mb-6">
+        {/* Tab Navigation with Reroll Button - stacks on mobile */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-4 sm:mb-6">
           <div className="flex gap-2">
             <button
               onClick={() => setSelectedTab('shop')}
-              className={`px-6 py-2 rounded-lg font-bold transition ${
+              className={`flex-1 sm:flex-none min-h-[44px] px-4 sm:px-6 py-2.5 rounded-lg font-bold text-sm sm:text-base transition ${
                 selectedTab === 'shop' ? 'th-button' : 'th-panel opacity-70 hover:opacity-100'
               }`}
             >
@@ -175,11 +175,11 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
             </button>
             <button
               onClick={() => setSelectedTab('inventory')}
-              className={`px-6 py-2 rounded-lg font-bold transition ${
+              className={`flex-1 sm:flex-none min-h-[44px] px-4 sm:px-6 py-2.5 rounded-lg font-bold text-sm sm:text-base transition ${
                 selectedTab === 'inventory' ? 'th-button' : 'th-panel opacity-70 hover:opacity-100'
               }`}
             >
-              🎒 Inventory ({horses.length + (hiredJockey ? 1 : 0) + equipment.length})
+              🎒 <span className="hidden sm:inline">Inventory </span>({horses.length + (hiredJockey ? 1 : 0) + equipment.length})
             </button>
           </div>
 
@@ -190,7 +190,7 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
             <button
               onClick={handleReroll}
               disabled={gold < 2}
-              className="th-button disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded-lg font-bold"
+              className="th-button disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] px-4 py-2.5 rounded-lg font-bold text-sm sm:text-base w-full sm:w-auto"
             >
               🔄 Reroll (2g)
             </button>
@@ -199,14 +199,14 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
 
         {/* Shop Tab */}
         {selectedTab === 'shop' && (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* Horses */}
-            <div className="th-panel rounded-lg p-6">
-              <h2 className="text-xl font-bold mb-4">🐴 Horses</h2>
+            <div className="th-panel rounded-lg p-3 sm:p-4 md:p-6">
+              <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">🐴 Horses</h2>
               {shopHorses.length === 0 ? (
                 <div className="text-center th-label py-4">No horses available</div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
                   {shopHorses.map((unit) => {
                     const horse = unit.data as Horse
                     return (
@@ -224,12 +224,12 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
             </div>
 
             {/* Jockeys */}
-            <div className="th-panel rounded-lg p-6">
-              <h2 className="text-xl font-bold mb-4">🏇 Jockeys for Hire</h2>
+            <div className="th-panel rounded-lg p-3 sm:p-4 md:p-6">
+              <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">🏇 Jockeys for Hire</h2>
               {shopJockeys.length === 0 ? (
                 <div className="text-center th-label py-4">No jockeys available</div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
                   {shopJockeys.map((unit) => {
                     const jockey = unit.data as Jockey
                     return (
@@ -248,12 +248,12 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
             </div>
 
             {/* Equipment */}
-            <div className="th-panel rounded-lg p-6">
-              <h2 className="text-xl font-bold mb-4">⚙️ Equipment</h2>
+            <div className="th-panel rounded-lg p-3 sm:p-4 md:p-6">
+              <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">⚙️ Equipment</h2>
               {shopEquipment.length === 0 ? (
                 <div className="text-center th-label py-4">No equipment available</div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   {shopEquipment.map((unit) => {
                     const item = unit.data as Equipment
                     return (
@@ -274,14 +274,14 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
 
         {/* Inventory Tab */}
         {selectedTab === 'inventory' && (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* Horses Inventory */}
-            <div className="th-panel rounded-lg p-6">
-              <h2 className="text-xl font-bold mb-4">🐴 Horses ({horses.length})</h2>
+            <div className="th-panel rounded-lg p-3 sm:p-4 md:p-6">
+              <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">🐴 Horses ({horses.length})</h2>
               {horses.length === 0 ? (
-                <div className="text-center th-label py-8">No horses owned. Buy some from the shop!</div>
+                <div className="text-center th-label py-6 sm:py-8 text-sm sm:text-base">No horses owned. Buy some from the shop!</div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
                   {horses.map((horse) => (
                     <HorseCard
                       key={horse.id}
@@ -299,10 +299,10 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
             </div>
 
             {/* Hired Jockey */}
-            <div className="th-panel rounded-lg p-6">
-              <h2 className="text-xl font-bold mb-4">🏇 Hired Jockey</h2>
+            <div className="th-panel rounded-lg p-3 sm:p-4 md:p-6">
+              <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">🏇 Hired Jockey</h2>
               {!hiredJockey ? (
-                <div className="text-center th-label py-8">No jockey hired. Hire one from the shop!</div>
+                <div className="text-center th-label py-6 sm:py-8 text-sm sm:text-base">No jockey hired. Hire one from the shop!</div>
               ) : (
                 <div className="max-w-sm">
                   <JockeyCard
@@ -318,12 +318,12 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
             </div>
 
             {/* Equipment Inventory */}
-            <div className="th-panel rounded-lg p-6">
-              <h2 className="text-xl font-bold mb-4">⚙️ Equipment ({equipment.length})</h2>
+            <div className="th-panel rounded-lg p-3 sm:p-4 md:p-6">
+              <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">⚙️ Equipment ({equipment.length})</h2>
               {equipment.length === 0 ? (
-                <div className="text-center th-label py-8">No equipment owned. Buy some from the shop!</div>
+                <div className="text-center th-label py-6 sm:py-8 text-sm sm:text-base">No equipment owned. Buy some from the shop!</div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   {equipment.map((item) => (
                     <EquipmentCard
                       key={item.id}
@@ -495,9 +495,9 @@ function HorseCard({
         <button
           onClick={onPurchase}
           disabled={!canAfford}
-          className={`flex-1 py-2 rounded font-bold text-base ${
+          className={`flex-1 min-h-[44px] py-2.5 rounded font-bold text-sm sm:text-base ${
             isInventory
-              ? 'bg-red-600 hover:bg-red-500'
+              ? 'bg-red-600 hover:bg-red-500 active:bg-red-400'
               : 'th-button disabled:opacity-50 disabled:cursor-not-allowed'
           }`}
         >
@@ -506,7 +506,7 @@ function HorseCard({
         {canTrain && (
           <button
             onClick={() => setShowTraining(!showTraining)}
-            className="px-3 py-2 bg-yellow-600 hover:bg-yellow-500 rounded font-bold text-base"
+            className="min-h-[44px] min-w-[44px] px-3 py-2.5 bg-yellow-600 hover:bg-yellow-500 active:bg-yellow-400 rounded font-bold text-sm sm:text-base"
           >
             {showTraining ? '✕' : '⬆'}
           </button>
@@ -580,9 +580,9 @@ function JockeyCard({
       <button
         onClick={onPurchase}
         disabled={!canAfford}
-        className={`mt-auto py-2 rounded font-bold text-base ${
+        className={`mt-auto min-h-[44px] py-2.5 rounded font-bold text-sm sm:text-base ${
           isInventory
-            ? 'bg-red-600 hover:bg-red-500'
+            ? 'bg-red-600 hover:bg-red-500 active:bg-red-400'
             : 'th-button disabled:opacity-50 disabled:cursor-not-allowed'
         }`}
       >
@@ -672,9 +672,9 @@ function EquipmentCard({
       <button
         onClick={onPurchase}
         disabled={!canAfford}
-        className={`mt-auto py-2 rounded font-bold text-base ${
+        className={`mt-auto min-h-[44px] py-2.5 rounded font-bold text-sm sm:text-base ${
           isInventory
-            ? 'bg-red-600 hover:bg-red-500'
+            ? 'bg-red-600 hover:bg-red-500 active:bg-red-400'
             : 'th-button disabled:opacity-50 disabled:cursor-not-allowed'
         }`}
       >
