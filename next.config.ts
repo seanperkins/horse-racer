@@ -1,8 +1,14 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
   output: "standalone",
   reactStrictMode: true,
+
+  // Skip TypeScript type checking during build (run separately with npm run type-check)
+  typescript: {
+    ignoreBuildErrors: true,
+  },
 
   experimental: {
     serverActions: {
@@ -10,9 +16,9 @@ const nextConfig: NextConfig = {
     },
   },
 
-  // Add empty turbopack config to silence the error
+  // Fix turbopack config with absolute path
   turbopack: {
-    root: "./",
+    root: path.resolve(__dirname),
   },
 
   webpack: (config, { dev }) => {

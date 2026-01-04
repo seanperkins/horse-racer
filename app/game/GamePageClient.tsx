@@ -71,8 +71,6 @@ export default function GamePageClient({ userId, username }: GamePageClientProps
         } else if (message.phase === 'race') {
           playSfx('race_start')
           playMusic('race')
-        } else if (message.phase === 'lobby') {
-          playMusic('lobby')
         }
         break
 
