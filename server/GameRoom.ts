@@ -1019,13 +1019,15 @@ export class GameRoom {
     }
 
     // Apply bet winnings/losses
+    // Winning bets now award Prestige instead of gold
     for (const betResult of betResults) {
       const player = this.players.get(betResult.playerId)!
       if (betResult.won) {
         if (betResult.isHeartBet) {
           player.hearts = Math.min(player.hearts + 1, 5)
         } else {
-          player.gold += betResult.payout || 0
+          // Award Prestige instead of gold for winning bets
+          player.prestige += betResult.prestigeEarned || 0
         }
         player.betWins += 1
       }
@@ -1186,30 +1188,26 @@ export class GameRoom {
     playerId: string
     won: boolean
     payout?: number
+    prestigeEarned?: number
     isHeartBet: boolean
   }> {
-    const results: Array<{ playerId: string; won: boolean; payout?: number; isHeartBet: boolean }> = []
+    const results: Array<{ playerId: string; won: boolean; payout?: number; prestigeEarned?: number; isHeartBet: boolean }> = []
 
     for (const [playerId, player] of this.players) {
       if (!player.currentBet) continue
 
       const bet = player.currentBet
       let won = false
-      let payoutMultiplier = 0
 
       // Get top 3 finishers
       const winner = placements.find(p => p.position === 1)
       const runnerUp = placements.find(p => p.position === 2)
       const thirdPlace = placements.find(p => p.position === 3)
-      const odds = this.lastBettingOdds.get(bet.targetPlayerId || '') || { win: 2, place: 1.5 }
 
       switch (bet.type) {
         case 'win':
           // Bet on a specific horse to win
           won = bet.targetPlayerId === winner?.playerId
-          if (won) {
-            payoutMultiplier = odds.win
-          }
           break
 
         case 'place':
@@ -1217,29 +1215,23 @@ export class GameRoom {
           won = bet.targetPlayerId === winner?.playerId ||
                 bet.targetPlayerId === runnerUp?.playerId ||
                 bet.targetPlayerId === thirdPlace?.playerId
-          if (won) {
-            payoutMultiplier = odds.place
-          }
           break
 
         case 'exacta':
           // Bet on exact 1st and 2nd place finishers
           won = bet.exactaFirst === winner?.playerId && bet.exactaSecond === runnerUp?.playerId
-          if (won) {
-            const exactaProbability = this.calculateExactaProbability(bet.exactaFirst, bet.exactaSecond)
-            if (exactaProbability > 0) {
-              payoutMultiplier = this.calculateOddsFromProbability(exactaProbability, EXACTA_ODDS_CAP)
-            } else {
-              payoutMultiplier = 10
-            }
-          }
           break
       }
+
+      // Calculate Prestige earned: 1 Prestige per ~2.5 gold wagered on win
+      // Losing bets lose gold but gain nothing
+      const prestigeEarned = won && !bet.betForHeart ? Math.floor(bet.amount / 2.5) : 0
 
       results.push({
         playerId,
         won,
-        payout: won && !bet.betForHeart ? Math.floor(bet.amount * payoutMultiplier) : 0,
+        payout: 0, // Betting no longer pays gold, only Prestige
+        prestigeEarned,
         isHeartBet: bet.betForHeart || false,
       })
     }

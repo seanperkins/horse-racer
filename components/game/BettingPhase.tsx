@@ -114,21 +114,12 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
     return entries.find((e) => e.playerId === selectedPlayer)
   }
 
-  const getPotentialPayout = () => {
-    if (betType === 'win' && selectedPlayer) {
-      const entry = getSelectedEntry()
-      if (entry) {
-        return Math.floor(betAmount * entry.odds)
-      }
-    } else if (betType === 'place' && selectedPlayer) {
-      const entry = getSelectedEntry()
-      if (entry) {
-        return Math.floor(betAmount * entry.placeOdds)
-      }
-    } else if (betType === 'exacta') {
-      return betAmount * 10 // Fixed 10x for exacta
-    }
-    return 0
+  // Calculate Prestige earned: 1 Prestige per ~2.5 gold wagered on win
+  const getPotentialPrestige = () => {
+    // Prestige is based on bet amount, not odds
+    // 1 Prestige per 2.5 gold wagered (minimum 1 if bet >= 1)
+    if (betAmount < 1) return 0
+    return Math.max(1, Math.floor(betAmount / 2.5))
   }
 
   return (
@@ -160,7 +151,7 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
                   }`}
                 >
                   <div className="font-bold mb-1">Win Bet</div>
-                  <div className="text-sm opacity-70">Pick the winner (2x-8x payout)</div>
+                  <div className="text-sm opacity-70">Pick the winner to earn ⭐ Prestige</div>
                 </button>
 
                 <button
@@ -175,7 +166,7 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
                   }`}
                 >
                   <div className="font-bold mb-1">Place Bet</div>
-                  <div className="text-sm opacity-70">Pick top 3 finisher (1.5x-3x payout)</div>
+                  <div className="text-sm opacity-70">Pick top 3 finisher to earn ⭐ Prestige</div>
                 </button>
 
                 <button
@@ -187,7 +178,7 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
                   }`}
                 >
                   <div className="font-bold mb-1">Exacta</div>
-                  <div className="text-sm opacity-70">Pick 1st AND 2nd in order (10x payout)</div>
+                  <div className="text-sm opacity-70">Pick 1st AND 2nd in order to earn ⭐ Prestige</div>
                 </button>
               </div>
 
@@ -231,19 +222,22 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
                 </div>
               )}
 
-              {/* Potential Payout */}
+              {/* Potential Reward */}
               <div className="mt-6 p-4 bg-[var(--bg-secondary)] rounded">
-                <h4 className="font-semibold mb-2 text-sm">Potential Payout</h4>
+                <h4 className="font-semibold mb-2 text-sm">Potential Reward</h4>
                 {betForHeart ? (
                   <div className="text-lg font-bold text-[var(--accent-red)]">+1 ❤️</div>
                 ) : (
-                  <div className="text-lg font-bold text-[var(--accent-gold)]">
-                    {getPotentialPayout()}g
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-lg">⭐</span>
+                    <span className="text-lg font-bold text-[var(--accent-gold)]">
+                      {getPotentialPrestige()} Prestige
+                    </span>
                   </div>
                 )}
-                {!selectedPlayer && betType !== 'exacta' && (
-                  <div className="text-xs opacity-60 mt-1">Select a player to see payout</div>
-                )}
+                <div className="text-xs opacity-60 mt-2">
+                  Betting costs gold but wins earn Prestige
+                </div>
               </div>
             </div>
 

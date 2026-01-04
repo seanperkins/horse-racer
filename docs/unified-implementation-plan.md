@@ -223,6 +223,12 @@ Inline component for top of horse purchase section in Shop:
 3. **Show participation penalty:** If player didn't race, show "-1 ❤️ (No entry submitted)"
 4. Add keyboard shortcuts
 
+### 4.7 RacePhase.tsx
+**File:** `components/game/RacePhase.tsx`
+
+1. Render the current player's name in a high-contrast style (e.g., green) to help them spot their horse
+2. Add keyboard shortcuts
+
 ---
 
 ## Phase 5: Server Protocol Changes
@@ -280,8 +286,8 @@ Add handler for `expand_stable` message.
 - [x] 9. ✅ `GamePageClient.tsx` - Integration
 
 ### Milestone 4: Betting Changes
-- [ ] 10. `server/GameRoom.ts` - Betting pays Prestige not gold
-- [ ] 11. `BettingPhase.tsx` - Update payout display to show Prestige
+- [x] 10. ✅ `server/GameRoom.ts` - Betting pays Prestige not gold
+- [x] 11. ✅ `BettingPhase.tsx` - Update payout display to show Prestige
 
 ### Milestone 5: Stable System
 - [ ] 12. `server/GameRoom.ts` - Enforce stable slot limits
