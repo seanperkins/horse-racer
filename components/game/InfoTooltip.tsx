@@ -62,7 +62,7 @@ export function InfoTooltip({ title, description, children, className = '' }: In
 
   // Touch support - toggle on tap
   const handleTouchStart = (e: React.TouchEvent) => {
-    e.preventDefault() // Prevent click event
+    e.stopPropagation() // Prevent event bubbling without blocking scrolling
     const touch = e.touches[0]
     calculatePosition(touch.clientX, touch.clientY)
     setIsVisible(!isVisible)
