@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import toast from 'react-hot-toast'
 import { useGameStore } from '@/lib/store/gameStore'
 import { HorizontalStatBars } from './HorizontalStatBars'
 import { InfoTooltip } from './InfoTooltip'
@@ -33,7 +34,7 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
     }
 
     if (gold < unit.cost) {
-      alert('Not enough gold!')
+      toast.error('Not enough gold!')
       return
     }
 
@@ -46,12 +47,12 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
 
   const handleHireJockey = (jockeyId: string, cost: number) => {
     if (hiredJockey) {
-      alert('You already have a jockey. Fire them first to hire another.')
+      toast.error('You already have a jockey. Fire them first to hire another.')
       return
     }
 
     if (gold < cost) {
-      alert('Not enough gold!')
+      toast.error('Not enough gold!')
       return
     }
 
@@ -88,7 +89,7 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
 
   const handleReroll = () => {
     if (gold < 2) {
-      alert('Need 2 gold to reroll!')
+      toast.error('Need 2 gold to reroll!')
       return
     }
 
@@ -467,7 +468,7 @@ function HorseCard({
                 key={stat}
                 onClick={() => {
                   if (currentGold < trainCost) {
-                    alert('Not enough gold!')
+                    toast.error('Not enough gold!')
                     return
                   }
                   onTrain(horse.id, stat)

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import toast from 'react-hot-toast'
 import { useGameStore } from '@/lib/store/gameStore'
 import type { ClientMessage } from '@/types/messages'
 import type { Horse, Jockey, Equipment, RaceStrategy } from '@/types/game'
@@ -69,11 +70,11 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
     console.log('Submit clicked - horse:', selectedHorse?.name, 'jockey:', selectedJockey?.name)
 
     if (!selectedHorse) {
-      alert('Please select a horse!')
+      toast.error('Please select a horse!')
       return
     }
     if (!selectedJockey) {
-      alert('Please select a jockey!')
+      toast.error('Please select a jockey!')
       return
     }
 

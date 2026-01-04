@@ -10,6 +10,7 @@ import {
 import { generateShopInventory } from '@/game/shop'
 import { generateTrackForRound } from '@/game/tracks'
 import { generateHorse, generateJockey } from '@/game/generators'
+import { prisma } from '@/lib/prisma'
 
 const MAX_PLAYERS = 8
 const HOUSE_EDGE = 0.95
@@ -69,6 +70,7 @@ export class GameRoom {
   currentTrack: Track | null
   createdAt: number
   lastActivityAt: number
+  matchId: string | null
 
   constructor(roomId: string, wss: WebSocketServer, friendCode: string | null = null) {
     this.roomId = roomId
@@ -89,6 +91,7 @@ export class GameRoom {
     this.currentTrack = null
     this.createdAt = Date.now()
     this.lastActivityAt = Date.now()
+    this.matchId = null
   }
 
   generateFriendCode(): string {
@@ -366,30 +369,30 @@ export class GameRoom {
 
     // Try to buy cheapest horse if affordable
     const affordableHorses = shopInventory.horses
-      .filter(h => h.price <= player.gold)
-      .sort((a, b) => a.price - b.price)
+      .filter(h => h.cost <= player.gold)
+      .sort((a, b) => a.cost - b.cost)
 
     if (affordableHorses.length > 0) {
       const horse = affordableHorses[0]
-      player.gold -= horse.price
+      player.gold -= horse.cost
       player.horses.push(horse)
       // Remove from shop inventory
       shopInventory.horses = shopInventory.horses.filter(h => h.id !== horse.id)
-      console.log(`${player.username} bought ${horse.name} for ${horse.price}g`)
+      console.log(`${player.username} bought ${horse.name} for ${horse.cost}g`)
     }
 
     // Try to hire cheapest jockey if don't have one or can afford better
     if (!player.hiredJockey) {
       const affordableJockeys = shopInventory.jockeys
-        .filter(j => j.hiringCost <= player.gold)
-        .sort((a, b) => a.hiringCost - b.hiringCost)
+        .filter(j => j.hireCost <= player.gold)
+        .sort((a, b) => a.hireCost - b.hireCost)
 
       if (affordableJockeys.length > 0) {
         const jockey = affordableJockeys[0]
-        player.gold -= jockey.hiringCost
+        player.gold -= jockey.hireCost
         player.hiredJockey = jockey
         shopInventory.jockeys = shopInventory.jockeys.filter(j => j.id !== jockey.id)
-        console.log(`${player.username} hired ${jockey.name} for ${jockey.hiringCost}g`)
+        console.log(`${player.username} hired ${jockey.name} for ${jockey.hireCost}g`)
       }
     }
 
@@ -616,11 +619,25 @@ export class GameRoom {
     return alivePlayers.every((p) => p.ready)
   }
 
-  startGame(): void {
+  async startGame(): Promise<void> {
     console.log(`Starting game in room ${this.roomId}`)
 
     // Initialize AI players to fill remaining slots
     this.initializeAIPlayers()
+
+    // Create Match record in database
+    try {
+      const match = await prisma.match.create({
+        data: {
+          startedAt: new Date(),
+          totalRounds: 0,
+        },
+      })
+      this.matchId = match.id
+      console.log(`📊 Created match ${this.matchId} for room ${this.roomId}`)
+    } catch (error) {
+      console.error('Failed to create match record:', error)
+    }
 
     this.gameStarted = true
     this.currentRound = 1
@@ -1019,7 +1036,7 @@ export class GameRoom {
     // Results already shown
   }
 
-  endGame(winner?: PlayerData): void {
+  async endGame(winner?: PlayerData): Promise<void> {
     console.log(`Game ended in room ${this.roomId}`)
 
     if (winner) {
@@ -1032,11 +1049,96 @@ export class GameRoom {
       })
     }
 
+    // Save match results to database
+    await this.saveMatchResults(winner)
+
     if (this.phaseTimer) {
       clearTimeout(this.phaseTimer)
     }
 
     this.gameStarted = false
+  }
+
+  async saveMatchResults(winner?: PlayerData): Promise<void> {
+    if (!this.matchId) {
+      console.log('⚠️  No matchId - skipping match results save')
+      return
+    }
+
+    try {
+      // Get all non-AI players sorted by placement
+      const realPlayers = Array.from(this.players.values())
+        .filter((p) => !p.isAI)
+        .sort((a, b) => (a.placement || 999) - (b.placement || 999))
+
+      console.log(`💾 Saving match results for ${realPlayers.length} players`)
+
+      // Calculate XP for each player
+      const XP_PER_ROUND = 10
+      const XP_FOR_WIN = 100
+      const XP_PER_PLACEMENT = [100, 75, 50, 30, 20, 10, 5, 0] // Bonus for placement
+
+      // Update Match record
+      await prisma.match.update({
+        where: { id: this.matchId },
+        data: {
+          completedAt: new Date(),
+          winner: winner?.id,
+          totalRounds: this.currentRound,
+        },
+      })
+
+      // Create MatchPlayer records and update User stats
+      for (const player of realPlayers) {
+        const roundsPlayed = this.currentRound
+        const placement = player.placement || realPlayers.length
+        const isWinner = player.id === winner?.id
+
+        // Calculate XP earned
+        const baseXP = roundsPlayed * XP_PER_ROUND
+        const winBonus = isWinner ? XP_FOR_WIN : 0
+        const placementBonus = XP_PER_PLACEMENT[placement - 1] || 0
+        const totalXP = baseXP + winBonus + placementBonus
+
+        // Create MatchPlayer record
+        await prisma.matchPlayer.create({
+          data: {
+            matchId: this.matchId,
+            userId: player.id,
+            placement,
+            goldEarned: player.gold,
+            roundsPlayed,
+            betWins: 0, // TODO: Track bet wins
+          },
+        })
+
+        // Get current user XP to calculate new level
+        const currentUser = await prisma.user.findUnique({
+          where: { id: player.id },
+          select: { xp: true },
+        })
+
+        const newXP = (currentUser?.xp || 0) + totalXP
+        const newLevel = Math.floor(newXP / 1000) + 1
+
+        // Update User stats
+        await prisma.user.update({
+          where: { id: player.id },
+          data: {
+            xp: { increment: totalXP },
+            totalMatches: { increment: 1 },
+            totalWins: isWinner ? { increment: 1 } : undefined,
+            level: newLevel,
+          },
+        })
+
+        console.log(`📊 Updated stats for ${player.username}: +${totalXP} XP (total: ${newXP}), level ${newLevel}, placement ${placement}`)
+      }
+
+      console.log(`✅ Match ${this.matchId} results saved successfully`)
+    } catch (error) {
+      console.error('Failed to save match results:', error)
+    }
   }
 
   getRaceEntries(): Array<{

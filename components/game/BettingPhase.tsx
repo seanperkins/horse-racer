@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import toast from 'react-hot-toast'
 import { useGameStore } from '@/lib/store/gameStore'
 import type { ClientMessage } from '@/types/messages'
 
@@ -37,32 +38,32 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
 
   const handlePlaceBet = () => {
     if (betPlaced) {
-      alert('You have already placed a bet this round!')
+      toast.error('You have already placed a bet this round!')
       return
     }
 
     if (betAmount < 1 || betAmount > maxBet) {
-      alert(`Bet must be between 1 and ${maxBet} gold`)
+      toast.error(`Bet must be between 1 and ${maxBet} gold`)
       return
     }
 
     if (betForHeart && betAmount < 5) {
-      alert('Recovery bet requires minimum 5 gold')
+      toast.error('Recovery bet requires minimum 5 gold')
       return
     }
 
     if (betForHeart && betType !== 'exacta') {
-      alert('Recovery bet requires Exacta bet type')
+      toast.error('Recovery bet requires Exacta bet type')
       return
     }
 
     if (betType === 'win' || betType === 'place') {
       if (!selectedPlayer) {
-        alert('Please select a player to bet on')
+        toast.error('Please select a player to bet on')
         return
       }
       if (selectedPlayer === playerId) {
-        alert('Cannot bet on your own horse!')
+        toast.error('Cannot bet on your own horse!')
         return
       }
 
@@ -75,15 +76,15 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
       })
     } else if (betType === 'exacta') {
       if (!exactaFirst || !exactaSecond) {
-        alert('Please select both 1st and 2nd place for Exacta bet')
+        toast.error('Please select both 1st and 2nd place for Exacta bet')
         return
       }
       if (exactaFirst === exactaSecond) {
-        alert('Cannot select the same player for 1st and 2nd')
+        toast.error('Cannot select the same player for 1st and 2nd')
         return
       }
       if (exactaFirst === playerId || exactaSecond === playerId) {
-        alert('Cannot bet on your own horse!')
+        toast.error('Cannot bet on your own horse!')
         return
       }
 

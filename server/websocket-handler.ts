@@ -22,38 +22,41 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
   wss.on('connection', (ws: WebSocket, request: any, user: AuthenticatedUser | null) => {
     console.log('New WebSocket connection')
 
-    // Use authenticated user ID if available, otherwise wait for join_lobby message
-    let playerId: string | null = user?.id || null
-    let playerName: string | null = user?.username || null
+    // Require authentication - reject unauthenticated connections
+    if (!user || !user.id) {
+      console.log('❌ Rejected unauthenticated WebSocket connection')
+      sendError(ws, 'Authentication required. Please login to play.')
+      ws.close(1008, 'Authentication required')
+      return
+    }
+
+    // Use authenticated user info
+    const playerId: string = user.id
+    const playerName: string = user.username
     let currentRoom: GameRoom | null = null
 
-    // If user is authenticated, try to restore their session
-    if (playerId) {
-      console.log(`🔐 Authenticated connection for user: ${playerId} (${playerName})`)
+    console.log(`🔐 Authenticated connection for user: ${playerId} (${playerName})`)
 
-      // Close any previous connection for this user
-      const existingConnection = playerConnections.get(playerId)
-      if (existingConnection && existingConnection !== ws) {
-        console.log(`🔄 Closing previous connection for player ${playerId}`)
-        existingConnection.close()
-      }
+    // Close any previous connection for this user
+    const existingConnection = playerConnections.get(playerId)
+    if (existingConnection && existingConnection !== ws) {
+      console.log(`🔄 Closing previous connection for player ${playerId}`)
+      existingConnection.close()
+    }
 
-      playerConnections.set(playerId, ws)
+    playerConnections.set(playerId, ws)
 
-      // Try to find and restore the player's room
-      const existingRoom = findRoomByPlayerId(playerId)
-      if (existingRoom) {
-        currentRoom = existingRoom
-        console.log(`📍 Auto-restored room ${existingRoom.roomId} for player ${playerId}`)
+    // Try to find and restore the player's room
+    const existingRoom = findRoomByPlayerId(playerId)
+    if (existingRoom) {
+      currentRoom = existingRoom
+      console.log(`📍 Auto-restored room ${existingRoom.roomId} for player ${playerId}`)
 
-        // Update the WebSocket connection in the room
-        existingRoom.updatePlayerConnection(playerId, ws)
+      // Update the WebSocket connection in the room
+      existingRoom.updatePlayerConnection(playerId, ws)
 
-        // Send current lobby state to reconnected player
-        existingRoom.broadcastLobbyState()
-      }
-    } else {
-      console.log('⚠️  Unauthenticated WebSocket connection - waiting for join_lobby')
+      // Send current lobby state to reconnected player
+      existingRoom.broadcastLobbyState()
     }
 
     ws.on('message', async (data) => {
@@ -66,23 +69,8 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
         // Handle different message types
         switch (validatedMessage.type) {
           case 'join_lobby':
-            // For unauthenticated users, get playerId from the message
-            if (!playerId) {
-              playerId = validatedMessage.userId
-              playerName = validatedMessage.playerName
-              console.log(`🔑 Setting playerId from join_lobby: ${playerId}`)
-
-              // Close any prior socket for the same userId
-              const existingConnection = playerConnections.get(playerId)
-              if (existingConnection && existingConnection !== ws) {
-                console.log(`🔄 Closing previous connection for player ${playerId}`)
-                existingConnection.close()
-              }
-
-              playerConnections.set(playerId, ws)
-            } else {
-              console.log(`🔐 Authenticated user ${playerId} joining lobby`)
-            }
+            // playerId and playerName are already set from authenticated user
+            console.log(`🔐 Authenticated user ${playerId} joining lobby`)
 
             handleJoinLobby(ws, validatedMessage, wss, playerId, playerName, (room) => {
               currentRoom = room
@@ -92,11 +80,6 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
 
           case 'ready_up':
             // Enforce sender identity - use connection-bound playerId, reject mismatched userId
-            if (!playerId) {
-              console.error(`❌ ready_up message received but playerId not set. Message:`, validatedMessage)
-              sendError(ws, 'Player not identified (ready_up)')
-              break
-            }
             if (validatedMessage.userId !== playerId) {
               console.error(`❌ ready_up rejected: userId mismatch (message: ${validatedMessage.userId}, connection: ${playerId})`)
               sendError(ws, 'Invalid sender identity')
@@ -119,10 +102,6 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
             break
 
           case 'purchase_unit':
-            if (!playerId) {
-              sendError(ws, 'Player not identified')
-              break
-            }
             if (!currentRoom) {
               currentRoom = findRoomByPlayerId(playerId)
               if (currentRoom) {
@@ -137,10 +116,6 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
             break
 
           case 'sell_unit':
-            if (!playerId) {
-              sendError(ws, 'Player not identified')
-              break
-            }
             if (!currentRoom) {
               currentRoom = findRoomByPlayerId(playerId)
               if (currentRoom) {
@@ -155,10 +130,6 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
             break
 
           case 'reroll_shop':
-            if (!playerId) {
-              sendError(ws, 'Player not identified')
-              break
-            }
             if (!currentRoom) {
               currentRoom = findRoomByPlayerId(playerId)
               if (currentRoom) {
@@ -173,10 +144,6 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
             break
 
           case 'train_horse':
-            if (!playerId) {
-              sendError(ws, 'Player not identified')
-              break
-            }
             if (!currentRoom) {
               currentRoom = findRoomByPlayerId(playerId)
               if (currentRoom) {
@@ -191,10 +158,6 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
             break
 
           case 'hire_jockey':
-            if (!playerId) {
-              sendError(ws, 'Player not identified')
-              break
-            }
             if (!currentRoom) {
               currentRoom = findRoomByPlayerId(playerId)
               if (currentRoom) {
@@ -209,10 +172,6 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
             break
 
           case 'fire_jockey':
-            if (!playerId) {
-              sendError(ws, 'Player not identified')
-              break
-            }
             if (!currentRoom) {
               currentRoom = findRoomByPlayerId(playerId)
               if (currentRoom) {
@@ -227,11 +186,6 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
             break
 
           case 'setup_race_entry':
-            if (!playerId) {
-              console.error(`❌ setup_race_entry message received but playerId not set. Message:`, validatedMessage)
-              sendError(ws, 'Player not identified (setup_race_entry)')
-              break
-            }
             if (!currentRoom) {
               currentRoom = findRoomByPlayerId(playerId)
               if (currentRoom) {
@@ -246,11 +200,6 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
             break
 
           case 'place_bet':
-            if (!playerId) {
-              console.error(`❌ place_bet message received but playerId not set. Message:`, validatedMessage)
-              sendError(ws, 'Player not identified (place_bet)')
-              break
-            }
             if (!currentRoom) {
               currentRoom = findRoomByPlayerId(playerId)
               if (currentRoom) {
@@ -274,14 +223,12 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
     })
 
     ws.on('close', () => {
-      console.log(`WebSocket connection closed for player ${playerId || 'unknown'}`)
-      if (playerId) {
-        playerConnections.delete(playerId)
+      console.log(`WebSocket connection closed for player ${playerId}`)
+      playerConnections.delete(playerId)
 
-        // Don't immediately remove player - give them a grace period to reconnect
-        // The player data stays in the room, only the socket connection is cleared
-        // Room cleanup will handle removing empty rooms after 60 seconds
-      }
+      // Don't immediately remove player - give them a grace period to reconnect
+      // The player data stays in the room, only the socket connection is cleared
+      // Room cleanup will handle removing empty rooms after 60 seconds
     })
 
     ws.on('error', (error) => {

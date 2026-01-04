@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { v4 as uuidv4 } from 'uuid'
+import toast from 'react-hot-toast'
 import { useGameStore } from '@/lib/store/gameStore'
 import type { ClientMessage } from '@/types/messages'
 
@@ -242,7 +243,7 @@ export function Lobby({ sendMessage, roomCode, isConnected }: LobbyProps) {
                 onClick={() => {
                   const url = `${window.location.origin}/game?room=${friendCode}`
                   navigator.clipboard.writeText(url)
-                  alert('Room URL copied to clipboard!')
+                  toast.success('Room URL copied to clipboard!')
                 }}
                 className="mt-2 px-4 py-2 bg-[var(--accent-blue)] hover:bg-[var(--accent-blue)]/80 rounded text-sm font-semibold transition"
               >
