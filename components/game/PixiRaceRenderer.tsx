@@ -101,8 +101,9 @@ export function PixiRaceRenderer({
       const availableHeight = windowHeight - 300; // Account for header, footer, controls
 
       // Maintain 2:1 aspect ratio, but respect available space
-      let width = Math.min(1200, Math.max(800, availableWidth));
-      let height = Math.min(600, Math.max(400, availableHeight));
+      // Use smaller minimums for mobile (320px min width)
+      let width = Math.min(1200, Math.max(320, availableWidth));
+      let height = Math.min(600, Math.max(160, availableHeight));
 
       // Adjust to maintain aspect ratio
       const targetRatio = 2;

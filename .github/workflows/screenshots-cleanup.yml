@@ -1,0 +1,58 @@
+name: Cleanup PR Screenshots
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Cleanup screenshots for closed PR
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+
+          # Clone the repo
+          git clone https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git repo
+          cd repo
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Check if screenshots branch exists
+          if ! git ls-remote --exit-code --heads origin screenshots; then
+            echo "No screenshots branch exists, nothing to clean up"
+            exit 0
+          fi
+
+          # Checkout screenshots branch
+          git fetch origin screenshots
+          git checkout screenshots
+
+          # Check if PR folder exists
+          if [ ! -d "pr-${PR_NUMBER}" ]; then
+            echo "No screenshots folder for PR #${PR_NUMBER}, nothing to clean up"
+            exit 0
+          fi
+
+          # Remove PR folder
+          rm -rf "pr-${PR_NUMBER}"
+
+          # Create a fresh orphan branch with current state to eliminate history
+          git checkout --orphan screenshots-clean
+          git add .
+          git commit -m "Screenshots (cleaned up PR #${PR_NUMBER})" || {
+            # If nothing to commit, the branch is now empty
+            echo "Screenshots branch is now empty"
+            git commit --allow-empty -m "Empty screenshots branch"
+          }
+
+          # Force push to replace the screenshots branch entirely
+          git push origin screenshots-clean:screenshots --force
+
+          echo "Cleaned up screenshots for PR #${PR_NUMBER} (history removed)"

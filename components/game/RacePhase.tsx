@@ -21,10 +21,10 @@ export function RacePhase() {
   }
 
   return (
-    <div className="min-h-screen p-8 th-bg">
+    <div className="min-h-screen px-2 py-4 sm:p-8 th-bg overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
         {raceInputs && !simulationResult && (
-          <div className="th-panel rounded-lg p-8">
+          <div className="th-panel rounded-lg p-2 sm:p-8">
             <PixiRaceRenderer
               raceInputs={raceInputs}
               onRaceComplete={handleRaceComplete}
