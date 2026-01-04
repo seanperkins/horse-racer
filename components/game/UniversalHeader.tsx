@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useGameStore } from '@/lib/store/gameStore'
+import { AudioSettings } from '@/app/components/AudioSettings'
 
 export function UniversalHeader() {
   const {
@@ -160,11 +161,13 @@ export function UniversalHeader() {
             )}
           </div>
 
-          {/* Right section: Player count and Ready button */}
+          {/* Right section: Player count, Audio settings, and Ready button */}
           <div className="flex items-center gap-3">
             <div className="text-sm th-muted">
               {activePlayers} player{activePlayers !== 1 ? 's' : ''}
             </div>
+
+            <AudioSettings />
 
             {canReady && (
               <button
