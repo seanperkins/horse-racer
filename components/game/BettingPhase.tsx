@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { useGameStore } from '@/lib/store/gameStore'
+import { useAudioStore } from '@/lib/store/audioStore'
 import type { ClientMessage } from '@/types/messages'
 
 interface BettingPhaseProps {
@@ -23,6 +24,7 @@ interface BettingEntry {
 
 export function BettingPhase({ sendMessage }: BettingPhaseProps) {
   const { gold, hearts, currentRound, bettingEntries, playerId } = useGameStore()
+  const playSfx = useAudioStore((state) => state.playSfx)
 
   const [betType, setBetType] = useState<'win' | 'place' | 'exacta'>('win')
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null)
@@ -98,6 +100,7 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
       })
     }
 
+    playSfx('bet_place')
     setBetPlaced(true)
   }
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { useGameStore } from '@/lib/store/gameStore'
+import { useAudioStore } from '@/lib/store/audioStore'
 import { HorizontalStatBars } from './HorizontalStatBars'
 import { InfoTooltip } from './InfoTooltip'
 import { BLOODLINE_TOOLTIPS, JOCKEY_TRAIT_TOOLTIPS, ABILITY_TOOLTIPS, GAME_MECHANIC_TOOLTIPS, EQUIPMENT_EFFECT_TOOLTIPS } from '@/game/tooltips'
@@ -24,6 +25,7 @@ interface ShopUnit {
 export function ShopPhase({ sendMessage }: ShopPhaseProps) {
   const playerId = useGameStore((state) => state.playerId)
   const { gold, shopUnits, horses, hiredJockey, equipment, currentRound } = useGameStore()
+  const playSfx = useAudioStore((state) => state.playSfx)
   const [selectedTab, setSelectedTab] = useState<'shop' | 'inventory'>('shop')
 
   const handlePurchase = (unit: ShopUnit) => {
@@ -38,6 +40,7 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
       return
     }
 
+    playSfx('purchase')
     sendMessage({
       type: 'purchase_unit',
       unitId: unit.id,
@@ -56,6 +59,7 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
       return
     }
 
+    playSfx('purchase')
     sendMessage({
       type: 'hire_jockey',
       jockeyId,
@@ -73,6 +77,7 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
   const handleSell = (unitId: string) => {
     if (!confirm('Sell this unit for 50% of its value?')) return
 
+    playSfx('sell')
     sendMessage({
       type: 'sell_unit',
       unitId,

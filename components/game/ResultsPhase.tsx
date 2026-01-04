@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useGameStore } from '@/lib/store/gameStore'
+import { useAudioStore } from '@/lib/store/audioStore'
 
 interface PlacementResult {
   playerId: string
@@ -20,6 +21,7 @@ interface BetResult {
 
 export function ResultsPhase() {
   const { currentRound, gold, hearts, raceResults, playerId, playerReadyStatus } = useGameStore()
+  const playSfx = useAudioStore((state) => state.playSfx)
 
   if (!raceResults || !raceResults.placements) {
     return (
@@ -40,6 +42,19 @@ export function ResultsPhase() {
   const myPlacement = placements.find((p) => p.playerId === playerId)
   const myBetResult = betResults.find((b) => b.playerId === playerId)
   const wasEliminated = eliminatedPlayers.includes(playerId || '')
+
+  // Play victory/defeat sound when results load
+  useEffect(() => {
+    if (myPlacement) {
+      if (myPlacement.position === 1) {
+        playSfx('victory')
+      } else if (myPlacement.position > 3 || wasEliminated) {
+        playSfx('defeat')
+      } else {
+        playSfx('race_finish')
+      }
+    }
+  }, [myPlacement, wasEliminated, playSfx])
 
   const getPositionMedal = (position: number) => {
     if (position === 1) return '🥇'

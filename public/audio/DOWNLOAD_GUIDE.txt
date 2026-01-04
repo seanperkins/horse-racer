@@ -1,0 +1,66 @@
+
+🎵 AUDIO SETUP GUIDE FOR HORSE RACER
+====================================
+
+The audio files are missing. Here are your options:
+
+OPTION 1: Download Free Audio Assets (Recommended)
+---------------------------------------------------
+
+Visit these sites and download appropriate audio:
+
+MUSIC (save to public/audio/music/):
+• lobby.mp3 - Casual, upbeat background music
+• shop.mp3 - Calm shopping/menu music
+• race.mp3 - Exciting, fast-paced racing music
+
+Recommended sources:
+- Pixabay: https://pixabay.com/music/ (public domain)
+- Incompetech: https://incompetech.com/music/royalty-free/music.html
+- OpenGameArt: https://opengameart.org/art-search?keys=music
+
+SOUND EFFECTS (save to public/audio/sfx/):
+• button_click.mp3 - UI click sound
+• purchase.mp3 - Success/buy sound
+• sell.mp3 - Cash register/sell sound
+• bet_place.mp3 - Coin/chip placement
+• race_start.mp3 - Horn/bell start signal
+• race_finish.mp3 - Finish bell/chime
+• stumble.mp3 - Error/negative sound
+• surge.mp3 - Power-up/boost sound
+• victory.mp3 - Winning fanfare
+• defeat.mp3 - Losing sound
+• ready_up.mp3 - Ready notification beep
+
+Recommended sources:
+- Freesound: https://freesound.org/ (Creative Commons)
+- Pixabay: https://pixabay.com/sound-effects/ (public domain)
+- Zapsplat: https://www.zapsplat.com/ (free with attribution)
+
+OPTION 2: AI-Generated Audio
+-----------------------------
+
+Use AI tools to generate custom audio:
+
+For Music:
+- Suno AI: https://suno.ai/ (free tier available)
+- Udio: https://udio.com/
+- Soundraw: https://soundraw.io/
+
+For Sound Effects:
+- ElevenLabs Sound Effects: https://elevenlabs.io/sound-effects
+- MyEdit: https://myedit.online/audio-editor/sound-effect-generator
+
+OPTION 3: Disable Audio
+------------------------
+
+If you want to develop without audio, the game will work fine.
+The audio system gracefully handles missing files with no errors.
+
+=====================================
+
+After downloading, place the files in:
+  public/audio/music/ (3 files)
+  public/audio/sfx/ (11 files)
+
+The game will automatically detect and use them!

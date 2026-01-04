@@ -71,10 +71,15 @@ const SFX_PATHS: Record<SoundEffect, string> = {
 };
 
 // Create a pool of audio elements for simultaneous sound effects
+// Silently handles missing audio files by suppressing error events
 function createSfxPool(src: string, poolSize: number = 3): HTMLAudioElement[] {
   const pool: HTMLAudioElement[] = [];
   for (let i = 0; i < poolSize; i++) {
     const audio = new Audio(src);
+    // Suppress error logging for missing audio files
+    audio.addEventListener('error', (e) => {
+      e.stopPropagation();
+    });
     pool.push(audio);
   }
   return pool;
@@ -85,8 +90,8 @@ export const useAudioStore = create<AudioState>()(
     (set, get) => ({
       musicVolume: 0.5,
       sfxVolume: 0.7,
-      musicEnabled: true,
-      sfxEnabled: true,
+      musicEnabled: false,
+      sfxEnabled: false,
       currentMusic: null,
       musicAudio: null,
       sfxPool: new Map(),
@@ -159,8 +164,13 @@ export const useAudioStore = create<AudioState>()(
         newAudio.volume = musicVolume;
         newAudio.loop = true;
 
-        newAudio.play().catch((error) => {
-          console.warn('Music playback prevented:', error);
+        // Suppress error events for missing audio files
+        newAudio.addEventListener('error', (e) => {
+          e.stopPropagation();
+        });
+
+        newAudio.play().catch(() => {
+          // Silently fail if audio file is missing or playback is prevented
         });
 
         set({ currentMusic: track, musicAudio: newAudio });
@@ -193,17 +203,20 @@ export const useAudioStore = create<AudioState>()(
         if (audio) {
           audio.volume = sfxVolume;
           audio.currentTime = 0;
-          audio.play().catch((error) => {
-            console.warn('SFX playback prevented:', error);
+          audio.play().catch(() => {
+            // Silently fail if audio file is missing or playback is prevented
           });
         }
       },
 
       initAudio: () => {
-        // Pre-load music tracks
+        // Pre-load music tracks (with error suppression)
         Object.values(MUSIC_PATHS).forEach((path) => {
           const audio = new Audio(path);
           audio.preload = 'auto';
+          audio.addEventListener('error', (e) => {
+            e.stopPropagation();
+          });
         });
 
         // Pre-load sound effects

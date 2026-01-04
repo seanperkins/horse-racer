@@ -11,7 +11,8 @@
     "test": "vitest",
     "test:e2e": "playwright test",
     "test:determinism": "tsx scripts/determinism-smoke.ts",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "setup:audio": "node scripts/generate-placeholder-audio.js"
   },
   "keywords": [],
   "author": "",

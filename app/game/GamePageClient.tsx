@@ -4,6 +4,7 @@ import { useCallback, useMemo, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useWebSocket } from '@/lib/hooks/useWebSocket'
 import { useGameStore } from '@/lib/store/gameStore'
+import { useAudioStore } from '@/lib/store/audioStore'
 import { Lobby } from '@/components/game/Lobby'
 import { ShopPhase } from '@/components/game/ShopPhase'
 import { PreparationPhase } from '@/components/game/PreparationPhase'
@@ -45,6 +46,7 @@ export default function GamePageClient({ userId, username }: GamePageClientProps
 
   const handleMessage = useCallback((message: ServerMessage) => {
     console.log('Received message:', message.type, message)
+    const { playSfx, playMusic } = useAudioStore.getState()
 
     switch (message.type) {
       case 'lobby_state':
@@ -63,6 +65,15 @@ export default function GamePageClient({ userId, username }: GamePageClientProps
 
       case 'game_phase':
         setGamePhase(message.phase, message.duration, message.round)
+        // Play music based on phase
+        if (message.phase === 'shop') {
+          playMusic('shop')
+        } else if (message.phase === 'race') {
+          playSfx('race_start')
+          playMusic('race')
+        } else if (message.phase === 'lobby') {
+          playMusic('lobby')
+        }
         break
 
       case 'shop_state':

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { useGameStore } from '@/lib/store/gameStore'
+import { useAudioStore } from '@/lib/store/audioStore'
 import type { ClientMessage } from '@/types/messages'
 import type { Horse, Jockey, Equipment, RaceStrategy } from '@/types/game'
 
@@ -39,6 +40,7 @@ const STRATEGY_PRESETS: Array<{
 
 export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
   const { horses, hiredJockey, equipment, currentRound, currentTrack } = useGameStore()
+  const playSfx = useAudioStore((state) => state.playSfx)
 
   // Selection state
   const [selectedHorse, setSelectedHorse] = useState<Horse | null>(null)
@@ -79,6 +81,7 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
     }
 
     console.log('Sending setup_race_entry message')
+    playSfx('ready_up')
     sendMessage({
       type: 'setup_race_entry',
       horseId: selectedHorse.id,
