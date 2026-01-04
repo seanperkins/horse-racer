@@ -21,7 +21,8 @@
       "Bash(xargs kill:*)",
       "Bash(tee:*)",
       "Bash(git push:*)",
-      "Bash(file:*)"
+      "Bash(file:*)",
+      "Bash(npx vitest:*)"
     ]
   }
 }

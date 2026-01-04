@@ -11,6 +11,7 @@ import { BettingPhase } from '@/components/game/BettingPhase'
 import { RacePhase } from '@/components/game/RacePhase'
 import { ResultsPhase } from '@/components/game/ResultsPhase'
 import { UniversalHeader } from '@/components/game/UniversalHeader'
+import { ErrorBoundary } from '@/app/components/ErrorBoundary'
 import type { ServerMessage } from '@/types/messages'
 
 interface GamePageClientProps {
@@ -156,22 +157,46 @@ export default function GamePageClient({ userId, username }: GamePageClientProps
 
     switch (currentPhase) {
       case 'lobby':
-        return <Lobby sendMessage={sendMessage} roomCode={roomCode} isConnected={isConnected} />
+        return (
+          <ErrorBoundary componentName="Lobby">
+            <Lobby sendMessage={sendMessage} roomCode={roomCode} isConnected={isConnected} />
+          </ErrorBoundary>
+        )
 
       case 'shop':
-        return <ShopPhase sendMessage={sendMessage} />
+        return (
+          <ErrorBoundary componentName="Shop Phase">
+            <ShopPhase sendMessage={sendMessage} />
+          </ErrorBoundary>
+        )
 
       case 'preparation':
-        return <PreparationPhase sendMessage={sendMessage} />
+        return (
+          <ErrorBoundary componentName="Preparation Phase">
+            <PreparationPhase sendMessage={sendMessage} />
+          </ErrorBoundary>
+        )
 
       case 'betting':
-        return <BettingPhase sendMessage={sendMessage} />
+        return (
+          <ErrorBoundary componentName="Betting Phase">
+            <BettingPhase sendMessage={sendMessage} />
+          </ErrorBoundary>
+        )
 
       case 'race':
-        return <RacePhase />
+        return (
+          <ErrorBoundary componentName="Race Phase">
+            <RacePhase />
+          </ErrorBoundary>
+        )
 
       case 'results':
-        return <ResultsPhase />
+        return (
+          <ErrorBoundary componentName="Results Phase">
+            <ResultsPhase />
+          </ErrorBoundary>
+        )
 
       default:
         return (
