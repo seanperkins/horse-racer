@@ -66,6 +66,17 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
         // Validate message against schema
         const validatedMessage = ClientMessageSchema.parse(message) as ClientMessage
 
+        // Helper function to ensure currentRoom is set
+        const ensureRoom = (): GameRoom | null => {
+          if (!currentRoom) {
+            currentRoom = findRoomByPlayerId(playerId)
+            if (currentRoom) {
+              console.log(`📍 Restored currentRoom to: ${currentRoom.roomId} for player ${playerId}`)
+            }
+          }
+          return currentRoom
+        }
+
         // Handle different message types
         switch (validatedMessage.type) {
           case 'join_lobby':
@@ -86,15 +97,8 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
               break
             }
             console.log(`📨 Received ready_up from ${playerId}: ${validatedMessage.ready}, currentRoom: ${currentRoom?.roomId || 'none'}`)
-            // If currentRoom is null, try to find the room by player ID
-            const roomForReady = currentRoom || findRoomByPlayerId(playerId)
-            if (roomForReady) {
-              roomForReady.handleReadyUp(playerId, validatedMessage.ready)
-              // Update currentRoom reference for future messages
-              if (!currentRoom) {
-                currentRoom = roomForReady
-                console.log(`📍 Restored currentRoom to: ${roomForReady.roomId} for player ${playerId}`)
-              }
+            if (ensureRoom()) {
+              currentRoom!.handleReadyUp(playerId, validatedMessage.ready)
             } else {
               console.error(`❌ ready_up failed: No room found for player ${playerId}`)
               sendError(ws, 'Not in a room')
@@ -102,112 +106,64 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
             break
 
           case 'purchase_unit':
-            if (!currentRoom) {
-              currentRoom = findRoomByPlayerId(playerId)
-              if (currentRoom) {
-                console.log(`📍 Restored currentRoom to: ${currentRoom.roomId} for player ${playerId}`)
-              }
-            }
-            if (currentRoom) {
-              currentRoom.handlePurchase(playerId, validatedMessage)
+            if (ensureRoom()) {
+              currentRoom!.handlePurchase(playerId, validatedMessage)
             } else {
               sendError(ws, 'Not in a room')
             }
             break
 
           case 'sell_unit':
-            if (!currentRoom) {
-              currentRoom = findRoomByPlayerId(playerId)
-              if (currentRoom) {
-                console.log(`📍 Restored currentRoom to: ${currentRoom.roomId} for player ${playerId}`)
-              }
-            }
-            if (currentRoom) {
-              currentRoom.handleSell(playerId, validatedMessage)
+            if (ensureRoom()) {
+              currentRoom!.handleSell(playerId, validatedMessage)
             } else {
               sendError(ws, 'Not in a room')
             }
             break
 
           case 'reroll_shop':
-            if (!currentRoom) {
-              currentRoom = findRoomByPlayerId(playerId)
-              if (currentRoom) {
-                console.log(`📍 Restored currentRoom to: ${currentRoom.roomId} for player ${playerId}`)
-              }
-            }
-            if (currentRoom) {
-              currentRoom.handleReroll(playerId)
+            if (ensureRoom()) {
+              currentRoom!.handleReroll(playerId)
             } else {
               sendError(ws, 'Not in a room')
             }
             break
 
           case 'train_horse':
-            if (!currentRoom) {
-              currentRoom = findRoomByPlayerId(playerId)
-              if (currentRoom) {
-                console.log(`📍 Restored currentRoom to: ${currentRoom.roomId} for player ${playerId}`)
-              }
-            }
-            if (currentRoom) {
-              currentRoom.handleTrain(playerId, validatedMessage)
+            if (ensureRoom()) {
+              currentRoom!.handleTrain(playerId, validatedMessage)
             } else {
               sendError(ws, 'Not in a room')
             }
             break
 
           case 'hire_jockey':
-            if (!currentRoom) {
-              currentRoom = findRoomByPlayerId(playerId)
-              if (currentRoom) {
-                console.log(`📍 Restored currentRoom to: ${currentRoom.roomId} for player ${playerId}`)
-              }
-            }
-            if (currentRoom) {
-              currentRoom.handleHireJockey(playerId, validatedMessage)
+            if (ensureRoom()) {
+              currentRoom!.handleHireJockey(playerId, validatedMessage)
             } else {
               sendError(ws, 'Not in a room')
             }
             break
 
           case 'fire_jockey':
-            if (!currentRoom) {
-              currentRoom = findRoomByPlayerId(playerId)
-              if (currentRoom) {
-                console.log(`📍 Restored currentRoom to: ${currentRoom.roomId} for player ${playerId}`)
-              }
-            }
-            if (currentRoom) {
-              currentRoom.handleFireJockey(playerId)
+            if (ensureRoom()) {
+              currentRoom!.handleFireJockey(playerId)
             } else {
               sendError(ws, 'Not in a room')
             }
             break
 
           case 'setup_race_entry':
-            if (!currentRoom) {
-              currentRoom = findRoomByPlayerId(playerId)
-              if (currentRoom) {
-                console.log(`📍 Restored currentRoom to: ${currentRoom.roomId} for player ${playerId}`)
-              }
-            }
-            if (currentRoom) {
-              currentRoom.handleSetupRaceEntry(playerId, validatedMessage)
+            if (ensureRoom()) {
+              currentRoom!.handleSetupRaceEntry(playerId, validatedMessage)
             } else {
               sendError(ws, 'Not in a room')
             }
             break
 
           case 'place_bet':
-            if (!currentRoom) {
-              currentRoom = findRoomByPlayerId(playerId)
-              if (currentRoom) {
-                console.log(`📍 Restored currentRoom to: ${currentRoom.roomId} for player ${playerId}`)
-              }
-            }
-            if (currentRoom) {
-              currentRoom.handlePlaceBet(playerId, validatedMessage)
+            if (ensureRoom()) {
+              currentRoom!.handlePlaceBet(playerId, validatedMessage)
             } else {
               sendError(ws, 'Not in a room')
             }
