@@ -30,19 +30,33 @@ export async function getUserFromRequest(
     // Legacy v4 names: __Secure-next-auth.session-token or next-auth.session-token
     const cookies = parseCookies(cookieHeader)
     console.log('🔒 Available cookies:', Object.keys(cookies))
-    const token =
-      cookies['__Secure-authjs.session-token'] ||
-      cookies['__Host-authjs.session-token'] ||
-      cookies['authjs.session-token'] ||
-      cookies['__Secure-next-auth.session-token'] ||
-      cookies['next-auth.session-token']
 
-    if (!token) {
+    // Try each cookie name and track which one we found
+    let token: string | undefined
+    let cookieName: string | undefined
+
+    const cookieNames = [
+      '__Secure-authjs.session-token',
+      '__Host-authjs.session-token',
+      'authjs.session-token',
+      '__Secure-next-auth.session-token',
+      'next-auth.session-token'
+    ]
+
+    for (const name of cookieNames) {
+      if (cookies[name]) {
+        token = cookies[name]
+        cookieName = name
+        break
+      }
+    }
+
+    if (!token || !cookieName) {
       console.log('🔒 No NextAuth session token found')
       return null
     }
 
-    console.log('🔒 Found NextAuth token, decoding...')
+    console.log(`🔒 Found NextAuth token in cookie: ${cookieName}`)
 
     // Decode the JWT token
     if (!AUTH_SECRET) {
@@ -50,10 +64,16 @@ export async function getUserFromRequest(
       return null
     }
 
+    // NextAuth v5 uses the cookie name (without prefix) as the salt
+    // Remove __Secure-, __Host- prefixes to get the base cookie name
+    const salt = cookieName.replace(/^__(Secure|Host)-/, '')
+
+    console.log(`🔒 Decoding with salt: ${salt}`)
+
     const decoded = await decode({
       token,
       secret: AUTH_SECRET,
-      salt: '',
+      salt,
     })
 
     if (!decoded || !decoded.id) {
