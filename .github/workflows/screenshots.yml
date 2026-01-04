@@ -86,6 +86,10 @@ jobs:
       - name: Upload screenshots to branch
         if: success() && github.event_name == 'pull_request'
         run: |
+          # Save screenshots to temp location first
+          mkdir -p /tmp/screenshots-upload
+          cp screenshots/*.png /tmp/screenshots-upload/
+
           # Configure git
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -93,20 +97,25 @@ jobs:
           # Create a unique folder for this PR/commit
           SCREENSHOT_DIR="pr-${{ github.event.pull_request.number }}/${{ github.sha }}"
 
-          # Fetch and checkout screenshots branch (create if doesn't exist)
-          git fetch origin screenshots || true
-          git checkout screenshots || git checkout --orphan screenshots
+          # Clone the repo fresh for screenshots branch operations
+          cd /tmp
+          rm -rf screenshots-repo
+          git clone --depth 1 https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git screenshots-repo || true
+          cd screenshots-repo
 
-          # Clean up old files but keep structure
-          git rm -rf . || true
+          # Try to checkout screenshots branch, or create orphan
+          git fetch origin screenshots:screenshots 2>/dev/null && git checkout screenshots || {
+            git checkout --orphan screenshots
+            git rm -rf . 2>/dev/null || true
+          }
 
           # Create directory and copy screenshots
           mkdir -p "$SCREENSHOT_DIR"
-          cp /home/runner/work/horse-racer/horse-racer/screenshots/*.png "$SCREENSHOT_DIR/" || true
+          cp /tmp/screenshots-upload/*.png "$SCREENSHOT_DIR/"
 
           # Commit and push
           git add .
-          git commit -m "Screenshots for PR #${{ github.event.pull_request.number }} @ ${{ github.sha }}" || true
+          git commit -m "Screenshots for PR #${{ github.event.pull_request.number }} @ ${{ github.sha }}" || echo "No changes to commit"
           git push origin screenshots --force
 
       - name: Post screenshots to PR
@@ -117,7 +126,8 @@ jobs:
             const fs = require('fs');
             const path = require('path');
 
-            const screenshotDir = 'screenshots';
+            // Screenshots were copied to /tmp/screenshots-upload before git operations
+            const screenshotDir = '/tmp/screenshots-upload';
             const files = fs.readdirSync(screenshotDir).filter(f => f.endsWith('.png'));
 
             if (files.length === 0) {
