@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Player, Horse, Jockey, Equipment, Track } from '@/types/game'
+import type { Player, Horse, Jockey, Equipment, Track, SubmittedEntry } from '@/types/game'
 import type { RaceInputs as RaceInputsMessage } from '@/types/messages'
 
 type GamePhase = 'shop' | 'preparation' | 'betting' | 'race' | 'results'
@@ -24,7 +24,15 @@ interface GameState {
   // Player resources
   gold: number
   hearts: number
+  prestige: number
+  stableSlots: number
+  maxStableSlots: number
   eliminated: boolean
+
+  // UI state for phase actions
+  bettingStatus: 'open' | 'submitted' | 'skipped'
+  entryStatus: 'open' | 'submitted'
+  lastSubmittedEntry: SubmittedEntry | null
 
   // Inventory
   horses: Horse[]
@@ -94,6 +102,15 @@ interface GameState {
   setWebSocket: (ws: WebSocket | null) => void
   sendMessage: (message: any) => void
   reset: () => void
+
+  // UI state actions
+  setBettingStatus: (status: 'open' | 'submitted' | 'skipped') => void
+  setEntryStatus: (status: 'open' | 'submitted', entry?: SubmittedEntry) => void
+
+  // Economy actions
+  setPrestige: (prestige: number) => void
+  addPrestige: (amount: number) => void
+  setStableSlots: (slots: number) => void
 }
 
 const initialState = {
@@ -109,7 +126,13 @@ const initialState = {
   phaseStartTime: 0,
   gold: 10,
   hearts: 5,
+  prestige: 0,
+  stableSlots: 1,
+  maxStableSlots: 3,
   eliminated: false,
+  bettingStatus: 'open' as const,
+  entryStatus: 'open' as const,
+  lastSubmittedEntry: null,
   horses: [],
   hiredJockey: null,
   equipment: [],
@@ -148,6 +171,17 @@ export const useGameStore = create<GameState>((set) => ({
     // Reset player ready status when entering results, shop, or betting phase
     if (phase === 'results' || phase === 'shop' || phase === 'betting') {
       updates.playerReadyStatus = {}
+    }
+
+    // Reset betting status when entering betting phase
+    if (phase === 'betting') {
+      updates.bettingStatus = 'open'
+    }
+
+    // Reset entry status when entering preparation phase
+    if (phase === 'preparation') {
+      updates.entryStatus = 'open'
+      updates.lastSubmittedEntry = null
     }
 
     set(updates)
@@ -201,4 +235,21 @@ export const useGameStore = create<GameState>((set) => ({
   },
 
   reset: () => set(initialState),
+
+  // UI state actions
+  setBettingStatus: (status) => set({ bettingStatus: status }),
+
+  setEntryStatus: (status, entry) =>
+    set({
+      entryStatus: status,
+      ...(entry && { lastSubmittedEntry: entry }),
+    }),
+
+  // Economy actions
+  setPrestige: (prestige) => set({ prestige }),
+
+  addPrestige: (amount) =>
+    set((state) => ({ prestige: state.prestige + amount })),
+
+  setStableSlots: (slots) => set({ stableSlots: slots }),
 }))
