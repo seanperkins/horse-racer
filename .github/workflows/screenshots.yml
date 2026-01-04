@@ -55,22 +55,36 @@ jobs:
       - name: Run database migrations
         run: npx prisma migrate deploy
 
+      - name: Seed test user
+        run: npx tsx prisma/seed-test-user.ts
+
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
 
-      - name: Create screenshots directory
-        run: mkdir -p screenshots
+      - name: Create directories
+        run: |
+          mkdir -p screenshots
+          mkdir -p playwright/.auth
 
       - name: Start server
         run: |
           npm run dev &
+          echo $! > .server-pid
           wait-on http://localhost:3000 --timeout 60000
 
       - name: Take screenshots
         run: npx playwright test --project=screenshots
-        continue-on-error: true
+
+      - name: Stop server
+        if: always()
+        run: |
+          if [ -f .server-pid ]; then
+            kill $(cat .server-pid) 2>/dev/null || true
+            rm .server-pid
+          fi
 
       - name: List screenshots
+        if: always()
         run: ls -la screenshots/ || echo "No screenshots directory"
 
       - name: Upload screenshots

@@ -16,7 +16,8 @@ const viewports = [
   { name: 'desktop', width: 1280, height: 720 },
 ]
 
-test.describe('Mobile Screenshots', () => {
+// Public pages that don't require authentication
+test.describe('Public Page Screenshots', () => {
   for (const viewport of viewports) {
     test.describe(`${viewport.name} (${viewport.width}x${viewport.height})`, () => {
       test.beforeEach(async ({ page }) => {
@@ -33,7 +34,7 @@ test.describe('Mobile Screenshots', () => {
       })
 
       test('Login page', async ({ page }) => {
-        await page.goto('/auth/signin')
+        await page.goto('/login')
         await page.waitForLoadState('networkidle')
         await page.screenshot({
           path: path.join(screenshotsDir, `login-${viewport.name}.png`),
@@ -42,19 +43,33 @@ test.describe('Mobile Screenshots', () => {
       })
 
       test('Registration page', async ({ page }) => {
-        await page.goto('/auth/register')
+        await page.goto('/register')
         await page.waitForLoadState('networkidle')
         await page.screenshot({
           path: path.join(screenshotsDir, `register-${viewport.name}.png`),
           fullPage: true,
         })
       })
+    })
+  }
+})
 
-      test('Lobby page', async ({ page }) => {
-        await page.goto('/lobby')
+// Authenticated pages - uses stored auth state from auth.setup.ts
+test.describe('Game Page Screenshots (Authenticated)', () => {
+  for (const viewport of viewports) {
+    test.describe(`${viewport.name} (${viewport.width}x${viewport.height})`, () => {
+      test.beforeEach(async ({ page }) => {
+        await page.setViewportSize({ width: viewport.width, height: viewport.height })
+      })
+
+      test('Game lobby', async ({ page }) => {
+        await page.goto('/game')
+        // Wait for the page to load - lobby should show while waiting for players
         await page.waitForLoadState('networkidle')
+        // Give time for WebSocket connection and initial state
+        await page.waitForTimeout(2000)
         await page.screenshot({
-          path: path.join(screenshotsDir, `lobby-${viewport.name}.png`),
+          path: path.join(screenshotsDir, `game-lobby-${viewport.name}.png`),
           fullPage: true,
         })
       })
