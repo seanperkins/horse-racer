@@ -181,9 +181,17 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
       console.log(`WebSocket connection closed for player ${playerId}`)
       playerConnections.delete(playerId)
 
-      // Don't immediately remove player - give them a grace period to reconnect
-      // The player data stays in the room, only the socket connection is cleared
-      // Room cleanup will handle removing empty rooms after 60 seconds
+      // Clean up the socket reference from the room to prevent memory leaks
+      // The player data stays in the room for reconnection grace period
+      if (currentRoom) {
+        currentRoom.handleSocketDisconnect(playerId)
+      } else {
+        // Try to find the room if currentRoom wasn't set
+        const room = findRoomByPlayerId(playerId)
+        if (room) {
+          room.handleSocketDisconnect(playerId)
+        }
+      }
     })
 
     ws.on('error', (error) => {
@@ -299,9 +307,16 @@ function sendError(ws: WebSocket, message: string, code?: string): void {
   )
 }
 
-// Cleanup empty rooms periodically
+// Cleanup empty rooms and dead sockets periodically
 setInterval(() => {
   for (const [roomId, room] of gameRooms) {
+    // Clean up any dead socket references first
+    const cleanedSockets = room.cleanupDeadSockets()
+    if (cleanedSockets > 0) {
+      console.log(`🧹 Cleaned ${cleanedSockets} dead socket(s) in room ${roomId}`)
+    }
+
+    // Then check if room should be removed
     if (room.isEmpty()) {
       console.log(`Removing empty room: ${roomId}`)
       gameRooms.delete(roomId)

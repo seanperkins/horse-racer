@@ -1,8 +1,22 @@
 import type { IncomingMessage } from 'http'
 import { decode } from 'next-auth/jwt'
+import { z } from 'zod'
 
 // NextAuth v5 supports both AUTH_SECRET and NEXTAUTH_SECRET
 const AUTH_SECRET = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET
+
+// Environment-based cookie configuration
+const IS_PRODUCTION = process.env.NODE_ENV === 'production'
+const COOKIE_NAME = IS_PRODUCTION
+  ? '__Secure-authjs.session-token'
+  : 'authjs.session-token'
+
+// Zod schema for validating decoded JWT payload
+const SessionPayloadSchema = z.object({
+  id: z.string().min(1),
+  username: z.string().default(''),
+  email: z.string().email().optional(),
+})
 
 interface SessionUser {
   id: string
@@ -17,94 +31,48 @@ export async function getUserFromRequest(
   request: IncomingMessage
 ): Promise<SessionUser | null> {
   try {
-    // Parse cookies from request headers
     const cookieHeader = request.headers.cookie
     if (!cookieHeader) {
       console.log('🔒 No cookie header in WebSocket request')
       return null
     }
 
-    // NextAuth v5 uses authjs cookie names:
-    // In production with HTTPS: __Secure-authjs.session-token or __Host-authjs.session-token
-    // In development with HTTP: authjs.session-token
-    // Legacy v4 names: __Secure-next-auth.session-token or next-auth.session-token
     const cookies = parseCookies(cookieHeader)
-    console.log('🔒 Available cookies:', Object.keys(cookies))
+    const token = cookies[COOKIE_NAME]
 
-    // Try each cookie name and track which one we found
-    let token: string | undefined
-    let cookieName: string | undefined
-
-    const cookieNames = [
-      '__Secure-authjs.session-token',
-      '__Host-authjs.session-token',
-      'authjs.session-token',
-      '__Secure-next-auth.session-token',
-      'next-auth.session-token'
-    ]
-
-    for (const name of cookieNames) {
-      if (cookies[name]) {
-        token = cookies[name]
-        cookieName = name
-        break
-      }
-    }
-
-    if (!token || !cookieName) {
-      console.log('🔒 No NextAuth session token found')
+    if (!token) {
+      console.log(`🔒 No session token found (expected: ${COOKIE_NAME})`)
       return null
     }
 
-    console.log(`🔒 Found NextAuth token in cookie: ${cookieName}`)
-
-    // Decode the JWT token
     if (!AUTH_SECRET) {
       console.error('🔒 ERROR: No AUTH_SECRET or NEXTAUTH_SECRET environment variable set!')
       return null
     }
 
-    // NextAuth v5 uses the cookie name as the salt
-    // Try with the full cookie name first, then without prefixes if that fails
-    console.log(`🔒 Secret available: ${AUTH_SECRET ? 'yes (length: ' + AUTH_SECRET.length + ')' : 'no'}`)
-
-    // Try decoding with the full cookie name as salt
-    console.log(`🔒 Attempting decode with full cookie name as salt: ${cookieName}`)
-    let decoded = await decode({
+    const decoded = await decode({
       token,
       secret: AUTH_SECRET,
-      salt: cookieName,
+      salt: COOKIE_NAME,
     })
 
-    // If that fails, try with the base name (without __Secure-/__Host-)
-    if (!decoded || !decoded.id) {
-      const baseSalt = cookieName.replace(/^__(Secure|Host)-/, '')
-      console.log(`🔒 First attempt failed, trying with base salt: ${baseSalt}`)
-      decoded = await decode({
-        token,
-        secret: AUTH_SECRET,
-        salt: baseSalt,
-      })
-    }
-
-    if (!decoded || !decoded.id) {
-      console.log('🔒 Token decode failed or missing id', decoded)
+    if (!decoded) {
+      console.log('🔒 Token decode returned null')
       return null
     }
 
-    console.log(`🔒 Successfully decoded token for user: ${decoded.id}`)
+    // Validate the decoded payload structure
+    const result = SessionPayloadSchema.safeParse(decoded)
+    if (!result.success) {
+      console.log('🔒 Token payload validation failed:', result.error.message)
+      return null
+    }
 
-    return {
-      id: decoded.id as string,
-      username: (decoded.username as string) || '',
-      email: decoded.email as string | undefined,
-    }
+    console.log(`🔒 Successfully authenticated user: ${result.data.id}`)
+
+    return result.data
   } catch (error) {
-    console.error('🔒 Error extracting user from request:', error)
-    if (error instanceof Error) {
-      console.error('🔒 Error message:', error.message)
-      console.error('🔒 Error stack:', error.stack)
-    }
+    console.error('🔒 Error extracting user from request:', error instanceof Error ? error.message : 'Unknown error')
     return null
   }
 }

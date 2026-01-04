@@ -239,6 +239,36 @@ export class GameRoom {
   }
 
   /**
+   * Handle socket disconnection without removing the player from the game.
+   * This allows players to reconnect within the grace period.
+   * Cleans up the dead socket reference to prevent memory leaks.
+   */
+  handleSocketDisconnect(playerId: string): void {
+    const socket = this.playerSockets.get(playerId)
+    if (socket) {
+      this.playerSockets.delete(playerId)
+      console.log(`🔌 Cleaned up socket for player ${playerId} in room ${this.roomId}`)
+    }
+  }
+
+  /**
+   * Clean up any dead socket references (sockets that are not in OPEN state).
+   * Call this periodically to prevent memory leaks from ungraceful disconnects.
+   */
+  cleanupDeadSockets(): number {
+    let cleanedCount = 0
+    for (const [playerId, socket] of this.playerSockets) {
+      // WebSocket.OPEN = 1
+      if (socket.readyState !== 1) {
+        this.playerSockets.delete(playerId)
+        cleanedCount++
+        console.log(`🧹 Removed dead socket for player ${playerId} in room ${this.roomId}`)
+      }
+    }
+    return cleanedCount
+  }
+
+  /**
    * Create AI players to fill empty slots up to MAX_PLAYERS
    */
   initializeAIPlayers(): void {
