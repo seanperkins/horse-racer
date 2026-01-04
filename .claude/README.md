@@ -7,11 +7,13 @@ This directory contains configuration for Claude Code, including custom skills, 
 ```
 .claude/
 ├── skills/           # Custom skills that can be invoked
-│   └── update-tutorial.md
+│   ├── update-tutorial.md
+│   └── test-balance.md
 ├── hooks/            # Hooks that run at specific events
 │   └── post-task.sh
 ├── agents/           # Agent configurations for specialized tasks
-│   └── tutorial-updater.json
+│   ├── tutorial-updater.json
+│   └── balance-tester.json
 └── settings.local.json  # Local settings (gitignored)
 ```
 
@@ -96,6 +98,21 @@ A specialized skill for maintaining tutorial documentation. Invoked with `/updat
 
 See `skills/update-tutorial.md` for full documentation.
 
+### test-balance
+
+A specialized skill for testing game balance through race simulations. Invoked with `/test-balance`.
+
+See `skills/test-balance.md` for full documentation.
+
+**Quick usage:**
+```bash
+# Run balance test via skill
+/test-balance
+
+# Or run the script directly
+npx tsx scripts/balance-test.ts
+```
+
 ## Agents
 
 ### tutorial-updater
@@ -103,6 +120,12 @@ See `skills/update-tutorial.md` for full documentation.
 A documentation specialist agent configured to maintain the tutorial page.
 
 Configuration in `agents/tutorial-updater.json`.
+
+### balance-tester
+
+A game balance specialist agent that runs simulations to verify fairness.
+
+Configuration in `agents/balance-tester.json`.
 
 ## Settings
 
