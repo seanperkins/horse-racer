@@ -17,7 +17,9 @@ export function UniversalHeader() {
     phaseStartTime,
     playerId,
     playerReadyStatus,
-    sendMessage
+    sendMessage,
+    bettingStatus,
+    setBettingStatus
   } = useGameStore()
 
   const [timeLeft, setTimeLeft] = useState(phaseDuration)
@@ -57,8 +59,9 @@ export function UniversalHeader() {
     return true
   }).length
 
-  // Ready status
+  // Ready status - for betting phase, use bettingStatus from store
   const isReady = playerId ? playerReadyStatus[playerId] : false
+  const isBettingDone = currentPhase === 'betting' && bettingStatus !== 'open'
   const canReady = currentPhase === 'shop' || currentPhase === 'results' || currentPhase === 'betting'
 
   const handleToggleReady = () => {
@@ -67,11 +70,17 @@ export function UniversalHeader() {
       return
     }
 
-    console.log('Sending ready_up:', { playerId, isReady, currentPhase })
+    console.log('Sending ready_up:', { playerId, isReady, currentPhase, bettingStatus })
 
     // For betting phase, we need to handle skip differently
     if (currentPhase === 'betting') {
-      // Skip betting - just mark as ready without placing a bet
+      // Don't allow skip if already bet/skipped
+      if (bettingStatus !== 'open') {
+        console.warn('Betting already done:', bettingStatus)
+        return
+      }
+      // Skip betting - update store state and mark as ready
+      setBettingStatus('skipped')
       sendMessage({
         type: 'ready_up',
         ready: true,
@@ -90,9 +99,18 @@ export function UniversalHeader() {
   // Get button text based on phase
   const getReadyButtonText = () => {
     if (currentPhase === 'betting') {
-      return isReady ? '✓ Skipped' : 'Skip Betting'
+      if (bettingStatus === 'submitted') return '✓ Bet Placed'
+      if (bettingStatus === 'skipped') return '✓ Skipped'
+      return 'Skip Betting'
     }
     return isReady ? '✓ Ready' : 'Ready Up'
+  }
+
+  // Determine if button should be disabled
+  const isButtonDisabled = () => {
+    if (eliminated) return true
+    if (currentPhase === 'betting') return bettingStatus !== 'open'
+    return isReady
   }
 
   // Don't show header in lobby
@@ -172,12 +190,12 @@ export function UniversalHeader() {
             {canReady && (
               <button
                 onClick={handleToggleReady}
-                disabled={eliminated || isReady}
+                disabled={isButtonDisabled()}
                 className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${
-                  isReady
+                  isReady || isBettingDone
                     ? 'th-button-green'
                     : 'th-button'
-                } ${eliminated || isReady ? 'opacity-50 cursor-not-allowed' : ''}`}
+                } ${isButtonDisabled() ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {getReadyButtonText()}
               </button>

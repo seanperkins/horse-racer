@@ -23,7 +23,7 @@ interface BettingEntry {
 }
 
 export function BettingPhase({ sendMessage }: BettingPhaseProps) {
-  const { gold, hearts, currentRound, bettingEntries, playerId } = useGameStore()
+  const { gold, hearts, currentRound, bettingEntries, playerId, bettingStatus, setBettingStatus } = useGameStore()
   const playSfx = useAudioStore((state) => state.playSfx)
 
   const [betType, setBetType] = useState<'win' | 'place' | 'exacta'>('win')
@@ -32,7 +32,9 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
   const [exactaSecond, setExactaSecond] = useState<string | null>(null)
   const [betAmount, setBetAmount] = useState<number>(3)
   const [betForHeart, setBetForHeart] = useState<boolean>(false)
-  const [betPlaced, setBetPlaced] = useState<boolean>(false)
+
+  // Use store's bettingStatus instead of local state
+  const betPlaced = bettingStatus !== 'open'
 
   const entries = bettingEntries as BettingEntry[]
   const maxBet = Math.min(10, gold)
@@ -101,11 +103,11 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
     }
 
     playSfx('bet_place')
-    setBetPlaced(true)
+    setBettingStatus('submitted')
   }
 
   const handleSkip = () => {
-    setBetPlaced(true)
+    setBettingStatus('skipped')
   }
 
   const getSelectedEntry = () => {
@@ -134,7 +136,9 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
       <div className="max-w-7xl mx-auto">
         {betPlaced ? (
           <div className="th-panel rounded-lg p-8 text-center">
-            <h2 className="text-2xl font-bold mb-4 text-[var(--accent-green)]">✓ Bet Placed!</h2>
+            <h2 className="text-2xl font-bold mb-4 text-[var(--accent-green)]">
+              {bettingStatus === 'submitted' ? '✓ Bet Placed!' : '⏭ Betting Skipped'}
+            </h2>
             <p className="th-label">Waiting for race to begin...</p>
           </div>
         ) : (

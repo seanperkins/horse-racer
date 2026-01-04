@@ -271,8 +271,8 @@ Add handler for `expand_stable` message.
 - [x] 4. ✅ `types/messages.ts` - Update message types
 
 ### Milestone 2: UI State Sync (Issue #1)
-- [ ] 5. `BettingPhase.tsx` - Replace local state with store
-- [ ] 6. `UniversalHeader.tsx` - Sync skip action with store
+- [x] 5. ✅ `BettingPhase.tsx` - Replace local state with store
+- [x] 6. ✅ `UniversalHeader.tsx` - Sync skip action with store
 
 ### Milestone 3: Economy Display
 - [ ] 7. `UniversalHeader.tsx` - Add Prestige display
