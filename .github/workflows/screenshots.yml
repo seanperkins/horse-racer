@@ -103,6 +103,10 @@ jobs:
           git clone --depth 1 https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git screenshots-repo || true
           cd screenshots-repo
 
+          # Configure git in cloned repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
           # Try to checkout screenshots branch, or create orphan
           git fetch origin screenshots:screenshots 2>/dev/null && git checkout screenshots || {
             git checkout --orphan screenshots
