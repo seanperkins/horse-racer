@@ -42,3 +42,6 @@ prisma/migrations/
 
 # IDE
 .vscode/
+
+# Claude Code local settings (keep agents and skills tracked)
+.claude/settings.local.json
