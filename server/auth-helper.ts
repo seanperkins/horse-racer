@@ -69,6 +69,7 @@ export async function getUserFromRequest(
     const salt = cookieName.replace(/^__(Secure|Host)-/, '')
 
     console.log(`🔒 Decoding with salt: ${salt}`)
+    console.log(`🔒 Secret available: ${AUTH_SECRET ? 'yes (length: ' + AUTH_SECRET.length + ')' : 'no'}`)
 
     const decoded = await decode({
       token,
