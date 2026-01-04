@@ -36,8 +36,8 @@ export function Lobby({ sendMessage, roomCode, isConnected }: LobbyProps) {
   }
 
   const username = session?.user?.username?.trim() || playerName || ''
-  // Always use localStorage UUID first for consistency across sessions
-  const userId = fallbackIdRef.current || session?.user?.id || playerId
+  // Use authenticated session ID first (must match server's playerId), then fallback
+  const userId = session?.user?.id || fallbackIdRef.current || playerId
   const showAiPlaceholders = hasJoined
 
   // Auto-join if room code is in URL
