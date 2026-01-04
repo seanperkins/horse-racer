@@ -1,7 +1,12 @@
 import { PrismaClient } from '@prisma/client'
+import { PrismaPg } from '@prisma/adapter-pg'
+import { Pool } from 'pg'
 import bcrypt from 'bcryptjs'
 
-const prisma = new PrismaClient()
+// Create Prisma client with pg adapter (same as lib/prisma.ts)
+const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+const adapter = new PrismaPg(pool)
+const prisma = new PrismaClient({ adapter })
 
 async function main() {
   const testEmail = 'test@example.com'
@@ -43,5 +48,6 @@ main()
     process.exit(1)
   })
   .finally(async () => {
+    await pool.end()
     await prisma.$disconnect()
   })
