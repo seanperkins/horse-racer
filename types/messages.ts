@@ -77,6 +77,10 @@ export const PlaceBetSchema = BaseMessageSchema.extend({
   betForHeart: z.boolean().default(false), // Recovery bet
 })
 
+export const ExpandStableSchema = BaseMessageSchema.extend({
+  type: z.literal('expand_stable'),
+})
+
 // Server -> Client messages
 export const LobbyStateSchema = BaseMessageSchema.extend({
   type: z.literal('lobby_state'),
@@ -186,7 +190,9 @@ export const RaceResultsSchema = BaseMessageSchema.extend({
     z.object({
       playerId: z.string(),
       won: z.boolean(),
-      payout: z.number(),
+      payout: z.number().optional(),
+      prestigeEarned: z.number().optional(), // Prestige from winning bets (replaces gold payout)
+      isHeartBet: z.boolean().optional(),
     }),
   ),
   eliminatedPlayers: z.array(z.string()),
@@ -204,13 +210,15 @@ export const PlayerStateSchema = BaseMessageSchema.extend({
   type: z.literal('player_state'),
   gold: z.number(),
   hearts: z.number(),
+  prestige: z.number(),
+  stableSlots: z.number(),
   inventory: z.object({
     horses: z.array(z.any()),
     hiredJockey: z.any().nullable(),
     equipment: z.array(z.any()),
   }),
-  wins: z.number(),
-  currentRound: z.number(),
+  wins: z.number().optional(),
+  currentRound: z.number().optional(),
 })
 
 export const ErrorMessageSchema = BaseMessageSchema.extend({
@@ -237,6 +245,7 @@ export const ClientMessageSchema = z.discriminatedUnion('type', [
   FireJockeySchema,
   SetupRaceEntrySchema,
   PlaceBetSchema,
+  ExpandStableSchema,
 ])
 
 // Union of all server messages
@@ -267,6 +276,7 @@ export type HireJockey = z.infer<typeof HireJockeySchema>
 export type FireJockey = z.infer<typeof FireJockeySchema>
 export type SetupRaceEntry = z.infer<typeof SetupRaceEntrySchema>
 export type PlaceBet = z.infer<typeof PlaceBetSchema>
+export type ExpandStable = z.infer<typeof ExpandStableSchema>
 
 export type LobbyState = z.infer<typeof LobbyStateSchema>
 export type GamePhase = z.infer<typeof GamePhaseSchema>

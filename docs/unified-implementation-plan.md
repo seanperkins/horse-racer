@@ -268,7 +268,7 @@ Add handler for `expand_stable` message.
 - [x] 1. ✅ `types/game.ts` - Add SubmittedEntry type
 - [x] 2. ✅ `lib/store/gameStore.ts` - Add all new state fields
 - [x] 3. ✅ `server/GameRoom.ts` - Add prestige, stableSlots to player state
-- [ ] 4. `types/messages.ts` - Update message types
+- [x] 4. ✅ `types/messages.ts` - Update message types
 
 ### Milestone 2: UI State Sync (Issue #1)
 - [ ] 5. `BettingPhase.tsx` - Replace local state with store
