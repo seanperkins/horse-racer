@@ -2,69 +2,64 @@
 
 ## ✅ Recently Completed
 
+### Authentication Integration (2026-01-04)
+
+- ✅ WebSocket requires authentication - rejects unauthenticated connections
+- ✅ Session user ID passed from NextAuth to WebSocket handler
+- ✅ User session validated on connection
+- ✅ Fixed client userId mismatch (prioritize session ID over localStorage)
+
+### Sound Effects & Music (2026-01-03)
+
+- ✅ Background music for lobby/shop/race phases
+- ✅ Sound effects for: button clicks, purchase/sell, bet placement, race start/finish, stumbles/surges, victory/defeat, ready up
+- ✅ Volume controls and mute toggle in AudioSettings component
+- ✅ Audio store with sfx/music management
+
+### Error Handling Improvements (2026-01-03)
+
+- ✅ Toast notifications replace alerts (react-hot-toast)
+- ✅ WebSocket reconnection handling with session persistence
+- ✅ User-friendly error messages
+
 ### WebSocket Room Join Fixes (2026-01-02)
 
 - ✅ Reconnects bypass `canJoin()` when `room.players.has(userId)`
-- ✅ Join-by-code is now join-only (doesn't create new rooms, returns error if not found)
+- ✅ Join-by-code is now join-only (doesn't create new rooms)
 - ✅ `ready_up` enforces sender identity using connection-bound `playerId`
-- ✅ All message handlers restore `currentRoom` when missing via `findRoomByPlayerId()`
-- ✅ Clear error messages returned when player not in a room
-- ✅ Reconnection closes prior socket for same `userId` and cleans up stale `playerSockets` entries
+- ✅ All message handlers restore `currentRoom` via `findRoomByPlayerId()`
+- ✅ Reconnection closes prior socket for same `userId`
 
 ### URL State Management & Reconnection (2026-01-02)
 
-- ✅ URL updates with room code when joining private rooms (`/game?room=ABCD`)
-- ✅ Auto-join from URL - visiting `/game?room=ABCD` automatically joins that room
-- ✅ Copy Room URL button in lobby for easy sharing
-- ✅ Reconnection support - reload page to rejoin after disconnect
-- ✅ Deep linking support for direct links to specific game rooms
+- ✅ URL updates with room code when joining private rooms
+- ✅ Auto-join from URL (`/game?room=ABCD`)
+- ✅ Copy Room URL button in lobby
 - ✅ Persistent player ID in localStorage for reconnection
-- ✅ Full game state sync on reconnection (phase, inventory, shop, track, betting, race)
-- ✅ Server recognizes returning players and syncs their current game state
+- ✅ Full game state sync on reconnection
 
 ### Ready-Up System for Results Phase (2026-01-02)
 
 - ✅ Players can ready up after viewing race results
 - ✅ Shows which players are ready/not ready
-- ✅ Game advances to next round when all players ready (or after 60s timeout)
-- ✅ Eliminated players don't see ready button
+- ✅ Game advances when all ready or after timeout
 
 ### Race Duration Fix (2026-01-02)
 
-- ✅ Races now run until all horses complete instead of fixed 60s timeout
-- ✅ Race phase duration adjusted to 70s to accommodate variable race lengths
-- ✅ Server calculates actual race duration based on simulation
+- ✅ Races run until all horses complete (no fixed timeout)
+
+### Tutorial Page (2026-01-03)
+
+- ✅ Basic tutorial page exists at `/tutorial`
 
 ---
 
 ## 🔴 High Priority Tasks
 
-### 1. Digital Ocean Deployment
+### 1. Implement Race Commentary/Events UI
 
 **Status:** Not Started
-**Priority:** Low (can develop locally)
-**Files:** `deploy.sh`, `ecosystem.config.js`, `nginx.conf`
-
-**Requirements:**
-
-- Set up Digital Ocean droplet
-- Configure PM2 for Node.js process management
-- Set up Nginx reverse proxy
-- Configure SSL with Let's Encrypt
-- Set up managed PostgreSQL database
-- Create deployment script
-- Configure environment variables
-- Set up health check endpoint
-- Set up PM2 log rotation
-
-**Reference:** Plan has detailed deployment steps in Phase 7
-
----
-
-### 2. Implement Race Commentary/Events UI
-
-**Status:** Not Started
-**Files:** `components/game/PixiRaceRenderer.tsx`, `components/game/RaceLog.tsx` (new or existing)
+**Files:** `components/game/PixiRaceRenderer.tsx`, `components/game/RaceLog.tsx`
 
 **Requirements:**
 
@@ -74,7 +69,7 @@
 
 ---
 
-### 3. Improve Pixi.js Race Visualization
+### 2. Improve Pixi.js Race Visualization
 
 **Status:** In Progress
 **Priority:** High (visual experience)
@@ -82,157 +77,115 @@
 
 **Missing Features:**
 
-- Real-time position updates during race simulation
-- Smooth interpolation between positions
 - Stumble animations
 - Surge/speed boost visual effects
 - Particle effects (dust, mud splashes)
 - Strategy change indicators
 - Commentary callouts overlaid on race
-- Better horse/jockey sprite rendering
 - Track obstacles visualization
 - Parallax background layers
 
----
+**Already Working:**
 
-### 4. Add Sound Effects & Music
-
-**Status:** Not Started
-**Priority:** Medium (polish)
-**Directory:** `public/audio/`
-
-**Requirements:**
-
-- Background music for lobby/shop/race
-- Sound effects for:
-  - Button clicks
-  - Purchase/sell
-  - Bet placement
-  - Race start/finish
-  - Stumbles/surges
-  - Victory/defeat
-- Volume controls
-- Mute toggle
+- Real-time position updates during race
+- Smooth interpolation between positions
+- Horse/jockey sprite rendering with bloodline tints
 
 ---
 
-### 5. Integrate Authentication with WebSocket
+### 3. Link Game Results to Database
 
 **Status:** Not Started
 **Priority:** Medium
-**Files:** `server/websocket-handler.ts`, `components/game/Lobby.tsx`
+**Files:** `server/GameRoom.ts`, `server/websocket-handler.ts`
 
 **Requirements:**
 
-- Require session authentication before WebSocket connection
-- Pass user ID from NextAuth session to WebSocket
-- Validate user session on connection
-- Link game results to User database records
 - Update user stats (XP, level, totalMatches, totalWins) after matches
 - Save match history to Match and MatchPlayer tables
-- Protect `/game` route - redirect to `/login` if not authenticated
-
-**Implementation:**
-
-- Use `getServerSession()` in game page
-- Pass session token to WebSocket handshake
-- Verify token in WebSocket handler
+- Track player progression
 
 ---
 
-### 6. Improve Error Handling
+### 4. Add Error Boundaries
 
-**Status:** Basic error handling exists
+**Status:** Not Started
 **Priority:** Medium
 
 **Requirements:**
 
-- Replace `alert()` calls with toast notifications
-- Add error boundaries to React components
-- Better WebSocket disconnection handling
-- Reconnection logic with session persistence
-- User-friendly error messages
-- Retry mechanisms for failed actions
+- Add React error boundaries to handle component crashes
+- Show friendly error messages to users
+- Prevent full page crashes
 
 ---
 
 ## 🟡 Medium Priority Tasks
 
-### 7. Implement Race Replay System
+### 5. Implement Race Replay System
 
 **Status:** Not Started
-**Priority:** Medium
 **Files:** `server/GameRoom.ts`, `app/replay/[id]/page.tsx`
 
 **Requirements:**
 
 - Save race input packets to Replay table after each race
-- Store: track, all participants, equipment, strategies, seed
 - Create replay viewer page
-- Load replay data and re-run simulation with same seed
-- Display race using Pixi.js visualization
-- Add replay UI controls (play/pause, speed control)
+- Re-run simulation with same seed
+- Add replay UI controls (play/pause, speed)
 
 **Database:** Replay model already exists in Prisma schema
 
 ---
 
-### 8. Add Match History & User Profile
+### 6. Add Match History & User Profile
 
 **Status:** Not Started
-**Priority:** Medium
 **Files:** `app/profile/page.tsx`, `app/api/matches/route.ts`
 
 **Requirements:**
 
 - Display user stats (level, XP, win rate)
 - Show match history with placements
-- Display cosmetics/achievements (future)
-- Create API endpoints for fetching match data
 - Pagination for match history
 
 **Database:** Match and MatchPlayer models already exist
 
 ---
 
+### 7. Rate Limiting
+
+**Status:** Not Started
+**Priority:** Medium
+
+**Requirements:**
+
+- Add rate limiting to registration
+- Add rate limiting to login attempts
+- Prevent abuse of API endpoints
+
+---
+
 ## 🟢 Low Priority / Polish Tasks
 
-### 9. Implement Cosmetics System
+### 8. Implement Cosmetics System
 
 **Status:** Database schema exists
 **Priority:** Low (future feature)
-**Files:** `app/cosmetics/page.tsx`
 
 **Requirements:**
 
 - Unlock system based on level/achievements
 - Horse skins, jockey outfits, emotes, badges
-- Cosmetic shop (separate from game shop)
 - Apply cosmetics in race visualization
 
 **Database:** Cosmetic and UserCosmetic models already exist
 
 ---
 
-### 10. Add Tutorial/How to Play
+### 9. Expand E2E Testing
 
-**Status:** Not Started
-**Priority:** Low
-**File:** `app/tutorial/page.tsx`
-
-**Requirements:**
-
-- Interactive tutorial for new players
-- Explain game phases
-- Explain stats and mechanics
-- Strategy tips
-- Link from home page
-
----
-
-### 11. E2E Testing with Playwright
-
-**Status:** Setup complete, no tests written
+**Status:** One test exists (`tests/e2e/race-sync.spec.js`)
 **Priority:** Low
 **Directory:** `tests/e2e/`
 
@@ -240,14 +193,13 @@
 
 - Test full match flow (2 players)
 - Test shop purchases
-- Test race visualization rendering
 - Test betting
 - Test authentication flow
-- Test WebSocket connection/reconnection
+- Test WebSocket reconnection
 
 ---
 
-### 12. Add Admin Panel
+### 10. Add Admin Panel
 
 **Status:** Not Started
 **Priority:** Low
@@ -257,9 +209,8 @@
 
 - View active games
 - Monitor server health
-- Manage users (ban, reset)
+- Manage users
 - View game statistics
-- Manual game room management
 
 ---
 
@@ -267,34 +218,17 @@
 
 1. **Server startup requires manual database start**
    - Consider adding script to auto-start Docker containers
-   - Or add check in server.ts to verify DB connection
 
-2. **No graceful WebSocket disconnection handling**
-   - Players should be able to reconnect if disconnected
-   - Implement reconnection token system
+2. ✅ **FIXED: Bloodline bonuses not applied during race ticks** (2026-01-03)
 
-3. **No rate limiting on API endpoints**
-   - Add rate limiting to registration
-   - Add rate limiting to login attempts
+3. ✅ **FIXED: Shop purchases duplication** (2026-01-03)
 
-4. **No error boundaries in React components**
-   - Add error boundaries to handle component crashes
-   - Show friendly error messages to users
+4. ✅ **FIXED: Purchase handler gold corruption** (2026-01-03)
 
-5. ✅ **FIXED: Bloodline bonuses not applied during race ticks** (2026-01-03)
-   - Fixed `RaceSimulator.tick()` to pass `participant.bloodlineBonuses` to `calculateDerivedStats()`
-   - Bonuses now correctly affect live simulation, not just initial variance
+5. ✅ **FIXED: Shop actions allowed outside shop phase** (2026-01-03)
 
-6. ✅ **FIXED: Shop purchases duplication** (2026-01-03)
-   - Shop inventory properly removes purchased items (already fixed in code)
-
-7. ✅ **FIXED: Purchase handler gold corruption** (2026-01-03)
-   - `GameRoom.handlePurchase()` now blocks jockey purchases (use `hire_jockey` instead)
-   - Prevents NaN gold from undefined `unit.cost` on jockeys
-
-8. ✅ **FIXED: Shop actions allowed outside shop phase** (2026-01-03)
-   - Added phase validation to `handlePurchase`, `handleSell`, `handleTrain`, `handleHireJockey`, `handleFireJockey`, `handleReroll`
-   - Players can no longer mutate inventory during betting/race/results phases
+6. ✅ **FIXED: Invalid sender identity on ready_up** (2026-01-04)
+   - Client was using localStorage UUID instead of session ID
 
 ---
 
@@ -305,16 +239,17 @@
 ### Option A: Race Experience Polish
 
 1. Implement race commentary/events UI
-2. Improve Pixi.js race visuals and animations
+2. Add stumble/surge animations
+3. Add particle effects
 
-### Option B: Core Stability & Security
+### Option B: Persistence & Progression
 
-1. Integrate authentication with WebSocket
-2. Fix shop duplication/gold corruption issues
-3. Add phase checks and reconnection handling
+1. Link game results to database
+2. Add match history page
+3. Implement user profile with stats
 
-### Option C: Quality of Life
+### Option C: Stability
 
-1. Replace alerts with toast notifications
-2. Add error boundaries and retry flows
-3. Add basic sound effects
+1. Add React error boundaries
+2. Add rate limiting
+3. Expand E2E test coverage
