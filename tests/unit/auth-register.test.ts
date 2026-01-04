@@ -289,18 +289,13 @@ describe('Registration API', () => {
     it('should not return password hash in response', async () => {
       vi.mocked(prisma.user.findFirst).mockResolvedValue(null)
       vi.mocked(bcrypt.hash).mockResolvedValue('hashed_password' as any)
+      // Mock should return only selected fields (matching the actual select in route)
       vi.mocked(prisma.user.create).mockResolvedValue({
         id: 'user-123',
         email: 'test@example.com',
         username: 'testuser',
-        passwordHash: 'hashed_password',
         createdAt: new Date(),
-        updatedAt: new Date(),
-        xp: 0,
-        level: 1,
-        totalMatches: 0,
-        totalWins: 0,
-      })
+      } as any)
 
       const request = new Request('http://localhost/api/auth/register', {
         method: 'POST',
