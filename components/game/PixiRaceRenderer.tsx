@@ -35,6 +35,8 @@ interface HorseSprite {
   isStumbled: boolean;
   animationFrame: number;
   animationTimer: number;
+  particles: PIXI.Graphics[];
+  particleTimer: number;
 }
 
 interface CameraState {
@@ -191,29 +193,21 @@ export function PixiRaceRenderer({
     canvasRef.current.appendChild(app.canvas as HTMLCanvasElement);
     appRef.current = app;
 
-    // Preload the horse sprite sheets
-    console.log('[PIXI] Loading horse sprite sheets...');
+    // Initialize SpriteManager for composite horse+jockey sprites
+    console.log('[PIXI] Initializing SpriteManager...');
+    const spriteManager = new SpriteManager();
+    await spriteManager.loadAllAssets();
+    spriteManagerRef.current = spriteManager;
+    console.log('[PIXI] SpriteManager initialized successfully');
+
+    // Keep legacy sprite loading as fallback for now
     const [staticTexture, gallopingTexture] = await Promise.all([
       PIXI.Assets.load('/sprites/horse-sprites.png'),
       PIXI.Assets.load('/sprites/better-galloping.png')
     ]);
     horseSpriteTextureRef.current = staticTexture;
     gallopingSpriteTextureRef.current = gallopingTexture;
-    console.log('[PIXI] Horse sprites loaded:', {
-      static: { width: staticTexture?.width, height: staticTexture?.height },
-      galloping: { width: gallopingTexture?.width, height: gallopingTexture?.height }
-    });
-
-    // Initialize SpriteManager for composite sprites (optional upgrade path)
-    try {
-      const spriteManager = new SpriteManager();
-      await spriteManager.loadAllAssets();
-      spriteManagerRef.current = spriteManager;
-      console.log('[PIXI] SpriteManager initialized successfully');
-    } catch (error) {
-      console.log('[PIXI] SpriteManager not available yet, using legacy sprites:', error);
-      // Fallback to existing sprite system
-    }
+    console.log('[PIXI] Legacy sprites loaded as fallback');
 
     // Draw placeholder track (will be redrawn when race starts)
     drawTrack(app, 1000); // Default 1000m track for initialization
@@ -377,12 +371,42 @@ export function PixiRaceRenderer({
     participant: RaceParticipant,
     lane: number
   ): HorseSprite => {
-    const container = new PIXI.Container();
-
+    let container: PIXI.Container;
     let body: any;
 
-    // Use galloping sprite sheet if available, otherwise fallback to graphics
-    if (gallopingSpriteTextureRef.current) {
+    // Try to use SpriteManager for composite sprites
+    if (spriteManagerRef.current) {
+      try {
+        // Create composite sprite (horse + jockey layers)
+        container = spriteManagerRef.current.createCompositeSprite({
+          horseType: participant.horse.variant || 'regular',
+          bloodline: participant.horse.bloodline,
+          jockeyStyle: participant.jockey.style || 'classic',
+          jockeyColor: participant.jockey.color
+        });
+
+        // Scale the composite sprite
+        container.scale.set(1.25);
+
+        body = container; // The container itself is the body
+
+        console.log('[PIXI] Created composite sprite for', participant.playerName, {
+          horseType: participant.horse.variant || 'regular',
+          bloodline: participant.horse.bloodline,
+          jockeyStyle: participant.jockey.style || 'classic',
+          lane
+        });
+      } catch (error) {
+        console.error('[PIXI] Failed to create composite sprite, falling back:', error);
+        // Fall through to legacy sprite creation
+        container = new PIXI.Container();
+      }
+    } else {
+      container = new PIXI.Container();
+    }
+
+    // Fallback: Use legacy galloping sprite sheet if composite failed or unavailable
+    if (!body && gallopingSpriteTextureRef.current) {
       // Galloping sprite sheet is 256x256 (4 frames x 4 rows)
       // Each sprite is 64x64 pixels
       const SPRITE_WIDTH = 64;
@@ -409,7 +433,6 @@ export function PixiRaceRenderer({
       sprite.anchor.set(0.5, 0.5); // Center the sprite
 
       // Apply simple color tint to differentiate horses
-      // This will tint the entire sprite but is simpler and compatible
       const bloodlineToTint: Record<string, number> = {
         "Northern Storm": 0x6b9bd1,  // Blue
         "Desert Wind": 0xd4a574,     // Sandy brown
@@ -424,15 +447,15 @@ export function PixiRaceRenderer({
       body = sprite;
       container.addChild(sprite);
 
-      console.log('[PIXI] Created galloping horse for', participant.playerName, {
+      console.log('[PIXI] Created legacy galloping horse for', participant.playerName, {
         bloodline: participant.horse.bloodline,
         row,
         width: HORSE_WIDTH,
         height: HORSE_HEIGHT,
         lane
       });
-    } else {
-      // Fallback to colored rectangles
+    } else if (!body) {
+      // Final fallback: colored rectangles
       const graphics = new PIXI.Graphics();
       const horseColor = getHorseColor(participant.horse.bloodline);
 
@@ -496,6 +519,8 @@ export function PixiRaceRenderer({
       isStumbled: false,
       animationFrame: 0,
       animationTimer: 0,
+      particles: [],
+      particleTimer: 0,
     };
   };
 
@@ -509,6 +534,69 @@ export function PixiRaceRenderer({
       "Royal Line": 0xd4af37, // Gold
     };
     return colors[bloodline] || 0xcccccc;
+  };
+
+  /**
+   * Apply tint to a horse sprite (handles both legacy sprites and composite sprites)
+   */
+  const applyHorseTint = (horse: HorseSprite, tint: number) => {
+    if (horse.body instanceof PIXI.Sprite) {
+      horse.body.tint = tint;
+    } else if (horse.body instanceof PIXI.Container) {
+      // For composite sprites, tint all children
+      horse.body.children.forEach((child) => {
+        if (child instanceof PIXI.Sprite) {
+          child.tint = tint;
+        }
+      });
+    }
+  };
+
+  /**
+   * Restore original tint for a horse (bloodline color for horse, jockey color for jockey)
+   */
+  const restoreOriginalTint = (horse: HorseSprite, playerId: string) => {
+    const originalParticipant = raceInputs?.entries.find(e => e.playerId === playerId);
+    if (!originalParticipant) {
+      console.warn(`[RESTORE TINT] No participant found for ${playerId}`);
+      return;
+    }
+
+    const bloodlineToTint: Record<string, number> = {
+      "Northern Storm": 0x6b9bd1,
+      "Desert Wind": 0xd4a574,
+      "Iron Heart": 0x888888,
+      "Wild Card": 0xc94d4d,
+      "Mudblood": 0x8b6f47,
+      "Royal Line": 0xd4af37,
+    };
+
+    if (horse.body instanceof PIXI.Sprite) {
+      // Legacy sprite - apply bloodline tint
+      horse.body.tint = bloodlineToTint[originalParticipant.horse.bloodline] || 0xffffff;
+      console.log(`[RESTORE TINT] Legacy sprite ${playerId} -> ${horse.body.tint.toString(16)}`);
+    } else if (horse.body instanceof PIXI.Container) {
+      // Composite sprite - restore tint on individual layers
+      const horseLayer = horse.body.children[0] as PIXI.Sprite;
+      const jockeyLayer = horse.body.children[1] as PIXI.Sprite;
+
+      console.log(`[RESTORE TINT] Composite sprite ${playerId}, children: ${horse.body.children.length}`);
+
+      if (horseLayer) {
+        const targetTint = bloodlineToTint[originalParticipant.horse.bloodline] || 0xffffff;
+        horseLayer.tint = targetTint;
+        console.log(`[RESTORE TINT] Horse layer ${playerId} bloodline=${originalParticipant.horse.bloodline} -> 0x${targetTint.toString(16)}`);
+      } else {
+        console.warn(`[RESTORE TINT] No horse layer for ${playerId}`);
+      }
+
+      if (jockeyLayer) {
+        jockeyLayer.tint = originalParticipant.jockey.color || 0xffffff;
+        console.log(`[RESTORE TINT] Jockey layer ${playerId} -> 0x${jockeyLayer.tint.toString(16)}`);
+      } else {
+        console.log(`[RESTORE TINT] No jockey layer for ${playerId} (expected if no jockey sprite)`);
+      }
+    }
   };
 
   const startRace = () => {
@@ -671,6 +759,28 @@ export function PixiRaceRenderer({
 
       if (newEvents.length > 0) {
         setRaceEvents((prev) => [...newEvents, ...prev].slice(0, 10)); // Keep last 10 events
+
+        // Add visual effects for surge events
+        newEvents.forEach((event) => {
+          if (event.type === 'surge') {
+            const horse = horsesRef.current.get(event.playerId);
+            if (horse) {
+              // Create a speed boost visual effect
+              // Scale up briefly
+              const originalScale = horse.container.scale.x;
+              horse.container.scale.set(originalScale * 1.2);
+
+              // Add a yellow glow/tint
+              applyHorseTint(horse, 0xffff00); // Yellow tint for surge
+
+              // Reset after 300ms
+              setTimeout(() => {
+                horse.container.scale.set(originalScale);
+                restoreOriginalTint(horse, event.playerId);
+              }, 300);
+            }
+          }
+        });
       }
 
       // Sort participants by actual finish order for visual accuracy
@@ -706,13 +816,39 @@ export function PixiRaceRenderer({
           finishersRef.current.add(p.playerId);
         }
 
-        // Update status
+        // Update status and visual effects for stumbles
+        // Log stumble state for debugging
+        if (p.isStumbled || horse.isStumbled) {
+          console.log(`[STUMBLE] ${p.playerId} - sim:${p.isStumbled}, local:${horse.isStumbled}`);
+        }
+
         if (p.isStumbled) {
-          horse.statusText.text = "STUMBLED!";
-          horse.isStumbled = true;
+          if (!horse.isStumbled) {
+            // Horse just stumbled - add visual effects
+            console.log(`[STUMBLE START] ${p.playerId} stumbled!`);
+            horse.statusText.text = "STUMBLED!";
+            horse.statusText.visible = true;
+            horse.isStumbled = true;
+
+            // Add stumble animation: tilt the sprite
+            horse.container.rotation = Math.PI / 12; // Tilt 15 degrees
+
+            // Flash red briefly
+            applyHorseTint(horse, 0xff6666);
+          }
         } else if (horse.isStumbled) {
+          // Horse recovered from stumble - restore normal state
+          console.log(`[STUMBLE RECOVERY] ${p.playerId} recovering, isStumbled in sim: ${p.isStumbled}`);
           horse.statusText.text = "";
+          horse.statusText.visible = false;
           horse.isStumbled = false;
+
+          // Remove tilt
+          horse.container.rotation = 0;
+
+          // Restore original color/tint
+          console.log(`[STUMBLE RECOVERY] Calling restoreOriginalTint for ${horse.playerId}`);
+          restoreOriginalTint(horse, horse.playerId);
         }
       });
 
@@ -769,31 +905,97 @@ export function PixiRaceRenderer({
 
         // Animate if not stumbled and not finished
         const shouldAnimate = !horse.isStumbled && !horseFinished;
-        if (shouldAnimate && horse.body instanceof PIXI.Sprite && gallopingSpriteTextureRef.current) {
+        if (shouldAnimate) {
+          // Generate dust particles behind running horses
+          horse.particleTimer += tickInterval;
+          if (horse.particleTimer >= 100 && trackContainerRef.current) { // Create particle every 100ms
+            horse.particleTimer = 0;
+
+            // Create a small dust particle
+            const particle = new PIXI.Graphics();
+            const size = 3 + Math.random() * 4; // Random size 3-7px
+            particle.circle(0, 0, size);
+            particle.fill(0x8b6f47); // Brownish dust color
+            particle.alpha = 0.6;
+
+            // Position behind the horse
+            particle.x = horse.container.x - HORSE_WIDTH / 2;
+            particle.y = horse.container.y + (Math.random() * 20 - 10); // Random vertical offset
+
+            trackContainerRef.current.addChild(particle);
+            horse.particles.push(particle);
+
+            // Animate particle (fade out and drift back)
+            const particleVelocity = -2; // Move backward
+            const fadeSpeed = 0.02;
+
+            const animateParticle = () => {
+              particle.x += particleVelocity;
+              particle.alpha -= fadeSpeed;
+
+              if (particle.alpha <= 0) {
+                // Remove particle when fully faded
+                trackContainerRef.current?.removeChild(particle);
+                const index = horse.particles.indexOf(particle);
+                if (index > -1) {
+                  horse.particles.splice(index, 1);
+                }
+              } else {
+                requestAnimationFrame(animateParticle);
+              }
+            };
+            animateParticle();
+          }
+
           // Update animation timer (cycle every 50ms for smooth galloping - 16 frames)
           horse.animationTimer += tickInterval;
           if (horse.animationTimer >= 50) {
             horse.animationTimer = 0;
             horse.animationFrame = (horse.animationFrame + 1) % 16; // 16 frames total (4x4 grid)
 
-            // Update sprite texture to next frame
-            const SPRITE_WIDTH = 64;
-            const SPRITE_HEIGHT = 64;
-            const FRAMES_PER_ROW = 4;
+            // Try to use SpriteManager's updateCompositeFrame for composite sprites
+            if (spriteManagerRef.current && horse.body instanceof PIXI.Container) {
+              // Get the original participant data from raceInputs (has horse/jockey info)
+              const originalParticipant = raceInputs?.entries.find(e => e.playerId === horse.playerId);
+              if (originalParticipant) {
+                try {
+                  spriteManagerRef.current.updateCompositeFrame(
+                    horse.body,
+                    {
+                      horseType: originalParticipant.horse.variant || 'regular',
+                      bloodline: originalParticipant.horse.bloodline,
+                      jockeyStyle: originalParticipant.jockey.style || 'classic',
+                      jockeyColor: originalParticipant.jockey.color
+                    },
+                    horse.animationFrame
+                  );
+                } catch (error) {
+                  // Fallback to legacy sprite animation if composite update fails
+                  console.warn('[PIXI] Composite frame update failed, using legacy:', error);
+                }
+              }
+            }
 
-            // Calculate row and column from frame number
-            const row = Math.floor(horse.animationFrame / FRAMES_PER_ROW);
-            const col = horse.animationFrame % FRAMES_PER_ROW;
+            // Legacy sprite animation (fallback or if not using composite)
+            if (horse.body instanceof PIXI.Sprite && gallopingSpriteTextureRef.current) {
+              const SPRITE_WIDTH = 64;
+              const SPRITE_HEIGHT = 64;
+              const FRAMES_PER_ROW = 4;
 
-            horse.body.texture = new PIXI.Texture({
-              source: gallopingSpriteTextureRef.current.source,
-              frame: new PIXI.Rectangle(
-                col * SPRITE_WIDTH,
-                row * SPRITE_HEIGHT,
-                SPRITE_WIDTH,
-                SPRITE_HEIGHT
-              ),
-            });
+              // Calculate row and column from frame number
+              const row = Math.floor(horse.animationFrame / FRAMES_PER_ROW);
+              const col = horse.animationFrame % FRAMES_PER_ROW;
+
+              horse.body.texture = new PIXI.Texture({
+                source: gallopingSpriteTextureRef.current.source,
+                frame: new PIXI.Rectangle(
+                  col * SPRITE_WIDTH,
+                  row * SPRITE_HEIGHT,
+                  SPRITE_WIDTH,
+                  SPRITE_HEIGHT
+                ),
+              });
+            }
           }
         }
       });

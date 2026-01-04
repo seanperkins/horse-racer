@@ -33,6 +33,7 @@ interface ParticipantState {
   maxStamina: number
   isStumbled: boolean
   stumbleRecoveryTicks: number
+  stumbleImmunityTicks: number // Cooldown after recovery to prevent immediate re-stumbling
   finishTick: number | null // Tick when horse crossed finish line
   finishPosition: number | null // Exact position when crossed (for sub-tick precision)
   events: Array<{ tick: number; type: string; description: string }>
@@ -94,6 +95,7 @@ export class RaceSimulator {
         maxStamina: derivedStats.staminaPool,
         isStumbled: false,
         stumbleRecoveryTicks: 0,
+        stumbleImmunityTicks: 0,
         finishTick: null,
         finishPosition: null,
         events: [],
@@ -153,14 +155,26 @@ export class RaceSimulator {
         participant.bloodlineBonuses, // Pass bloodline bonuses to tick calculations
       )
 
+      // Decrement immunity ticks if active
+      if (state.stumbleImmunityTicks > 0) {
+        state.stumbleImmunityTicks--
+      }
+
       // Skip if stumbled and still recovering
-      if (state.isStumbled && state.stumbleRecoveryTicks > 0) {
-        state.stumbleRecoveryTicks--
-        if (state.stumbleRecoveryTicks === 0) {
-          state.isStumbled = false
-          this.addEvent(state, 'recovery', 'Recovered from stumble')
+      if (state.isStumbled) {
+        if (state.stumbleRecoveryTicks > 0) {
+          state.stumbleRecoveryTicks = Math.max(0, state.stumbleRecoveryTicks - 1)
+          console.log(`[SIM] ${state.playerId} recovering: ${state.stumbleRecoveryTicks} ticks left`)
         }
-        continue
+
+        if (state.stumbleRecoveryTicks <= 0) {
+          state.isStumbled = false
+          state.stumbleImmunityTicks = 30 // 3 seconds of immunity after recovery
+          console.log(`[SIM] ${state.playerId} RECOVERED from stumble, immunity granted for 30 ticks`)
+          this.addEvent(state, 'recovery', 'Recovered from stumble')
+        } else {
+          continue
+        }
       }
 
       // Get strategy for current phase
@@ -272,6 +286,13 @@ export class RaceSimulator {
         // The horse crossed at: (currentTick - 1) + tickFraction
         state.finishTick = (this.currentTick - 1) + tickFraction
         state.finishPosition = state.position
+
+        // Clear stumble state when finishing
+        if (state.isStumbled) {
+          state.isStumbled = false
+          state.stumbleRecoveryTicks = 0
+          state.stumbleImmunityTicks = 0
+        }
       }
 
       if (state.position < this.raceDistance) {
@@ -513,6 +534,11 @@ export class RaceSimulator {
     state: ParticipantState,
     derivedStats: any,
   ): void {
+    // Skip stumble check if horse has immunity from recent recovery
+    if (state.stumbleImmunityTicks > 0) {
+      return
+    }
+
     let stumbleChance = 0
 
     // Base stumble chance depends on terrain
@@ -552,12 +578,18 @@ export class RaceSimulator {
       state.isStumbled = true
 
       const baseRecovery = 15 // 15 ticks = 1.5 seconds
-      state.stumbleRecoveryTicks = calculateStumbleRecovery(
-        baseRecovery,
-        participant.jockey.stats.skill,
-        participant.horse.stats.grit,
+      state.stumbleRecoveryTicks = Math.max(
+        1,
+        Math.ceil(
+          calculateStumbleRecovery(
+            baseRecovery,
+            participant.jockey.stats.skill,
+            participant.horse.stats.grit,
+          ),
+        ),
       )
 
+      console.log(`[SIM] ${state.playerId} STUMBLED! Recovery ticks: ${state.stumbleRecoveryTicks}`)
       this.addEvent(state, 'stumble', 'Stumbled!')
     }
   }

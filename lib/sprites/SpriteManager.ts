@@ -81,11 +81,15 @@ export class SpriteManager {
       // this.horseSheets.set("skeleton", await this.loadSpriteSheet("/sprites/horses/legendary/skeleton-gallop-sheet.png"));
       // this.horseSheets.set("kelpie", await this.loadSpriteSheet("/sprites/horses/legendary/kelpie-gallop-sheet.png"));
 
-      // Load jockey overlays
-      this.jockeySheets.set(
-        "classic",
-        await this.loadSpriteSheet("/sprites/jockeys/classic-racing-silks.png")
-      );
+      // Load jockey overlays (optional - will use fallback if not available)
+      try {
+        this.jockeySheets.set(
+          "classic",
+          await this.loadSpriteSheet("/sprites/jockeys/classic-racing-silks.png")
+        );
+      } catch (error) {
+        console.log('[SpriteManager] Jockey sprite not available, will skip jockey layer');
+      }
 
       // Load additional jockey styles (when available)
       // this.jockeySheets.set("lightweight", await this.loadSpriteSheet("/sprites/jockeys/lightweight-outfit.png"));
