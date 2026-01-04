@@ -55,6 +55,8 @@ export class RaceSimulator {
     this.tickRate = config.tickRate || 10 // 10 ticks per second
 
     // Convert furlongs to meters (1 furlong = 201.168 meters)
+    // This gives realistic track lengths for visual scrolling
+    // Speed is scaled up in the tick function to ensure races complete in ~20-50 seconds
     this.raceDistance = config.track.distance * 201.168
 
     this.initializeParticipants()
@@ -262,7 +264,11 @@ export class RaceSimulator {
 
       // Move forward based on current speed
       // Speed is in units per second, tick rate divides it
-      state.position += state.currentSpeed / this.tickRate
+      // Apply 4x speed multiplier for target race times:
+      // - Sprint (5 furlongs/1006m): ~17 seconds at avg 15 base speed
+      // - Distance (16 furlongs/3219m): ~54 seconds at avg 15 base speed
+      const SPEED_MULTIPLIER = 4
+      state.position += (state.currentSpeed * SPEED_MULTIPLIER) / this.tickRate
     }
   }
 

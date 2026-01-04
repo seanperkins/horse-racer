@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useGameStore } from '@/lib/store/gameStore'
-import { AudioSettings } from '@/app/components/AudioSettings'
+import { SettingsMenu } from '@/components/game/SettingsMenu'
 
 export function UniversalHeader() {
   const {
@@ -196,8 +196,8 @@ export function UniversalHeader() {
               {activePlayers}p
             </div>
 
-            {/* Audio settings */}
-            <AudioSettings />
+            {/* Settings menu (audio + leave game) */}
+            <SettingsMenu />
 
             {/* Ready button - larger touch target */}
             {canReady && (

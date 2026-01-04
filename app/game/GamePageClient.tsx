@@ -64,6 +64,11 @@ export default function GamePageClient({ userId, username }: GamePageClientProps
         break
 
       case 'game_phase':
+        console.log(`🎮 Phase change: ${message.phase}, round: ${message.round}`)
+        if (message.phase === 'results') {
+          const currentResults = useGameStore.getState().raceResults
+          console.log('📊 Current raceResults when entering results phase:', currentResults)
+        }
         setGamePhase(message.phase, message.duration, message.round)
         // Play music based on phase
         if (message.phase === 'shop') {
@@ -117,6 +122,7 @@ export default function GamePageClient({ userId, username }: GamePageClientProps
 
       case 'race_results':
         // Store race results for results phase
+        console.log('📊 Received race_results:', message.placements?.length, 'placements')
         useGameStore.getState().setRaceResults({
           placements: message.placements,
           betResults: message.betResults,
@@ -149,12 +155,14 @@ export default function GamePageClient({ userId, username }: GamePageClientProps
     }, [setWebSocket]),
   })
 
-  // Store WebSocket instance in the store when it changes
+  // Store WebSocket instance in the store when connected
+  // We check isConnected to ensure the ws ref is populated
   useEffect(() => {
-    if (ws) {
+    if (isConnected && ws) {
+      console.log('Storing WebSocket in game store')
       setWebSocket(ws)
     }
-  }, [ws, setWebSocket])
+  }, [isConnected, ws, setWebSocket])
 
   // Render current phase
   const renderPhase = () => {

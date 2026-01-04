@@ -81,6 +81,11 @@ export const ExpandStableSchema = BaseMessageSchema.extend({
   type: z.literal('expand_stable'),
 })
 
+export const LeaveGameSchema = BaseMessageSchema.extend({
+  type: z.literal('leave_game'),
+  userId: z.string(),
+})
+
 // Server -> Client messages
 export const LobbyStateSchema = BaseMessageSchema.extend({
   type: z.literal('lobby_state'),
@@ -246,6 +251,7 @@ export const ClientMessageSchema = z.discriminatedUnion('type', [
   SetupRaceEntrySchema,
   PlaceBetSchema,
   ExpandStableSchema,
+  LeaveGameSchema,
 ])
 
 // Union of all server messages
@@ -277,6 +283,7 @@ export type FireJockey = z.infer<typeof FireJockeySchema>
 export type SetupRaceEntry = z.infer<typeof SetupRaceEntrySchema>
 export type PlaceBet = z.infer<typeof PlaceBetSchema>
 export type ExpandStable = z.infer<typeof ExpandStableSchema>
+export type LeaveGame = z.infer<typeof LeaveGameSchema>
 
 export type LobbyState = z.infer<typeof LobbyStateSchema>
 export type GamePhase = z.infer<typeof GamePhaseSchema>

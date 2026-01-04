@@ -252,6 +252,41 @@ export class GameRoom {
   }
 
   /**
+   * Handle a player deliberately leaving the game.
+   * This removes the player from the game entirely (unlike disconnect which allows reconnection).
+   */
+  handleLeaveGame(playerId: string): void {
+    const player = this.players.get(playerId)
+    if (!player) {
+      console.log(`Player ${playerId} not found in room ${this.roomId}`)
+      return
+    }
+
+    console.log(`🚪 Player ${player.username} is leaving room ${this.roomId}`)
+
+    // Remove the player
+    this.removePlayer(playerId)
+
+    // If game hasn't started, rebalance AI players
+    if (!this.gameStarted) {
+      this.balanceAIPlayers()
+      this.broadcastLobbyState()
+    } else {
+      // If game is in progress, check if we should end it
+      const remainingHumanPlayers = Array.from(this.players.values())
+        .filter(p => !p.isAI && !p.eliminated).length
+
+      if (remainingHumanPlayers === 0) {
+        console.log(`No human players left, ending game in room ${this.roomId}`)
+        this.endGame()
+      } else if (remainingHumanPlayers === 1) {
+        console.log(`Only one human player left in room ${this.roomId}`)
+        // Game can continue with AI players
+      }
+    }
+  }
+
+  /**
    * Clean up any dead socket references (sockets that are not in OPEN state).
    * Call this periodically to prevent memory leaks from ungraceful disconnects.
    */
@@ -729,7 +764,9 @@ export class GameRoom {
         this.runRace()
         break
       case 'results':
-        this.showResults()
+        // Process race results when entering results phase
+        // This ensures results are available immediately
+        this.processRaceResults()
         break
     }
 
@@ -962,21 +999,9 @@ export class GameRoom {
       seed,
     })
 
-    // Run simulation to get actual duration
-    const outcome = simulator.simulate()
-
-    // Calculate the actual race duration in milliseconds
-    // All horses finish when the last horse crosses the line
-    const maxFinishTime = Math.max(...outcome.placements.map(p => p.finishTime))
-
-    // Add a small buffer (2 seconds) for results processing
-    const raceDuration = maxFinishTime + 2000
-
-    console.log(`Race will complete in ${(raceDuration / 1000).toFixed(2)} seconds (last horse finishes at ${(maxFinishTime / 1000).toFixed(2)}s)`)
-
-    setTimeout(() => {
-      this.processRaceResults()
-    }, raceDuration)
+    // Note: We no longer process results here on a timer
+    // Results are processed when entering the results phase via startPhase('results')
+    // This ensures results are available immediately when the phase changes
   }
 
   processRaceResults(): void {
@@ -1065,6 +1090,7 @@ export class GameRoom {
       player.currentBet = undefined
     }
 
+    console.log(`📊 Broadcasting race_results with ${placements.length} placements, current phase: ${this.currentPhase}`)
     this.broadcast({
       type: 'race_results',
       placements,
@@ -1083,9 +1109,6 @@ export class GameRoom {
     }
   }
 
-  showResults(): void {
-    // Results already shown
-  }
 
   async endGame(winner?: PlayerData): Promise<void> {
     console.log(`Game ended in room ${this.roomId}`)

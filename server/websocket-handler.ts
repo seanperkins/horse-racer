@@ -168,6 +168,24 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
             }
             break
 
+          case 'leave_game':
+            // Enforce sender identity - use connection-bound playerId, reject mismatched userId
+            if (validatedMessage.userId !== playerId) {
+              console.error(`❌ leave_game rejected: userId mismatch (message: ${validatedMessage.userId}, connection: ${playerId})`)
+              sendError(ws, 'Invalid sender identity')
+              break
+            }
+            console.log(`📨 Received leave_game from ${playerId}`)
+            if (ensureRoom()) {
+              currentRoom!.handleLeaveGame(playerId)
+              currentRoom = null // Clear room reference since player left
+            } else {
+              console.log(`Player ${playerId} not in a room, just closing connection`)
+            }
+            // Close the WebSocket connection after processing leave
+            ws.close()
+            break
+
           default:
             sendError(ws, `Unknown message type: ${(validatedMessage as any).type}`)
         }

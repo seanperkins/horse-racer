@@ -2,7 +2,6 @@
 
 import { useMemo, useRef, useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { v4 as uuidv4 } from 'uuid'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 import { useGameStore } from '@/lib/store/gameStore'
@@ -23,21 +22,9 @@ export function Lobby({ sendMessage, roomCode, isConnected }: LobbyProps) {
   const [hasJoined, setHasJoined] = useState(false)
   const autoJoinAttemptedRef = useRef(false)
 
-  // Use persistent player ID from localStorage to support reconnection
-  const fallbackIdRef = useRef<string>('')
-  if (typeof window !== 'undefined' && !fallbackIdRef.current) {
-    const stored = localStorage.getItem('thunder-hooves-player-id')
-    if (stored) {
-      fallbackIdRef.current = stored
-    } else {
-      fallbackIdRef.current = uuidv4()
-      localStorage.setItem('thunder-hooves-player-id', fallbackIdRef.current)
-    }
-  }
-
+  // Use authenticated session ID (server requires authentication)
   const username = session?.user?.username?.trim() || playerName || ''
-  // Use authenticated session ID first (must match server's playerId), then fallback
-  const userId = session?.user?.id || fallbackIdRef.current || playerId
+  const userId = session?.user?.id || playerId
   const showAiPlaceholders = hasJoined
 
   // Auto-join if room code is in URL
