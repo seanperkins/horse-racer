@@ -1,0 +1,61 @@
+name: Cleanup PR Screenshots
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Cleanup screenshots for closed PR
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+
+          # Clone the repo
+          git clone https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git repo
+          cd repo
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Check if screenshots branch exists
+          if ! git ls-remote --exit-code --heads origin screenshots; then
+            echo "No screenshots branch exists, nothing to clean up"
+            exit 0
+          fi
+
+          # Checkout screenshots branch
+          git fetch origin screenshots
+          git checkout screenshots
+
+          # Check if PR folder exists
+          if [ ! -d "pr-${PR_NUMBER}" ]; then
+            echo "No screenshots folder for PR #${PR_NUMBER}, nothing to clean up"
+            exit 0
+          fi
+
+          # Remove PR folder
+          rm -rf "pr-${PR_NUMBER}"
+
+          # Commit and push
+          git add .
+          git commit -m "Cleanup screenshots for closed PR #${PR_NUMBER}" || echo "No changes to commit"
+
+          # Retry push up to 3 times in case of concurrent updates
+          for i in 1 2 3; do
+            if git push origin screenshots; then
+              echo "Push succeeded on attempt $i"
+              break
+            else
+              echo "Push failed on attempt $i, pulling and retrying..."
+              git pull --rebase origin screenshots
+            fi
+          done
+
+          echo "Cleaned up screenshots for PR #${PR_NUMBER}"
