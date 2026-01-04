@@ -1,7 +1,8 @@
 import type { IncomingMessage } from 'http'
 import { decode } from 'next-auth/jwt'
 
-const AUTH_SECRET = process.env.AUTH_SECRET
+// NextAuth v5 supports both AUTH_SECRET and NEXTAUTH_SECRET
+const AUTH_SECRET = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET
 
 interface SessionUser {
   id: string
@@ -40,13 +41,19 @@ export async function getUserFromRequest(
     console.log('🔒 Found NextAuth token, decoding...')
 
     // Decode the JWT token
+    if (!AUTH_SECRET) {
+      console.error('🔒 ERROR: No AUTH_SECRET or NEXTAUTH_SECRET environment variable set!')
+      return null
+    }
+
     const decoded = await decode({
       token,
-      secret: AUTH_SECRET || '',
+      secret: AUTH_SECRET,
       salt: '',
     })
 
     if (!decoded || !decoded.id) {
+      console.log('🔒 Token decode failed or missing id')
       return null
     }
 
