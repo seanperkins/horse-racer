@@ -53,7 +53,7 @@ jobs:
         run: npx prisma generate
 
       - name: Run database migrations
-        run: npx prisma db push --skip-generate
+        run: npx prisma db push --accept-data-loss
 
       - name: Seed test user
         run: npx tsx prisma/seed-test-user.ts
