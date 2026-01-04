@@ -25,14 +25,12 @@ export default function Home() {
               >
                 Play Now
               </Link>
-              <a
-                href="https://github.com"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                href="/tutorial"
                 className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg transition"
               >
                 How to Play
-              </a>
+              </Link>
             </div>
           </div>
         ) : (
@@ -49,14 +47,12 @@ export default function Home() {
             >
               Create Account
             </Link>
-            <a
-              href="https://github.com"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/tutorial"
               className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-lg transition"
             >
               How to Play
-            </a>
+            </Link>
           </div>
         )}
 

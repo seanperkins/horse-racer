@@ -4,6 +4,7 @@ import { useMemo, useRef, useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { v4 as uuidv4 } from 'uuid'
 import toast from 'react-hot-toast'
+import Link from 'next/link'
 import { useGameStore } from '@/lib/store/gameStore'
 import type { ClientMessage } from '@/types/messages'
 
@@ -217,6 +218,15 @@ export function Lobby({ sendMessage, roomCode, isConnected }: LobbyProps) {
 
             <div className="th-chip rounded-lg px-4 py-3 text-sm">
               Tip: Draft for bloodlines. Bet for comebacks.
+            </div>
+
+            <div className="text-center pt-4">
+              <Link
+                href="/tutorial"
+                className="inline-block text-blue-400 hover:text-blue-300 text-sm font-semibold transition"
+              >
+                📖 How to Play - Learn the Game
+              </Link>
             </div>
           </div>
         </div>
