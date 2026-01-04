@@ -24,12 +24,16 @@ export async function getUserFromRequest(
       return null
     }
 
-    // NextAuth uses different cookie names based on environment
-    // In production with HTTPS: __Secure-next-auth.session-token
-    // In development with HTTP: next-auth.session-token
+    // NextAuth v5 uses authjs cookie names:
+    // In production with HTTPS: __Secure-authjs.session-token or __Host-authjs.session-token
+    // In development with HTTP: authjs.session-token
+    // Legacy v4 names: __Secure-next-auth.session-token or next-auth.session-token
     const cookies = parseCookies(cookieHeader)
     console.log('🔒 Available cookies:', Object.keys(cookies))
     const token =
+      cookies['__Secure-authjs.session-token'] ||
+      cookies['__Host-authjs.session-token'] ||
+      cookies['authjs.session-token'] ||
       cookies['__Secure-next-auth.session-token'] ||
       cookies['next-auth.session-token']
 
