@@ -29,6 +29,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isConnectingRef = useRef(false)
+  const shouldReconnectRef = useRef(true) // Track if we should auto-reconnect
 
   const connect = useCallback(() => {
     if (
@@ -38,6 +39,9 @@ export function useWebSocket(options: UseWebSocketOptions) {
     ) {
       return
     }
+
+    // Re-enable auto-reconnect when manually connecting
+    shouldReconnectRef.current = true
 
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current)
@@ -62,8 +66,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
         wsRef.current = null
         onDisconnect?.()
 
-        // Auto-reconnect if enabled
-        if (autoReconnect) {
+        // Auto-reconnect only if enabled AND we should reconnect (not a deliberate disconnect)
+        if (autoReconnect && shouldReconnectRef.current) {
           reconnectTimeoutRef.current = setTimeout(() => {
             console.log('Attempting to reconnect...')
             connect()
@@ -95,8 +99,12 @@ export function useWebSocket(options: UseWebSocketOptions) {
   }, [url, onConnect, onDisconnect, onError, onMessage, autoReconnect, reconnectDelay])
 
   const disconnect = useCallback(() => {
+    // Disable auto-reconnect when deliberately disconnecting
+    shouldReconnectRef.current = false
+
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current)
+      reconnectTimeoutRef.current = null
     }
 
     if (wsRef.current) {
