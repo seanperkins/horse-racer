@@ -1978,6 +1978,40 @@ export class GameRoom {
     }
   }
 
+  handleSkipBetting(playerId: string): void {
+    const player = this.players.get(playerId)
+    if (!player) return
+
+    if (this.currentPhase !== 'betting') {
+      console.log(`Player ${playerId} tried to skip betting outside of betting phase`)
+      return
+    }
+
+    if (player.eliminated) {
+      console.log(`Eliminated player ${playerId} tried to skip betting`)
+      return
+    }
+
+    // Mark player as ready (without placing a bet)
+    player.ready = true
+    this.broadcast({
+      type: 'player_ready',
+      playerId,
+      ready: true,
+    })
+
+    console.log(`Player ${playerId} skipped betting`)
+
+    // Check if all players are ready during betting phase
+    if (this.shouldAdvancePhase()) {
+      console.log(`All players ready in betting phase, advancing to next phase`)
+      if (this.phaseTimer) {
+        clearTimeout(this.phaseTimer)
+      }
+      this.advancePhase()
+    }
+  }
+
   broadcast(message: Record<string, unknown>): void {
     const messageStr = JSON.stringify({ ...message, timestamp: Date.now() })
     for (const ws of this.playerSockets.values()) {

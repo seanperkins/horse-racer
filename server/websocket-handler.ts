@@ -168,6 +168,14 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
             }
             break
 
+          case 'skip_betting':
+            if (ensureRoom()) {
+              currentRoom!.handleSkipBetting(playerId)
+            } else {
+              sendError(ws, 'Not in a room')
+            }
+            break
+
           case 'leave_game':
             // Enforce sender identity - use connection-bound playerId, reject mismatched userId
             if (validatedMessage.userId !== playerId) {

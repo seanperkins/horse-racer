@@ -77,6 +77,10 @@ export const PlaceBetSchema = BaseMessageSchema.extend({
   betForHeart: z.boolean().default(false), // Recovery bet
 })
 
+export const SkipBettingSchema = BaseMessageSchema.extend({
+  type: z.literal('skip_betting'),
+})
+
 export const ExpandStableSchema = BaseMessageSchema.extend({
   type: z.literal('expand_stable'),
 })
@@ -314,6 +318,7 @@ export const ClientMessageSchema = z.discriminatedUnion('type', [
   FireJockeySchema,
   SetupRaceEntrySchema,
   PlaceBetSchema,
+  SkipBettingSchema,
   ExpandStableSchema,
   LeaveGameSchema,
   AnimationCompleteSchema,
@@ -348,6 +353,7 @@ export type HireJockey = z.infer<typeof HireJockeySchema>
 export type FireJockey = z.infer<typeof FireJockeySchema>
 export type SetupRaceEntry = z.infer<typeof SetupRaceEntrySchema>
 export type PlaceBet = z.infer<typeof PlaceBetSchema>
+export type SkipBetting = z.infer<typeof SkipBettingSchema>
 export type ExpandStable = z.infer<typeof ExpandStableSchema>
 export type LeaveGame = z.infer<typeof LeaveGameSchema>
 

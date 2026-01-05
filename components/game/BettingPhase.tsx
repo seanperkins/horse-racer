@@ -107,6 +107,7 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
   }
 
   const handleSkip = () => {
+    sendMessage({ type: 'skip_betting' })
     setBettingStatus('skipped')
   }
 
