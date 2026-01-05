@@ -247,6 +247,52 @@ export interface RaceState {
   }>
 }
 
+// Keyframe position for a single participant at a specific tick
+export interface KeyframePosition {
+  distance: number      // meters from start
+  speed: number         // current speed
+  stamina: number       // remaining stamina (0-1 normalized)
+  isStumbled: boolean
+}
+
+// A single keyframe capturing all participants at a specific tick
+export interface RaceKeyframe {
+  tick: number
+  positions: Record<string, KeyframePosition>
+}
+
+// Race event for commentary/effects
+export interface RaceEvent {
+  tick: number
+  playerId: string
+  type: 'start' | 'stumble' | 'recovery' | 'surge' | 'strategy_change' | 'ability_trigger' | 'position_update' | 'obstacle' | 'finish'
+  description: string
+}
+
+// Pre-computed race data sent to clients
+export interface PrecomputedRaceData {
+  // Final placements
+  placements: Array<{
+    playerId: string
+    playerName: string
+    position: number      // 1st, 2nd, 3rd...
+    finishTime: number    // ms
+    distance: number      // total distance
+  }>
+
+  // Keyframe positions for animation (every 5 ticks = 0.5s)
+  keyframes: RaceKeyframe[]
+
+  // Dramatic events for commentary/effects
+  events: RaceEvent[]
+
+  // Total duration for progress bar
+  totalTicks: number
+
+  // Race distance in meters
+  raceDistance: number
+}
+
 // Final race outcome
 export interface RaceOutcome {
   placements: Array<{

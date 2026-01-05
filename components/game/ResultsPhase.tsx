@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useGameStore } from '@/lib/store/gameStore'
 import { useAudioStore } from '@/lib/store/audioStore'
 
@@ -23,6 +23,27 @@ export function ResultsPhase() {
   const { currentRound, gold, hearts, raceResults, playerId, playerReadyStatus } = useGameStore()
   const playSfx = useAudioStore((state) => state.playSfx)
 
+  // Derive values for the effect (must be before any conditional returns)
+  const placements = raceResults?.placements as PlacementResult[] | undefined
+  const betResults = (raceResults?.betResults as BetResult[]) || []
+  const eliminatedPlayers = raceResults?.eliminatedPlayers || []
+  const myPlacement = placements?.find((p) => p.playerId === playerId)
+  const wasEliminated = eliminatedPlayers.includes(playerId || '')
+
+  // Play victory/defeat sound when results load
+  // This hook must be called unconditionally (before any early returns)
+  useEffect(() => {
+    if (myPlacement) {
+      if (myPlacement.position === 1) {
+        playSfx('victory')
+      } else if (myPlacement.position > 3 || wasEliminated) {
+        playSfx('defeat')
+      } else {
+        playSfx('race_finish')
+      }
+    }
+  }, [myPlacement, wasEliminated, playSfx])
+
   if (!raceResults || !raceResults.placements) {
     return (
       <div className="min-h-screen p-4 sm:p-8 th-bg">
@@ -35,26 +56,7 @@ export function ResultsPhase() {
     )
   }
 
-  const placements = raceResults.placements as PlacementResult[]
-  const betResults = (raceResults.betResults as BetResult[]) || []
-  const eliminatedPlayers = raceResults.eliminatedPlayers || []
-
-  const myPlacement = placements.find((p) => p.playerId === playerId)
   const myBetResult = betResults.find((b) => b.playerId === playerId)
-  const wasEliminated = eliminatedPlayers.includes(playerId || '')
-
-  // Play victory/defeat sound when results load
-  useEffect(() => {
-    if (myPlacement) {
-      if (myPlacement.position === 1) {
-        playSfx('victory')
-      } else if (myPlacement.position > 3 || wasEliminated) {
-        playSfx('defeat')
-      } else {
-        playSfx('race_finish')
-      }
-    }
-  }, [myPlacement, wasEliminated, playSfx])
 
   const getPositionMedal = (position: number) => {
     if (position === 1) return '🥇'

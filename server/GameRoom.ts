@@ -1,5 +1,5 @@
 import type { WebSocketServer, WebSocket } from 'ws'
-import type { Player, Horse, Jockey, Equipment, Track } from '@/types/game'
+import type { Player, Horse, Jockey, Equipment, Track, PrecomputedRaceData, RaceOutcome } from '@/types/game'
 import { RaceSimulator } from '@/game/simulation/RaceSimulator'
 import {
   calculatePowerRating,
@@ -79,6 +79,11 @@ export class GameRoom {
   lastActivityAt: number
   matchId: string | null
 
+  // Pre-computed race data cache
+  cachedRaceResults: RaceOutcome | null
+  cachedPrecomputedData: PrecomputedRaceData | null
+  playersAnimationComplete: Set<string>
+
   constructor(roomId: string, wss: WebSocketServer, friendCode: string | null = null) {
     this.roomId = roomId
     this.friendCode = friendCode || this.generateFriendCode()
@@ -99,6 +104,11 @@ export class GameRoom {
     this.createdAt = Date.now()
     this.lastActivityAt = Date.now()
     this.matchId = null
+
+    // Pre-computed race data cache
+    this.cachedRaceResults = null
+    this.cachedPrecomputedData = null
+    this.playersAnimationComplete = new Set()
   }
 
   generateFriendCode(): string {
@@ -959,24 +969,9 @@ export class GameRoom {
     // Store entries for use in processRaceResults
     this.lastRaceEntries = entriesWithBonuses
 
-    const raceInputs = {
-      type: 'race_inputs',
-      entries: entriesWithBonuses,
-      track,
-      seed: this.lastRaceSeed,
-    }
-
-    console.log('Broadcasting race inputs with seed:', this.lastRaceSeed)
-    console.log('Entries with bloodline bonuses:', entriesWithBonuses.map(e => ({
-      name: e.playerName,
-      bloodlineBonuses: e.bloodlineBonuses
-    })))
-
-    this.broadcast(raceInputs)
-
-    // Run the race simulation to determine actual duration
     const seed = this.lastRaceSeed
 
+    // Run the SINGLE simulation upfront and cache results
     const simulator = new RaceSimulator({
       track,
       participants: entriesWithBonuses.map(entry => ({
@@ -999,52 +994,99 @@ export class GameRoom {
       seed,
     })
 
-    // Note: We no longer process results here on a timer
-    // Results are processed when entering the results phase via startPhase('results')
-    // This ensures results are available immediately when the phase changes
+    // Run simulation ONCE and cache everything
+    this.cachedRaceResults = simulator.simulate()
+    this.cachedPrecomputedData = simulator.getPrecomputedData()
+
+    // Reset animation tracking for new race
+    this.playersAnimationComplete = new Set()
+
+    console.log('Broadcasting race_start with precomputed data')
+    console.log(`  - ${this.cachedPrecomputedData.keyframes.length} keyframes`)
+    console.log(`  - ${this.cachedPrecomputedData.events.length} events`)
+    console.log(`  - ${this.cachedPrecomputedData.totalTicks} total ticks`)
+
+    // Broadcast race_start with precomputed data for keyframe playback
+    this.broadcast({
+      type: 'race_start',
+      entries: entriesWithBonuses,
+      track,
+      seed,
+      precomputed: this.cachedPrecomputedData,
+    })
+
+    // Set up safety timeout - transition to results if clients take too long
+    // Use the last finisher's time + 5 second buffer
+    const lastFinishTime = this.cachedPrecomputedData.placements[
+      this.cachedPrecomputedData.placements.length - 1
+    ].finishTime
+    const safetyTimeout = Math.max(lastFinishTime + 5000, 30000) // At least 30 seconds
+
+    console.log(`Race safety timeout set to ${safetyTimeout}ms`)
+
+    // Clear any existing phase timer and set new safety timeout
+    if (this.phaseTimer) {
+      clearTimeout(this.phaseTimer)
+    }
+    this.phaseTimer = setTimeout(() => {
+      console.log('Race safety timeout triggered - transitioning to results')
+      this.startPhase('results')
+    }, safetyTimeout)
+  }
+
+  /**
+   * Handle animation_complete message from a client
+   */
+  handleAnimationComplete(playerId: string): void {
+    if (this.currentPhase !== 'race') {
+      console.log(`Ignoring animation_complete from ${playerId} - not in race phase`)
+      return
+    }
+
+    this.playersAnimationComplete.add(playerId)
+    console.log(`Animation complete for ${playerId} (${this.playersAnimationComplete.size}/${this.getActiveHumanPlayerCount()})`)
+
+    // Check if all active human players have completed
+    if (this.allHumanPlayersAnimationComplete()) {
+      console.log('All human players completed animation - transitioning to results')
+      if (this.phaseTimer) {
+        clearTimeout(this.phaseTimer)
+        this.phaseTimer = null
+      }
+      this.startPhase('results')
+    }
+  }
+
+  /**
+   * Get count of non-eliminated human players
+   */
+  private getActiveHumanPlayerCount(): number {
+    return Array.from(this.players.values())
+      .filter(p => !p.eliminated && !p.isAI)
+      .length
+  }
+
+  /**
+   * Check if all non-eliminated human players have signaled animation complete
+   */
+  private allHumanPlayersAnimationComplete(): boolean {
+    const activePlayers = Array.from(this.players.entries())
+      .filter(([, p]) => !p.eliminated && !p.isAI)
+
+    return activePlayers.every(([playerId]) =>
+      this.playersAnimationComplete.has(playerId)
+    )
   }
 
   processRaceResults(): void {
-    // Use the stored race entries with bloodline bonuses (same as sent to clients)
-    const entries = this.lastRaceEntries || this.getRaceEntries()
+    // Use cached race results from runRace() - NO re-simulation needed!
+    if (!this.cachedRaceResults || !this.cachedPrecomputedData) {
+      console.error('No cached race results! This should not happen.')
+      return
+    }
 
-    // Run the actual race simulation
-    const seed = this.lastRaceSeed || `race-${this.roomId}-${this.currentRound}`
-    const track = this.currentTrack || generateTrackForRound(this.currentRound)
-
-    console.log('Server simulation - Processing results with seed:', seed)
-
-    const simulator = new RaceSimulator({
-      track,
-      participants: entries.map(entry => {
-        const player = this.players.get(entry.playerId)
-        const playerName = player?.username || entry.playerName
-
-        // Calculate derived stats (note: RaceSimulator will recalculate with bloodline bonuses)
-        const derivedStats = {
-          baseSpeed: 0,
-          staminaPool: 0,
-          burnRate: 0,
-          terrainMod: 0,
-          efficiency: 0,
-          consistency: { variance: 0, isStable: true },
-        }
-
-        return {
-          playerId: entry.playerId,
-          playerName,
-          horse: entry.horse,
-          jockey: entry.jockey,
-          equipment: entry.equipment as any || {},
-          strategy: entry.strategy as any || { start: 'steady', mid: 'react', finish: 'maintain' },
-          derivedStats,
-          bloodlineBonuses: entry.bloodlineBonuses,
-        }
-      }),
-      seed,
-    })
-
-    const raceOutcome = simulator.simulate()
+    const raceOutcome = this.cachedRaceResults
+    console.log('Using cached race results - no re-simulation needed')
 
     // Map simulation results to placements
     const placements = raceOutcome.placements.map((placement) => ({
@@ -1100,6 +1142,11 @@ export class GameRoom {
         .map((p) => p.id),
       events: raceOutcome.events,
     })
+
+    // Clear cache after processing
+    this.cachedRaceResults = null
+    this.cachedPrecomputedData = null
+    this.playersAnimationComplete = new Set()
 
     // AI players auto-ready for next round
     for (const [playerId, player] of this.players) {

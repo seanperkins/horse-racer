@@ -10,6 +10,9 @@ import type {
   RaceOutcome,
   RaceState,
   RaceStrategy,
+  RaceKeyframe,
+  RaceEvent,
+  PrecomputedRaceData,
 } from '@/types/game'
 import {
   calculateDerivedStats,
@@ -46,6 +49,10 @@ export class RaceSimulator {
   private currentTick: number
   private raceDistance: number // Total race distance in meters
   private tickRate: number
+
+  // Keyframe capture for pre-computed race data
+  private keyframes: RaceKeyframe[] = []
+  private readonly KEYFRAME_INTERVAL = 5 // Capture every 5 ticks (0.5s at 10 ticks/sec)
 
   constructor(config: SimulationConfig) {
     this.config = config
@@ -109,16 +116,27 @@ export class RaceSimulator {
    * Run the complete race simulation
    */
   public simulate(): RaceOutcome {
+    // Reset keyframes for fresh simulation
+    this.keyframes = []
+
     // Add race start events for all participants
     for (const participant of this.config.participants) {
       const state = this.states.get(participant.playerId)!
       this.addEvent(state, 'start', 'Off to a strong start!')
     }
 
+    // Capture initial keyframe (tick 0)
+    this.captureKeyframe()
+
     // Run until all horses finish the race
     while (!this.isRaceComplete()) {
       this.tick()
       this.currentTick++
+
+      // Capture keyframe at regular intervals
+      if (this.currentTick % this.KEYFRAME_INTERVAL === 0) {
+        this.captureKeyframe()
+      }
 
       // Add position updates every 2 seconds (20 ticks)
       if (this.currentTick % 20 === 0) {
@@ -137,7 +155,31 @@ export class RaceSimulator {
       }
     }
 
+    // Capture final keyframe
+    this.captureKeyframe()
+
     return this.generateOutcome()
+  }
+
+  /**
+   * Capture current state as a keyframe for animation playback
+   */
+  private captureKeyframe(): void {
+    const positions: Record<string, { distance: number; speed: number; stamina: number; isStumbled: boolean }> = {}
+
+    for (const [playerId, state] of this.states) {
+      positions[playerId] = {
+        distance: state.position,
+        speed: state.currentSpeed,
+        stamina: state.maxStamina > 0 ? state.stamina / state.maxStamina : 0,
+        isStumbled: state.isStumbled,
+      }
+    }
+
+    this.keyframes.push({
+      tick: this.currentTick,
+      positions,
+    })
   }
 
   /**
@@ -808,5 +850,61 @@ export class RaceSimulator {
    */
   public getOutcome(): RaceOutcome {
     return this.generateOutcome()
+  }
+
+  /**
+   * Get the total number of ticks the race took
+   */
+  public getTotalTicks(): number {
+    return this.currentTick
+  }
+
+  /**
+   * Get captured keyframes for animation playback
+   */
+  public getKeyframes(): RaceKeyframe[] {
+    return this.keyframes
+  }
+
+  /**
+   * Get all race events formatted for the client
+   */
+  public getEvents(): RaceEvent[] {
+    const allEvents: RaceEvent[] = []
+
+    for (const state of this.states.values()) {
+      const participant = this.config.participants.find(
+        (p) => p.playerId === state.playerId,
+      )!
+
+      for (const event of state.events) {
+        allEvents.push({
+          tick: event.tick,
+          playerId: state.playerId,
+          type: event.type as RaceEvent['type'],
+          description: `${participant.playerName}: ${event.description}`,
+        })
+      }
+    }
+
+    // Sort events by tick
+    allEvents.sort((a, b) => a.tick - b.tick)
+    return allEvents
+  }
+
+  /**
+   * Get complete pre-computed race data for sending to clients
+   * Call this after simulate() completes
+   */
+  public getPrecomputedData(): PrecomputedRaceData {
+    const outcome = this.generateOutcome()
+
+    return {
+      placements: outcome.placements,
+      keyframes: this.keyframes,
+      events: this.getEvents(),
+      totalTicks: this.currentTick,
+      raceDistance: this.raceDistance,
+    }
   }
 }

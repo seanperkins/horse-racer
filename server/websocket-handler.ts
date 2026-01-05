@@ -186,6 +186,15 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
             ws.close()
             break
 
+          case 'animation_complete':
+            console.log(`📨 Received animation_complete from ${playerId}`)
+            if (ensureRoom()) {
+              currentRoom!.handleAnimationComplete(playerId)
+            } else {
+              console.log(`Player ${playerId} not in a room, ignoring animation_complete`)
+            }
+            break
+
           default:
             sendError(ws, `Unknown message type: ${(validatedMessage as any).type}`)
         }

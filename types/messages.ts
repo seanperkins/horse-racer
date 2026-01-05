@@ -86,6 +86,10 @@ export const LeaveGameSchema = BaseMessageSchema.extend({
   userId: z.string(),
 })
 
+export const AnimationCompleteSchema = BaseMessageSchema.extend({
+  type: z.literal('animation_complete'),
+})
+
 // Server -> Client messages
 export const LobbyStateSchema = BaseMessageSchema.extend({
   type: z.literal('lobby_state'),
@@ -157,6 +161,7 @@ export const BettingOpenSchema = BaseMessageSchema.extend({
   ),
 })
 
+// Legacy schema - kept for backward compatibility
 export const RaceInputsSchema = BaseMessageSchema.extend({
   type: z.literal('race_inputs'),
   entries: z.array(
@@ -177,6 +182,65 @@ export const RaceInputsSchema = BaseMessageSchema.extend({
     obstacles: z.array(z.any()).optional(),
   }),
   seed: z.string(), // For deterministic simulation
+})
+
+// New race_start message with pre-computed race data
+export const RaceStartSchema = BaseMessageSchema.extend({
+  type: z.literal('race_start'),
+  entries: z.array(
+    z.object({
+      playerId: z.string(),
+      playerName: z.string(),
+      horse: z.any(),
+      jockey: z.any(),
+      equipment: z.any(),
+      strategy: z.any(),
+      bloodlineBonuses: z.any().optional(),
+    }),
+  ),
+  track: z.object({
+    name: z.string(),
+    category: z.string(),
+    surface: z.string(),
+    distance: z.number(),
+    obstacles: z.array(z.any()).optional(),
+  }),
+  seed: z.string(),
+  precomputed: z.object({
+    placements: z.array(
+      z.object({
+        playerId: z.string(),
+        playerName: z.string(),
+        position: z.number(),
+        finishTime: z.number(),
+        distance: z.number(),
+      }),
+    ),
+    keyframes: z.array(
+      z.object({
+        tick: z.number(),
+        positions: z.record(
+          z.string(),
+          z.object({
+            distance: z.number(),
+            speed: z.number(),
+            stamina: z.number(),
+            isStumbled: z.boolean(),
+          }),
+        ),
+      }),
+    ),
+    events: z.array(
+      z.object({
+        tick: z.number(),
+        playerId: z.string(),
+        type: z.string(),
+        description: z.string(),
+      }),
+    ),
+    totalTicks: z.number(),
+    raceDistance: z.number(),
+  }),
 })
 
 export const RaceResultsSchema = BaseMessageSchema.extend({
@@ -252,6 +316,7 @@ export const ClientMessageSchema = z.discriminatedUnion('type', [
   PlaceBetSchema,
   ExpandStableSchema,
   LeaveGameSchema,
+  AnimationCompleteSchema,
 ])
 
 // Union of all server messages
@@ -262,6 +327,7 @@ export const ServerMessageSchema = z.discriminatedUnion('type', [
   TrackInfoSchema,
   BettingOpenSchema,
   RaceInputsSchema,
+  RaceStartSchema,
   RaceResultsSchema,
   PlayerStateSchema,
   ErrorMessageSchema,
@@ -289,6 +355,8 @@ export type LobbyState = z.infer<typeof LobbyStateSchema>
 export type GamePhase = z.infer<typeof GamePhaseSchema>
 export type ShopState = z.infer<typeof ShopStateSchema>
 export type RaceInputs = z.infer<typeof RaceInputsSchema>
+export type RaceStart = z.infer<typeof RaceStartSchema>
 export type RaceResults = z.infer<typeof RaceResultsSchema>
 export type PlayerState = z.infer<typeof PlayerStateSchema>
 export type ErrorMessage = z.infer<typeof ErrorMessageSchema>
+export type AnimationComplete = z.infer<typeof AnimationCompleteSchema>

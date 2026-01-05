@@ -116,8 +116,14 @@ export default function GamePageClient({ userId, username }: GamePageClientProps
         break
 
       case 'race_inputs':
-        // Store race inputs for client-side simulation
+        // Store race inputs for client-side simulation (legacy)
         useGameStore.getState().setRaceInputs(message)
+        break
+
+      case 'race_start':
+        // Store race start with precomputed data (new flow)
+        console.log('🎬 Received race_start with precomputed data')
+        useGameStore.getState().setRaceInputs(message as any)
         break
 
       case 'race_results':

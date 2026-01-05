@@ -2,15 +2,28 @@
 
 import { useEffect, useRef, useState } from "react";
 import * as PIXI from "pixi.js";
-import type { RaceParticipant } from "@/types/game";
-import type { RaceInputs } from "@/types/messages";
+import type { RaceParticipant, PrecomputedRaceData, RaceKeyframe } from "@/types/game";
+import type { RaceInputs, RaceStart } from "@/types/messages";
 import { RaceSimulator } from "@/game/simulation/RaceSimulator";
 import { TrackInfo, RaceCanvas, RaceSidebar, RaceEventLog } from "./race";
 import { useGameStore } from "@/lib/store/gameStore";
 import { SpriteManager } from "@/lib/sprites/SpriteManager";
 
+// Support both old race_inputs and new race_start formats
+type RaceData = RaceInputs | RaceStart;
+
+// Type guard to check if we have precomputed data
+function hasPrecomputedData(data: RaceData): data is RaceStart {
+  return 'precomputed' in data && data.precomputed !== undefined;
+}
+
+// Linear interpolation helper
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
 interface PixiRaceRendererProps {
-  raceInputs: RaceInputs;
+  raceInputs: RaceData;
   onRaceComplete: (result: { placements: any[]; events: any[] }) => void;
   onRaceEvent?: (events: RaceEvent[]) => void;
 }
@@ -49,7 +62,7 @@ export function PixiRaceRenderer({
   onRaceComplete,
   onRaceEvent,
 }: PixiRaceRendererProps) {
-  const { playerId } = useGameStore();
+  const { playerId, sendMessage } = useGameStore();
   const canvasRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<PIXI.Application | null>(null);
   const horsesRef = useRef<Map<string, HorseSprite>>(new Map());
@@ -78,6 +91,11 @@ export function PixiRaceRenderer({
   const horseSpriteTextureRef = useRef<PIXI.Texture | null>(null);
   const gallopingSpriteTextureRef = useRef<PIXI.Texture | null>(null);
   const spriteManagerRef = useRef<SpriteManager | null>(null);
+
+  // Pre-computed race data refs (for keyframe playback mode)
+  const precomputedDataRef = useRef<PrecomputedRaceData | null>(null);
+  const keyframeIndexRef = useRef<number>(0);
+  const raceIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Race configuration (responsive)
   const CANVAS_WIDTH = canvasSize.width;
@@ -622,77 +640,388 @@ export function PixiRaceRenderer({
     finishersRef.current.clear();
     setLiveStandings([]);
 
-    console.log(
-      "Creating simulator with",
-      raceInputs.entries.length,
-      "entries"
-    );
-    console.log("Race seed:", raceInputs.seed);
+    // Reset keyframe tracking
+    keyframeIndexRef.current = 0;
+    precomputedDataRef.current = null;
 
-    // Build participants exactly as they'll be passed to simulator
-    const participants = raceInputs.entries.map((entry) => ({
-      playerId: entry.playerId,
-      playerName: entry.playerName,
-      horse: entry.horse,
-      jockey: entry.jockey,
-      equipment: entry.equipment || {},
-      strategy: entry.strategy || {
-        start: "steady",
-        mid: "react",
-        finish: "maintain",
-      },
-      bloodlineBonuses: (entry as any).bloodlineBonuses || undefined,
-    }));
+    // Check if we have precomputed data (new flow) or need to simulate (legacy)
+    const useKeyframePlayback = hasPrecomputedData(raceInputs);
 
-    // Removed verbose simulator input logging - we confirmed it matches server
+    if (useKeyframePlayback) {
+      console.log("🎬 Using KEYFRAME PLAYBACK mode (precomputed data)");
+      precomputedDataRef.current = raceInputs.precomputed as PrecomputedRaceData;
+      const raceDistanceMeters = raceInputs.precomputed.raceDistance;
 
-    // Create simulator
-    const simulator = new RaceSimulator({
-      track: raceInputs.track as any,
-      participants: participants as any,
-      seed: raceInputs.seed || "default-seed",
-    });
-    simulatorRef.current = simulator;
+      console.log(`  - ${raceInputs.precomputed.keyframes.length} keyframes`);
+      console.log(`  - ${raceInputs.precomputed.events.length} events`);
+      console.log(`  - ${raceInputs.precomputed.totalTicks} total ticks`);
+      console.log(`  - ${raceDistanceMeters}m race distance`);
 
-    // Get race distance and redraw track with correct length
-    const raceDistanceMeters = simulator.getRaceDistance();
-    console.log("Redrawing track for race distance:", raceDistanceMeters, "meters");
-    appRef.current.stage.removeChildren();
-    drawTrack(appRef.current, raceDistanceMeters, raceInputs.track.surface);
+      // Redraw track with correct length
+      appRef.current.stage.removeChildren();
+      drawTrack(appRef.current, raceDistanceMeters, raceInputs.track.surface);
 
-    // Create horse sprites
-    console.log("Creating horse sprites...");
-    raceInputs.entries.forEach((entry: any, index: number) => {
-      console.log(`Creating sprite for ${entry.playerName} in lane ${index}`);
-      const horse = createHorseSprite(
-        {
-          playerId: entry.playerId,
-          playerName: entry.playerName,
-          horse: entry.horse,
-          jockey: entry.jockey,
-          equipment: entry.equipment || {},
-          strategy: entry.strategy || {
-            start: "steady",
-            mid: "react",
-            finish: "sprint",
-          },
-        } as RaceParticipant,
-        index
-      );
-      horsesRef.current.set(entry.playerId, horse);
-      trackContainerRef.current!.addChild(horse.container);
-      console.log(`[PIXI] Added ${entry.playerName} to track container`, {
-        position: horse.container.position,
-        stageChildren: appRef.current!.stage.children.length,
-        containerChildren: horse.container.children.length,
-        visible: horse.container.visible,
-        alpha: horse.container.alpha
+      // Create horse sprites
+      raceInputs.entries.forEach((entry: any, index: number) => {
+        const horse = createHorseSprite(
+          {
+            playerId: entry.playerId,
+            playerName: entry.playerName,
+            horse: entry.horse,
+            jockey: entry.jockey,
+            equipment: entry.equipment || {},
+            strategy: entry.strategy || {
+              start: "steady",
+              mid: "react",
+              finish: "sprint",
+            },
+          } as RaceParticipant,
+          index
+        );
+        horsesRef.current.set(entry.playerId, horse);
+        trackContainerRef.current!.addChild(horse.container);
       });
-    });
 
-    console.log("Starting animation loop...");
-    // Start animation loop
-    animate();
+      // Start keyframe playback animation
+      animateWithKeyframes();
+    } else {
+      console.log("🔧 Using LEGACY SIMULATION mode (no precomputed data)");
+      console.log("Race seed:", raceInputs.seed);
+
+      // Build participants exactly as they'll be passed to simulator
+      const participants = raceInputs.entries.map((entry) => ({
+        playerId: entry.playerId,
+        playerName: entry.playerName,
+        horse: entry.horse,
+        jockey: entry.jockey,
+        equipment: entry.equipment || {},
+        strategy: entry.strategy || {
+          start: "steady",
+          mid: "react",
+          finish: "maintain",
+        },
+        bloodlineBonuses: (entry as any).bloodlineBonuses || undefined,
+      }));
+
+      // Create simulator
+      const simulator = new RaceSimulator({
+        track: raceInputs.track as any,
+        participants: participants as any,
+        seed: raceInputs.seed || "default-seed",
+      });
+      simulatorRef.current = simulator;
+
+      // Get race distance and redraw track with correct length
+      const raceDistanceMeters = simulator.getRaceDistance();
+      console.log("Redrawing track for race distance:", raceDistanceMeters, "meters");
+      appRef.current.stage.removeChildren();
+      drawTrack(appRef.current, raceDistanceMeters, raceInputs.track.surface);
+
+      // Create horse sprites
+      raceInputs.entries.forEach((entry: any, index: number) => {
+        const horse = createHorseSprite(
+          {
+            playerId: entry.playerId,
+            playerName: entry.playerName,
+            horse: entry.horse,
+            jockey: entry.jockey,
+            equipment: entry.equipment || {},
+            strategy: entry.strategy || {
+              start: "steady",
+              mid: "react",
+              finish: "sprint",
+            },
+          } as RaceParticipant,
+          index
+        );
+        horsesRef.current.set(entry.playerId, horse);
+        trackContainerRef.current!.addChild(horse.container);
+      });
+
+      // Start legacy simulation animation loop
+      animate();
+    }
+  };
+
+  /**
+   * Animate using pre-computed keyframes (new flow)
+   * No simulation - just interpolate between keyframes
+   */
+  const animateWithKeyframes = () => {
+    console.log("animateWithKeyframes() called");
+
+    const precomputed = precomputedDataRef.current;
+    if (!precomputed || !appRef.current) {
+      console.error("Missing precomputed data or app in animateWithKeyframes");
+      return;
+    }
+
+    const { keyframes, events, totalTicks, raceDistance } = precomputed;
+    const raceDistanceMeters = raceDistance;
+    const tickInterval = 20; // 20ms between render ticks (50 ticks/second visual, 5x speed)
+    const KEYFRAME_INTERVAL = 5; // Server captures keyframe every 5 ticks
+
+    let currentTick = 0;
+    let keyframeIndex = 0;
+    let eventIndex = 0;
+
+    console.log(`Starting keyframe playback: ${keyframes.length} keyframes, ${totalTicks} total ticks`);
+
+    raceIntervalRef.current = setInterval(() => {
+      currentTick++;
+      setCurrentTick(currentTick);
+
+      // Find the current and next keyframe for interpolation
+      while (
+        keyframeIndex < keyframes.length - 1 &&
+        keyframes[keyframeIndex + 1].tick <= currentTick
+      ) {
+        keyframeIndex++;
+      }
+
+      const currentKeyframe = keyframes[keyframeIndex];
+      const nextKeyframe = keyframes[keyframeIndex + 1];
+
+      // Process events that should fire at this tick
+      while (eventIndex < events.length && events[eventIndex].tick <= currentTick) {
+        const event = events[eventIndex];
+        const playerName = raceInputs.entries.find(e => e.playerId === event.playerId)?.playerName || event.playerId;
+
+        // Add to race events display
+        setRaceEvents(prev => [{
+          tick: event.tick,
+          playerId: event.playerId,
+          playerName,
+          type: event.type,
+          description: event.description,
+        }, ...prev].slice(0, 10));
+
+        // Visual effects for events
+        const horse = horsesRef.current.get(event.playerId);
+        if (horse) {
+          if (event.type === 'stumble') {
+            horse.container.rotation = Math.PI / 12;
+            applyHorseTint(horse, 0xff6666);
+            horse.isStumbled = true;
+            horse.statusText.text = "STUMBLED!";
+            horse.statusText.visible = true;
+          } else if (event.type === 'recovery') {
+            horse.container.rotation = 0;
+            restoreOriginalTint(horse, event.playerId);
+            horse.isStumbled = false;
+            horse.statusText.text = "";
+            horse.statusText.visible = false;
+          } else if (event.type === 'surge') {
+            const originalScale = horse.container.scale.x;
+            horse.container.scale.set(originalScale * 1.2);
+            applyHorseTint(horse, 0xffff00);
+            setTimeout(() => {
+              horse.container.scale.set(originalScale);
+              restoreOriginalTint(horse, event.playerId);
+            }, 300);
+          }
+        }
+
+        eventIndex++;
+      }
+
+      // Send events to parent if callback provided
+      if (onRaceEvent) {
+        onRaceEvent(events.slice(0, eventIndex).map(e => ({
+          tick: e.tick,
+          playerId: e.playerId,
+          playerName: raceInputs.entries.find(entry => entry.playerId === e.playerId)?.playerName || e.playerId,
+          type: e.type,
+          description: e.description,
+        })));
+      }
+
+      // Interpolate positions for each horse
+      const trackLengthPixels = raceDistanceMeters * METERS_TO_PIXELS;
+      const standings: Array<{ playerId: string; distance: number; isFinished: boolean }> = [];
+
+      for (const [pId, horse] of horsesRef.current) {
+        const currentPos = currentKeyframe.positions[pId];
+        const nextPos = nextKeyframe?.positions[pId];
+
+        if (!currentPos) continue;
+
+        let distance: number;
+        let isStumbled: boolean;
+
+        if (nextPos && nextKeyframe) {
+          // Interpolate between keyframes
+          const t = (currentTick - currentKeyframe.tick) / (nextKeyframe.tick - currentKeyframe.tick);
+          distance = lerp(currentPos.distance, nextPos.distance, Math.min(1, Math.max(0, t)));
+          isStumbled = currentPos.isStumbled; // Use current frame's stumble state
+        } else {
+          // At or past last keyframe
+          distance = currentPos.distance;
+          isStumbled = currentPos.isStumbled;
+        }
+
+        // Update horse target position
+        const isFinished = distance >= raceDistanceMeters;
+        horse.targetX = TRACK_PADDING + (isFinished ? trackLengthPixels : distance * METERS_TO_PIXELS);
+
+        // Smooth movement
+        const moveSpeed = 0.15;
+        horse.currentX += (horse.targetX - horse.currentX) * moveSpeed;
+        horse.container.position.x = horse.currentX;
+
+        // Track finishers
+        if (isFinished && !finishersRef.current.has(pId)) {
+          finishersRef.current.add(pId);
+        }
+
+        // Update stumble visual state
+        if (isStumbled && !horse.isStumbled) {
+          horse.isStumbled = true;
+          horse.container.rotation = Math.PI / 12;
+          horse.statusText.text = "STUMBLED!";
+          horse.statusText.visible = true;
+        } else if (!isStumbled && horse.isStumbled) {
+          horse.isStumbled = false;
+          horse.container.rotation = 0;
+          horse.statusText.text = "";
+          horse.statusText.visible = false;
+        }
+
+        standings.push({ playerId: pId, distance, isFinished });
+
+        // Animate galloping (if not stumbled and not finished)
+        if (!horse.isStumbled && !isFinished) {
+          horse.animationTimer += tickInterval;
+          if (horse.animationTimer >= 50) {
+            horse.animationTimer = 0;
+            horse.animationFrame = (horse.animationFrame + 1) % 16;
+
+            // Update sprite frame
+            if (spriteManagerRef.current && horse.body instanceof PIXI.Container) {
+              const originalParticipant = raceInputs?.entries.find(e => e.playerId === horse.playerId);
+              if (originalParticipant) {
+                try {
+                  spriteManagerRef.current.updateCompositeFrame(
+                    horse.body,
+                    {
+                      horseType: originalParticipant.horse.variant || 'regular',
+                      bloodline: originalParticipant.horse.bloodline,
+                      jockeyStyle: originalParticipant.jockey.style || 'classic',
+                      jockeyColor: originalParticipant.jockey.color
+                    },
+                    horse.animationFrame
+                  );
+                } catch (error) {
+                  // Fallback handled below
+                }
+              }
+            }
+
+            if (horse.body instanceof PIXI.Sprite && gallopingSpriteTextureRef.current) {
+              const SPRITE_WIDTH = 64;
+              const SPRITE_HEIGHT = 64;
+              const FRAMES_PER_ROW = 4;
+              const row = Math.floor(horse.animationFrame / FRAMES_PER_ROW);
+              const col = horse.animationFrame % FRAMES_PER_ROW;
+              horse.body.texture = new PIXI.Texture({
+                source: gallopingSpriteTextureRef.current.source,
+                frame: new PIXI.Rectangle(col * SPRITE_WIDTH, row * SPRITE_HEIGHT, SPRITE_WIDTH, SPRITE_HEIGHT),
+              });
+            }
+          }
+
+          // Generate dust particles
+          horse.particleTimer += tickInterval;
+          if (horse.particleTimer >= 100 && trackContainerRef.current) {
+            horse.particleTimer = 0;
+            const particle = new PIXI.Graphics();
+            const size = 3 + Math.random() * 4;
+            particle.circle(0, 0, size);
+            particle.fill(0x8b6f47);
+            particle.alpha = 0.6;
+            particle.x = horse.container.x - HORSE_WIDTH / 2;
+            particle.y = horse.container.y + (Math.random() * 20 - 10);
+            trackContainerRef.current.addChild(particle);
+            horse.particles.push(particle);
+
+            const animateParticle = () => {
+              particle.x += -2;
+              particle.alpha -= 0.02;
+              if (particle.alpha <= 0) {
+                trackContainerRef.current?.removeChild(particle);
+                const index = horse.particles.indexOf(particle);
+                if (index > -1) horse.particles.splice(index, 1);
+              } else {
+                requestAnimationFrame(animateParticle);
+              }
+            };
+            animateParticle();
+          }
+        }
+      }
+
+      // Update live standings
+      standings.sort((a, b) => b.distance - a.distance);
+      setLiveStandings(standings.map((s, i) => ({
+        playerId: s.playerId,
+        playerName: raceInputs.entries.find(e => e.playerId === s.playerId)?.playerName || s.playerId,
+        horseName: raceInputs.entries.find(e => e.playerId === s.playerId)?.horse?.name || 'Unknown',
+        position: i + 1,
+        isFinished: s.isFinished,
+        distance: s.distance,
+      })));
+
+      // Update camera
+      if (trackContainerRef.current) {
+        let targetPosition: number;
+        const playerHorseStanding = standings.find(s => s.playerId === playerId);
+
+        if (playerHorseStanding) {
+          targetPosition = playerHorseStanding.distance;
+        } else {
+          const leadPack = standings.slice(0, Math.min(3, standings.length));
+          targetPosition = leadPack.reduce((sum, p) => sum + p.distance, 0) / leadPack.length;
+        }
+
+        const targetCameraX = targetPosition * METERS_TO_PIXELS + TRACK_PADDING;
+        const idealCameraOffset = targetCameraX - (CANVAS_WIDTH * 0.3);
+        const trackLengthPx = raceDistanceMeters * METERS_TO_PIXELS;
+        const maxCameraX = trackLengthPx - (CANVAS_WIDTH * 0.7);
+
+        cameraRef.current.targetX = Math.max(0, Math.min(idealCameraOffset, maxCameraX));
+        cameraRef.current.x += (cameraRef.current.targetX - cameraRef.current.x) * 0.15;
+        trackContainerRef.current.position.x = -cameraRef.current.x;
+
+        if (farBackgroundRef.current) {
+          farBackgroundRef.current.position.x = -cameraRef.current.x * 0.2;
+        }
+        if (midBackgroundRef.current) {
+          midBackgroundRef.current.position.x = -cameraRef.current.x * 0.5;
+        }
+      }
+
+      // Check if race is complete
+      if (currentTick >= totalTicks) {
+        console.log("🏁 Keyframe playback complete");
+
+        if (raceIntervalRef.current) {
+          clearInterval(raceIntervalRef.current);
+          raceIntervalRef.current = null;
+        }
+
+        // Send animation_complete to server
+        console.log("Sending animation_complete to server");
+        sendMessage({ type: 'animation_complete' });
+
+        // Notify parent with results
+        setTimeout(() => {
+          onRaceComplete({
+            placements: precomputed.placements,
+            events: precomputed.events,
+          });
+        }, 500);
+      }
+    }, tickInterval);
   };
 
   const animate = () => {
@@ -1077,6 +1406,12 @@ export function PixiRaceRenderer({
       animationFrameRef.current = null;
     }
 
+    // Clear keyframe playback interval
+    if (raceIntervalRef.current) {
+      clearInterval(raceIntervalRef.current);
+      raceIntervalRef.current = null;
+    }
+
     if (appRef.current) {
       appRef.current.destroy(true, { children: true });
       appRef.current = null;
@@ -1084,6 +1419,8 @@ export function PixiRaceRenderer({
 
     horsesRef.current.clear();
     simulatorRef.current = null;
+    precomputedDataRef.current = null;
+    keyframeIndexRef.current = 0;
     setIsInitialized(false);
     setCurrentTick(0);
     setRaceEvents([]);
