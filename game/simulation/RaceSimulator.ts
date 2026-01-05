@@ -54,6 +54,9 @@ export class RaceSimulator {
   private keyframes: RaceKeyframe[] = []
   private readonly KEYFRAME_INTERVAL = 5 // Capture every 5 ticks (0.5s at 10 ticks/sec)
 
+  // Speed multiplier for target race times (~20-50 seconds)
+  private readonly SPEED_MULTIPLIER = 4
+
   constructor(config: SimulationConfig) {
     this.config = config
     this.rng = seedrandom(config.seed)
@@ -306,11 +309,10 @@ export class RaceSimulator {
 
       // Move forward based on current speed
       // Speed is in units per second, tick rate divides it
-      // Apply 4x speed multiplier for target race times:
+      // SPEED_MULTIPLIER (4x) gives target race times:
       // - Sprint (5 furlongs/1006m): ~17 seconds at avg 15 base speed
       // - Distance (16 furlongs/3219m): ~54 seconds at avg 15 base speed
-      const SPEED_MULTIPLIER = 4
-      state.position += (state.currentSpeed * SPEED_MULTIPLIER) / this.tickRate
+      state.position += (state.currentSpeed * this.SPEED_MULTIPLIER) / this.tickRate
     }
   }
 
@@ -323,7 +325,7 @@ export class RaceSimulator {
       if (state.position >= this.raceDistance && state.finishTick === null) {
         // Calculate sub-tick precision: how far past the finish line did we go?
         const overshoot = state.position - this.raceDistance
-        const tickDistance = state.currentSpeed / this.tickRate
+        const tickDistance = (state.currentSpeed * this.SPEED_MULTIPLIER) / this.tickRate
 
         // Calculate what fraction of this tick had elapsed when crossing the finish
         // If overshoot = 0, we crossed exactly at the end of previous tick (fraction = 0)
