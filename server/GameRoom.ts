@@ -123,7 +123,9 @@ export class GameRoom {
   }
 
   canJoin(): boolean {
-    return this.players.size < MAX_PLAYERS && !this.gameStarted
+    // Count only real (non-AI) players - AI slots can be replaced
+    const realPlayerCount = Array.from(this.players.values()).filter(p => !p.isAI).length
+    return realPlayerCount < MAX_PLAYERS && !this.gameStarted
   }
 
   /**
