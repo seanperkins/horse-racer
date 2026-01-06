@@ -62,6 +62,9 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
       try {
         const message = JSON.parse(data.toString())
 
+        // Log incoming message for debugging
+        console.log(`📩 Received message from ${playerId}:`, JSON.stringify(message))
+
         // Validate message against schema
         const validatedMessage = ClientMessageSchema.parse(message) as ClientMessage
 
@@ -220,7 +223,17 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
             sendError(ws, `Unknown message type: ${(validatedMessage as any).type}`)
         }
       } catch (error) {
-        console.error('Error processing message:', error)
+        console.error('❌ Error processing message from player', playerId)
+        if (error instanceof Error) {
+          console.error('Error:', error.message)
+          console.error('Raw message data:', data.toString())
+          // If it's a Zod error, show more details
+          if ('issues' in error) {
+            console.error('Validation issues:', JSON.stringify((error as any).issues, null, 2))
+          }
+        } else {
+          console.error('Unknown error:', error)
+        }
         sendError(ws, error instanceof Error ? error.message : 'Unknown error')
       }
     })

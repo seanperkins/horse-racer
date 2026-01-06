@@ -1,14 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import toast from 'react-hot-toast'
 import { useGameStore } from '@/lib/store/gameStore'
 import { useAudioStore } from '@/lib/store/audioStore'
-import type { ClientMessage } from '@/types/messages'
 import type { Horse, Jockey, Equipment, RaceStrategy } from '@/types/game'
 
 interface PreparationPhaseProps {
-  sendMessage: (message: ClientMessage) => void
+  sendMessage: (message: any) => void
 }
 
 const STRATEGY_PRESETS: Array<{
@@ -39,7 +37,7 @@ const STRATEGY_PRESETS: Array<{
 ]
 
 export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
-  const { horses, hiredJockey, equipment, currentRound, currentTrack } = useGameStore()
+  const { horses, hiredJockey, equipment, currentRound, currentTrack, setPrepSelection, entryStatus } = useGameStore()
   const playSfx = useAudioStore((state) => state.playSfx)
 
   // Selection state
@@ -68,32 +66,15 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const handleSubmit = () => {
-    console.log('Submit clicked - horse:', selectedHorse?.name, 'jockey:', selectedJockey?.name)
-
-    if (!selectedHorse) {
-      toast.error('Please select a horse!')
-      return
-    }
-    if (!selectedJockey) {
-      toast.error('Please select a jockey!')
-      return
-    }
-
-    console.log('Sending setup_race_entry message')
-    playSfx('ready_up')
-    sendMessage({
-      type: 'setup_race_entry',
-      horseId: selectedHorse.id,
-      jockeyId: selectedJockey.id,
-      equipment: {
-        saddle: selectedEquipment.saddle?.id,
-        horseshoes: selectedEquipment.horseshoes?.id,
-        blinders: selectedEquipment.blinders?.id,
-      },
-      strategy,
+  // Update store whenever selections change
+  useEffect(() => {
+    setPrepSelection({
+      horse: selectedHorse,
+      jockey: selectedJockey,
+      equipment: selectedEquipment,
+      strategy
     })
-  }
+  }, [selectedHorse, selectedJockey, selectedEquipment, strategy, setPrepSelection])
 
   const applyPreset = (preset: typeof STRATEGY_PRESETS[0]) => {
     setStrategy(preset.strategy)
@@ -107,16 +88,6 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
   return (
     <div className="min-h-screen p-2 sm:p-4 md:p-8 th-bg">
       <div className="max-w-7xl mx-auto">
-        {/* Header - hidden on mobile, button at bottom instead */}
-        <div className="hidden sm:flex items-center justify-end mb-4 sm:mb-6">
-          <button
-            onClick={handleSubmit}
-            className="min-h-[44px] px-4 sm:px-6 py-2.5 sm:py-3 bg-[var(--accent-green)] text-white rounded-lg font-bold text-sm sm:text-base hover:bg-[var(--accent-green)]/80 active:scale-[0.98] transition"
-          >
-            Confirm Entry
-          </button>
-        </div>
-
         {/* Track Info */}
         {currentTrack && (
           <div className="th-panel rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
@@ -401,22 +372,6 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Submit Button (bottom) */}
-        <div className="mt-4 sm:mt-6 text-center px-2 sm:px-0">
-          <button
-            onClick={handleSubmit}
-            disabled={!selectedHorse || !selectedJockey}
-            className="w-full sm:w-auto min-h-[52px] px-6 sm:px-8 py-3 sm:py-4 bg-[var(--accent-green)] text-white rounded-lg font-bold text-base sm:text-lg hover:bg-[var(--accent-green)]/80 active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Confirm Race Entry
-          </button>
-          {(!selectedHorse || !selectedJockey) && (
-            <p className="mt-2 text-xs sm:text-sm text-[var(--accent-orange)]">
-              Select a horse and jockey to continue
-            </p>
-          )}
         </div>
       </div>
     </div>

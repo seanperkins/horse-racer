@@ -7,6 +7,7 @@
 
 import { RaceSimulator } from '../game/simulation/RaceSimulator';
 import type { RaceParticipant, Track, Bloodline, Horse, Jockey } from '../types/game';
+import { calculateDerivedStats } from '../game/stats';
 
 // Configuration
 const NUM_RACES = 100; // Reduced for faster testing
@@ -69,6 +70,8 @@ function generateTestJockey(index: number): Jockey {
       weight: 5 + Math.floor(Math.random() * 3),
     },
     style: 'classic',
+    hireCost: 0,
+    upkeepCost: 0,
   };
 }
 
@@ -124,29 +127,41 @@ async function runBalanceTest() {
 
   // Run races
   for (let raceNum = 0; raceNum < NUM_RACES; raceNum++) {
+    // Generate track first (needed for derived stats)
+    const track = generateTestTrack(raceNum);
+
     // Generate participants (rotate through bloodlines)
     const participants: RaceParticipant[] = [];
     for (let i = 0; i < HORSES_PER_RACE; i++) {
       const bloodline = bloodlines[i % bloodlines.length];
+      const horse = generateTestHorse(bloodline, i);
+      const jockey = generateTestJockey(i);
+      const equipment = {};
+      const derivedStats = calculateDerivedStats(horse, jockey, equipment, track.surface);
+
       participants.push({
         playerId: `player-${i}`,
         playerName: `Player ${i}`,
-        horse: generateTestHorse(bloodline, i),
-        jockey: generateTestJockey(i),
-        equipment: [],
+        horse,
+        jockey,
+        equipment,
+        strategy: { start: 'steady', mid: 'react', finish: 'maintain' },
+        derivedStats,
+        bloodlineBonuses: null,
       });
     }
 
-    // Generate track
-    const track = generateTestTrack(raceNum);
-
     // Run simulation
-    const simulator = new RaceSimulator(participants, track, Date.now() + raceNum);
+    const simulator = new RaceSimulator({
+      track,
+      participants,
+      seed: `balance-test-${raceNum}`,
+    });
     const raceResults = simulator.simulate();
 
     // Record results
     raceResults.placements.forEach((placement, index) => {
-      const participant = participants.find(p => p.horse.id === placement.horseId)!;
+      const participant = participants.find(p => p.playerId === placement.playerId)!;
       const bloodline = participant.horse.bloodline;
 
       results.bloodlineFinishes[bloodline].push(index + 1);
@@ -154,7 +169,7 @@ async function runBalanceTest() {
       if (index === 0) {
         // Winner
         results.bloodlineWins[bloodline]++;
-        results.raceTimes.push(placement.time);
+        results.raceTimes.push(placement.finishTime / 1000); // Convert ms to seconds
       }
     });
 

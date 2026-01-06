@@ -1928,9 +1928,8 @@ export class GameRoom {
 
     console.log(`Player ${playerId} set up race entry`)
 
-    // In multiplayer, check if all players are ready during preparation phase
-    // In single-player, only advance on explicit ready or timer
-    if (!this.isSinglePlayerMode() && this.currentPhase === 'preparation' && this.shouldAdvancePhase()) {
+    // Check if all players are ready during preparation phase
+    if (this.currentPhase === 'preparation' && this.shouldAdvancePhase()) {
       console.log(`All players ready in preparation phase, advancing to next phase`)
       if (this.phaseTimer) {
         clearTimeout(this.phaseTimer)
@@ -2041,9 +2040,8 @@ export class GameRoom {
 
     console.log(`Player ${playerId} placed ${message.betType} bet for ${message.amount} gold`)
 
-    // In multiplayer, check if all players are ready during betting phase
-    // In single-player, only advance on explicit ready or timer
-    if (!this.isSinglePlayerMode() && this.currentPhase === 'betting' && this.shouldAdvancePhase()) {
+    // Check if all players are ready during betting phase
+    if (this.currentPhase === 'betting' && this.shouldAdvancePhase()) {
       console.log(`All players ready in betting phase, advancing to next phase`)
       if (this.phaseTimer) {
         clearTimeout(this.phaseTimer)
@@ -2076,9 +2074,8 @@ export class GameRoom {
 
     console.log(`Player ${playerId} skipped betting`)
 
-    // In multiplayer, check if all players are ready during betting phase
-    // In single-player, only advance on explicit ready or timer
-    if (!this.isSinglePlayerMode() && this.shouldAdvancePhase()) {
+    // Check if all players are ready during betting phase
+    if (this.currentPhase === 'betting' && this.shouldAdvancePhase()) {
       console.log(`All players ready in betting phase, advancing to next phase`)
       if (this.phaseTimer) {
         clearTimeout(this.phaseTimer)
