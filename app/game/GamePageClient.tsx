@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useEffect } from 'react'
+import { useCallback, useMemo, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useWebSocket } from '@/lib/hooks/useWebSocket'
 import { useGameStore } from '@/lib/store/gameStore'
@@ -149,11 +149,17 @@ export default function GamePageClient({ userId, username }: GamePageClientProps
     }
   }, [setLobbyState, setGamePhase, setShopState, setPlayerState, setPlayerReadyStatus, roomCode, router])
 
+  // Track if we've ever connected (to show reconnecting vs initial connecting)
+  const [hasConnected, setHasConnected] = useState(false)
+  const [showConnectingScreen, setShowConnectingScreen] = useState(false)
+
   const { isConnected, sendMessage, ws } = useWebSocket({
     url: wsUrl,
     onMessage: handleMessage,
     onConnect: useCallback(() => {
       console.log('Connected to game server')
+      setHasConnected(true)
+      setShowConnectingScreen(false)
     }, []),
     onDisconnect: useCallback(() => {
       console.log('Disconnected from game server')
@@ -170,13 +176,32 @@ export default function GamePageClient({ userId, username }: GamePageClientProps
     }
   }, [isConnected, ws, setWebSocket])
 
+  // Show connecting screen after a delay if still not connected
+  // This prevents flickering during quick reconnects
+  useEffect(() => {
+    if (!isConnected) {
+      const timer = setTimeout(() => {
+        setShowConnectingScreen(true)
+      }, 500) // Wait 500ms before showing connecting screen
+
+      return () => clearTimeout(timer)
+    } else {
+      setShowConnectingScreen(false)
+    }
+  }, [isConnected])
+
   // Render current phase
   const renderPhase = () => {
-    if (!isConnected) {
+    // Only show full connecting screen if:
+    // 1. Not connected AND
+    // 2. Either never connected OR delayed timer has fired
+    if (!isConnected && (!hasConnected || showConnectingScreen)) {
       return (
         <div className="flex min-h-screen items-center justify-center">
           <div className="text-center">
-            <div className="mb-4 text-2xl">Connecting to server...</div>
+            <div className="mb-4 text-2xl">
+              {hasConnected ? 'Reconnecting to server...' : 'Connecting to server...'}
+            </div>
             <div className="h-2 w-64 bg-gray-700 rounded overflow-hidden">
               <div className="h-full bg-blue-600 w-1/2 animate-pulse"></div>
             </div>
@@ -237,8 +262,17 @@ export default function GamePageClient({ userId, username }: GamePageClientProps
     }
   }
 
+  // Check if we should show reconnecting banner
+  const showReconnectingBanner = !isConnected && hasConnected && !showConnectingScreen
+
   return (
     <div className="min-h-screen th-bg text-white">
+      {/* Subtle reconnecting banner */}
+      {showReconnectingBanner && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-600/90 text-black py-1 px-4 text-center text-sm font-semibold">
+          Reconnecting to server...
+        </div>
+      )}
       <UniversalHeader />
       {renderPhase()}
     </div>
