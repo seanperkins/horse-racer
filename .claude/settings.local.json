@@ -25,7 +25,8 @@
       "Bash(npx vitest:*)",
       "Bash(git fetch:*)",
       "Bash(git reset:*)",
-      "Bash(git -C /Users/sean/sites/horse-racer log --oneline -20)"
+      "Bash(git -C /Users/sean/sites/horse-racer log --oneline -20)",
+      "Bash(timeout 60 npm run build:*)"
     ]
   }
 }
