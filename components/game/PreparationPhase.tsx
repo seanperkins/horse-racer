@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useGameStore } from '@/lib/store/gameStore'
 import { useAudioStore } from '@/lib/store/audioStore'
+import { StrategyImpactPanel } from './StrategyImpactPanel'
 import type { Horse, Jockey, Equipment, RaceStrategy } from '@/types/game'
 
 interface PreparationPhaseProps {
@@ -370,6 +371,16 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
                 <div>Mid: {strategy.mid}</div>
                 <div>Finish: {strategy.finish}</div>
               </div>
+            </div>
+
+            {/* Strategy Impact Panel */}
+            <div className="mt-4 sm:mt-6">
+              <StrategyImpactPanel
+                horse={selectedHorse}
+                jockey={selectedJockey}
+                equipment={selectedEquipment}
+                strategy={strategy}
+              />
             </div>
           </div>
         </div>

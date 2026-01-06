@@ -7,9 +7,11 @@ import { useAudioStore } from '@/lib/store/audioStore'
 import { HorizontalStatBars } from './HorizontalStatBars'
 import { InfoTooltip } from './InfoTooltip'
 import { StableCapacityBar } from './StableCapacityBar'
+import { StrategyImpactPanel } from './StrategyImpactPanel'
+import { useStrategyImpact } from '@/lib/hooks/useStrategyImpact'
 import { BLOODLINE_TOOLTIPS, JOCKEY_TRAIT_TOOLTIPS, ABILITY_TOOLTIPS, GAME_MECHANIC_TOOLTIPS, EQUIPMENT_EFFECT_TOOLTIPS } from '@/game/tooltips'
 import type { ClientMessage } from '@/types/messages'
-import type { Horse, Jockey, Equipment } from '@/types/game'
+import type { Horse, Jockey, Equipment, RaceStrategy } from '@/types/game'
 
 interface ShopPhaseProps {
   sendMessage: (message: ClientMessage) => void
@@ -25,9 +27,56 @@ interface ShopUnit {
 
 export function ShopPhase({ sendMessage }: ShopPhaseProps) {
   const playerId = useGameStore((state) => state.playerId)
-  const { gold, shopUnits, horses, hiredJockey, equipment, currentRound, stableSlots } = useGameStore()
+  const { gold, shopUnits, horses, hiredJockey, equipment, currentRound, stableSlots, currentTrack } = useGameStore()
   const playSfx = useAudioStore((state) => state.playSfx)
   const [selectedTab, setSelectedTab] = useState<'shop' | 'inventory'>('shop')
+
+  // Preview loadout for comparison
+  const [previewHorse, setPreviewHorse] = useState<Horse | null>(null)
+  const [previewJockey, setPreviewJockey] = useState<Jockey | null>(null)
+  const [previewEquipment, setPreviewEquipment] = useState<{
+    saddle?: Equipment
+    horseshoes?: Equipment
+    blinders?: Equipment
+  }>({})
+
+  // Hover state for shop items
+  const [hoveredShopItem, setHoveredShopItem] = useState<{
+    type: 'horse' | 'jockey' | 'equipment'
+    data: Horse | Jockey | Equipment
+    slot?: 'saddle' | 'horseshoes' | 'blinders'
+  } | null>(null)
+
+  // Default strategy
+  const defaultStrategy: RaceStrategy = { start: 'steady', mid: 'react', finish: 'maintain' }
+
+  // Auto-select first horse and jockey
+  useEffect(() => {
+    if (!previewHorse && horses.length > 0) {
+      setPreviewHorse(horses[0])
+    }
+    if (!previewJockey && hiredJockey) {
+      setPreviewJockey(hiredJockey)
+    }
+  }, [horses, hiredJockey, previewHorse, previewJockey])
+
+  // Determine what to show in Strategy Impact Panel
+  const displayHorse = hoveredShopItem?.type === 'horse'
+    ? (hoveredShopItem.data as Horse)
+    : previewHorse
+
+  const displayJockey = hoveredShopItem?.type === 'jockey'
+    ? (hoveredShopItem.data as Jockey)
+    : previewJockey
+
+  const displayEquipment = hoveredShopItem?.type === 'equipment'
+    ? {
+        ...previewEquipment,
+        [hoveredShopItem.slot!]: hoveredShopItem.data as Equipment,
+      }
+    : previewEquipment
+
+  const showStrategyPanel = (displayHorse && displayJockey) || hoveredShopItem
 
   const handlePurchase = (unit: ShopUnit) => {
     // Jockeys use hire_jockey message instead
@@ -221,13 +270,18 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
                     const horse = unit.data as Horse
                     const isStableFull = horses.length >= stableSlots
                     return (
-                      <HorseCard
+                      <div
                         key={unit.id}
-                        horse={horse}
-                        cost={unit.cost}
-                        canAfford={gold >= unit.cost && !isStableFull}
-                        onPurchase={() => handlePurchase(unit)}
-                      />
+                        onMouseEnter={() => setHoveredShopItem({ type: 'horse', data: horse })}
+                        onMouseLeave={() => setHoveredShopItem(null)}
+                      >
+                        <HorseCard
+                          horse={horse}
+                          cost={unit.cost}
+                          canAfford={gold >= unit.cost && !isStableFull}
+                          onPurchase={() => handlePurchase(unit)}
+                        />
+                      </div>
                     )
                   })}
                 </div>
@@ -244,14 +298,19 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
                   {shopJockeys.map((unit) => {
                     const jockey = unit.data as Jockey
                     return (
-                      <JockeyCard
+                      <div
                         key={unit.id}
-                        jockey={jockey}
-                        cost={unit.cost}
-                        canAfford={gold >= unit.cost && !hiredJockey}
-                        onPurchase={() => handlePurchase(unit)}
-                        isHireMode={true}
-                      />
+                        onMouseEnter={() => setHoveredShopItem({ type: 'jockey', data: jockey })}
+                        onMouseLeave={() => setHoveredShopItem(null)}
+                      >
+                        <JockeyCard
+                          jockey={jockey}
+                          cost={unit.cost}
+                          canAfford={gold >= unit.cost && !hiredJockey}
+                          onPurchase={() => handlePurchase(unit)}
+                          isHireMode={true}
+                        />
+                      </div>
                     )
                   })}
                 </div>
@@ -268,13 +327,22 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
                   {shopEquipment.map((unit) => {
                     const item = unit.data as Equipment
                     return (
-                      <EquipmentCard
+                      <div
                         key={unit.id}
-                        equipment={item}
-                        cost={unit.cost}
-                        canAfford={gold >= unit.cost}
-                        onPurchase={() => handlePurchase(unit)}
-                      />
+                        onMouseEnter={() => setHoveredShopItem({
+                          type: 'equipment',
+                          data: item,
+                          slot: item.slot as 'saddle' | 'horseshoes' | 'blinders'
+                        })}
+                        onMouseLeave={() => setHoveredShopItem(null)}
+                      >
+                        <EquipmentCard
+                          equipment={item}
+                          cost={unit.cost}
+                          canAfford={gold >= unit.cost}
+                          onPurchase={() => handlePurchase(unit)}
+                        />
+                      </div>
                     )
                   })}
                 </div>
@@ -349,6 +417,21 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
               )}
             </div>
           </div>
+        )}
+
+        {/* Floating Strategy Impact Panel */}
+        {showStrategyPanel && (
+          <ShopComparisonPanel
+            previewHorse={previewHorse}
+            previewJockey={previewJockey}
+            previewEquipment={previewEquipment}
+            hoveredItem={hoveredShopItem}
+            displayHorse={displayHorse}
+            displayJockey={displayJockey}
+            displayEquipment={displayEquipment}
+            strategy={defaultStrategy}
+            currentTrack={currentTrack}
+          />
         )}
       </div>
     </div>
@@ -691,6 +774,229 @@ function EquipmentCard({
       >
         {isInventory ? `Sell ${cost}g` : `Buy ${cost}g`}
       </button>
+    </div>
+  )
+}
+
+// Shop Comparison Panel Component
+function ShopComparisonPanel({
+  previewHorse,
+  previewJockey,
+  previewEquipment,
+  hoveredItem,
+  displayHorse,
+  displayJockey,
+  displayEquipment,
+  strategy,
+  currentTrack,
+}: {
+  previewHorse: Horse | null
+  previewJockey: Jockey | null
+  previewEquipment: { saddle?: Equipment; horseshoes?: Equipment; blinders?: Equipment }
+  hoveredItem: { type: string; data: any; slot?: string } | null
+  displayHorse: Horse | null
+  displayJockey: Jockey | null
+  displayEquipment: { saddle?: Equipment; horseshoes?: Equipment; blinders?: Equipment }
+  strategy: RaceStrategy
+  currentTrack: any
+}) {
+  // Calculate current preview stats
+  const currentStats = useStrategyImpact(previewHorse, previewJockey, previewEquipment, strategy)
+
+  // Calculate hovered stats
+  const hoveredStats = useStrategyImpact(displayHorse, displayJockey, displayEquipment, strategy)
+
+  // Helper to format delta
+  const formatDelta = (current: number | undefined, hovered: number | undefined) => {
+    if (!current || !hovered || !hoveredItem) return null
+    const delta = hovered - current
+    if (Math.abs(delta) < 0.01) return null
+    return delta
+  }
+
+  // Stat descriptions for tooltips
+  const statDescriptions: Record<string, string> = {
+    'Speed': 'Base movement speed - higher is better',
+    'Stamina': 'Energy pool for maintaining pace - higher is better',
+    'Grit': 'Ability to push through fatigue - higher is better',
+    'Temper': 'Consistency and control - higher is more stable',
+    'Effective Speed': 'Final speed after all modifiers',
+    'Stamina Pool': 'Total available energy for the race',
+    'Burn Rate': 'Energy consumed per tick - lower is better',
+    'Efficiency': 'How effectively stamina is converted to speed - higher is better',
+  }
+
+  const DeltaDisplay = ({ delta, inverse = false }: { delta: number | null; inverse?: boolean }) => {
+    if (delta === null) return <span className="w-16 text-right text-xs th-label">-</span>
+    const isPositive = inverse ? delta < 0 : delta > 0
+    return (
+      <span className={`w-16 text-right text-xs font-semibold ${isPositive ? 'text-[var(--accent-green)]' : 'text-[var(--accent-red)]'}`}>
+        {delta > 0 ? '+' : ''}{delta.toFixed(2)}
+      </span>
+    )
+  }
+
+  const StatRow = ({
+    label,
+    value,
+    delta,
+    inverse = false,
+    tooltip
+  }: {
+    label: string
+    value: string | number
+    delta: number | null
+    inverse?: boolean
+    tooltip?: string
+  }) => {
+    const [showTooltip, setShowTooltip] = useState(false)
+
+    return (
+      <div className="grid grid-cols-[1fr_auto_auto] gap-2 items-center text-sm">
+        <div className="flex items-center gap-1">
+          <span>{label}</span>
+          <div className="relative">
+            <button
+              className="w-3 h-3 rounded-full border border-current opacity-50 hover:opacity-100 flex items-center justify-center text-[10px] leading-none"
+              onMouseEnter={() => setShowTooltip(true)}
+              onMouseLeave={() => setShowTooltip(false)}
+              onClick={() => setShowTooltip(!showTooltip)}
+            >
+              i
+            </button>
+            {showTooltip && tooltip && (
+              <div className="absolute left-0 top-full mt-1 w-48 p-2 text-xs th-panel rounded shadow-lg z-10 border border-[var(--outline)]">
+                {tooltip}
+              </div>
+            )}
+          </div>
+        </div>
+        <span className="font-bold tabular-nums w-12 text-right">{value}</span>
+        <DeltaDisplay delta={delta} inverse={inverse} />
+      </div>
+    )
+  }
+
+  return (
+    <div className="fixed bottom-4 right-4 w-96 max-w-[calc(100vw-2rem)] z-50">
+      <div className="th-panel rounded-lg p-4 shadow-2xl">
+        <h3 className="font-bold mb-3 text-sm">
+          {hoveredItem ? '👀 Preview with Purchase' : '📊 Current Preview'}
+        </h3>
+
+        {hoveredItem && (
+          <div className="mb-3 text-xs th-label p-2 bg-yellow-500/10 rounded border border-yellow-500/30">
+            Hovering: <strong>{hoveredItem.data.name}</strong>
+          </div>
+        )}
+
+        {/* Base Stats Comparison */}
+        {currentStats.speedBreakdown && hoveredStats.speedBreakdown && (
+          <div className="mb-4">
+            <h4 className="text-xs th-label mb-2 uppercase tracking-wide">Base Stats</h4>
+            <div className="space-y-2">
+              <StatRow
+                label="Speed"
+                value={hoveredStats.speedBreakdown.final}
+                delta={formatDelta(currentStats.speedBreakdown.final, hoveredStats.speedBreakdown.final)}
+                tooltip={statDescriptions['Speed']}
+              />
+              <StatRow
+                label="Stamina"
+                value={hoveredStats.staminaBreakdown?.final || 0}
+                delta={formatDelta(currentStats.staminaBreakdown?.final, hoveredStats.staminaBreakdown?.final)}
+                tooltip={statDescriptions['Stamina']}
+              />
+              <StatRow
+                label="Grit"
+                value={hoveredStats.gritBreakdown?.final || 0}
+                delta={formatDelta(currentStats.gritBreakdown?.final, hoveredStats.gritBreakdown?.final)}
+                tooltip={statDescriptions['Grit']}
+              />
+              <StatRow
+                label="Temper"
+                value={hoveredStats.temperBreakdown?.final || 0}
+                delta={formatDelta(currentStats.temperBreakdown?.final, hoveredStats.temperBreakdown?.final)}
+                tooltip={statDescriptions['Temper']}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Derived Stats Comparison */}
+        {currentStats.derivedStats && hoveredStats.derivedStats && (
+          <div className="mb-4">
+            <h4 className="text-xs th-label mb-2 uppercase tracking-wide">Derived Stats</h4>
+            <div className="space-y-2">
+              <StatRow
+                label="Effective Speed"
+                value={hoveredStats.derivedStats.baseSpeed.toFixed(1)}
+                delta={formatDelta(currentStats.derivedStats.baseSpeed, hoveredStats.derivedStats.baseSpeed)}
+                tooltip={statDescriptions['Effective Speed']}
+              />
+              <StatRow
+                label="Stamina Pool"
+                value={hoveredStats.derivedStats.staminaPool.toFixed(1)}
+                delta={formatDelta(currentStats.derivedStats.staminaPool, hoveredStats.derivedStats.staminaPool)}
+                tooltip={statDescriptions['Stamina Pool']}
+              />
+              <StatRow
+                label="Burn Rate"
+                value={`${hoveredStats.derivedStats.burnRate.toFixed(2)}/tk`}
+                delta={formatDelta(currentStats.derivedStats.burnRate, hoveredStats.derivedStats.burnRate)}
+                inverse={true}
+                tooltip={statDescriptions['Burn Rate']}
+              />
+              <StatRow
+                label="Efficiency"
+                value={`${(hoveredStats.derivedStats.efficiency * 100).toFixed(0)}%`}
+                delta={formatDelta(currentStats.derivedStats.efficiency * 100, hoveredStats.derivedStats.efficiency * 100)}
+                tooltip={statDescriptions['Efficiency']}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Terrain Alignment */}
+        {hoveredStats.terrainAlignment && (
+          <div className="mb-4">
+            <h4 className="text-xs th-label mb-2 uppercase tracking-wide">Terrain</h4>
+            <div
+              className={`text-sm p-2 rounded border ${
+                hoveredStats.terrainAlignment.modifier < 1.0
+                  ? 'border-[var(--accent-red)]/30 bg-[var(--accent-red)]/10'
+                  : hoveredStats.terrainAlignment.modifier > 1.0
+                    ? 'border-[var(--accent-green)]/30 bg-[var(--accent-green)]/10'
+                    : 'border-[var(--outline)] bg-[var(--bg-secondary)]'
+              }`}
+            >
+              <div className="flex justify-between items-center">
+                <span className="capitalize">
+                  {hoveredStats.terrainAlignment.surface?.replace('_', ' ') || 'Unknown'}
+                </span>
+                <span
+                  className={`font-bold ${
+                    hoveredStats.terrainAlignment.modifier < 1.0
+                      ? 'text-[var(--accent-red)]'
+                      : hoveredStats.terrainAlignment.modifier > 1.0
+                        ? 'text-[var(--accent-green)]'
+                        : ''
+                  }`}
+                >
+                  {hoveredStats.terrainAlignment.modifier >= 1.0 ? '+' : ''}
+                  {((hoveredStats.terrainAlignment.modifier - 1) * 100).toFixed(0)}%
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {currentTrack && (
+          <div className="mt-3 text-xs th-label">
+            <strong>Next Track:</strong> {currentTrack.name} - {currentTrack.surface.replace('_', ' ')}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
