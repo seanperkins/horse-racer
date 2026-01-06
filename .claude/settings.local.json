@@ -22,7 +22,10 @@
       "Bash(tee:*)",
       "Bash(git push:*)",
       "Bash(file:*)",
-      "Bash(npx vitest:*)"
+      "Bash(npx vitest:*)",
+      "Bash(git fetch:*)",
+      "Bash(git reset:*)",
+      "Bash(git -C /Users/sean/sites/horse-racer log --oneline -20)"
     ]
   }
 }
