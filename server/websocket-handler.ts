@@ -78,6 +78,11 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
 
         // Handle different message types
         switch (validatedMessage.type) {
+          case 'ping':
+            // Respond to heartbeat ping with pong
+            ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }))
+            break
+
           case 'join_lobby':
             // playerId and playerName are already set from authenticated user
             console.log(`🔐 Authenticated user ${playerId} joining lobby`)

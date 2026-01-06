@@ -94,7 +94,14 @@ export const AnimationCompleteSchema = BaseMessageSchema.extend({
   type: z.literal('animation_complete'),
 })
 
+export const PingSchema = BaseMessageSchema.extend({
+  type: z.literal('ping'),
+})
+
 // Server -> Client messages
+export const PongSchema = BaseMessageSchema.extend({
+  type: z.literal('pong'),
+})
 export const LobbyStateSchema = BaseMessageSchema.extend({
   type: z.literal('lobby_state'),
   players: z.array(
@@ -322,6 +329,7 @@ export const ClientMessageSchema = z.discriminatedUnion('type', [
   ExpandStableSchema,
   LeaveGameSchema,
   AnimationCompleteSchema,
+  PingSchema,
 ])
 
 // Union of all server messages
@@ -337,6 +345,7 @@ export const ServerMessageSchema = z.discriminatedUnion('type', [
   PlayerStateSchema,
   ErrorMessageSchema,
   PlayerReadySchema,
+  PongSchema,
 ])
 
 // TypeScript types inferred from schemas

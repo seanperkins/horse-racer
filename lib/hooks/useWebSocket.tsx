@@ -28,6 +28,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
   const [lastMessage, setLastMessage] = useState<ServerMessage | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const isConnectingRef = useRef(false)
   const shouldReconnectRef = useRef(true) // Track if we should auto-reconnect
 
@@ -57,6 +58,17 @@ export function useWebSocket(options: UseWebSocketOptions) {
         isConnectingRef.current = false
         setIsConnected(true)
         onConnect?.()
+
+        // Start heartbeat to keep connection alive (send ping every 30 seconds)
+        if (heartbeatIntervalRef.current) {
+          clearInterval(heartbeatIntervalRef.current)
+        }
+        heartbeatIntervalRef.current = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            // Send a ping message to keep the connection alive
+            ws.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }))
+          }
+        }, 30000) // 30 seconds
       }
 
       ws.onclose = () => {
@@ -65,6 +77,12 @@ export function useWebSocket(options: UseWebSocketOptions) {
         setIsConnected(false)
         wsRef.current = null
         onDisconnect?.()
+
+        // Clear heartbeat interval
+        if (heartbeatIntervalRef.current) {
+          clearInterval(heartbeatIntervalRef.current)
+          heartbeatIntervalRef.current = null
+        }
 
         // Auto-reconnect only if enabled AND we should reconnect (not a deliberate disconnect)
         if (autoReconnect && shouldReconnectRef.current) {
@@ -105,6 +123,11 @@ export function useWebSocket(options: UseWebSocketOptions) {
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current)
       reconnectTimeoutRef.current = null
+    }
+
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current)
+      heartbeatIntervalRef.current = null
     }
 
     if (wsRef.current) {
