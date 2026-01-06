@@ -128,6 +128,14 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
             }
             break
 
+          case 'expand_stable':
+            if (ensureRoom()) {
+              currentRoom!.handleExpandStable(playerId)
+            } else {
+              sendError(ws, 'Not in a room')
+            }
+            break
+
           case 'train_horse':
             if (ensureRoom()) {
               currentRoom!.handleTrain(playerId, validatedMessage)

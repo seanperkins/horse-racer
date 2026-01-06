@@ -6,6 +6,7 @@ import { useGameStore } from '@/lib/store/gameStore'
 import { useAudioStore } from '@/lib/store/audioStore'
 import { HorizontalStatBars } from './HorizontalStatBars'
 import { InfoTooltip } from './InfoTooltip'
+import { StableCapacityBar } from './StableCapacityBar'
 import { BLOODLINE_TOOLTIPS, JOCKEY_TRAIT_TOOLTIPS, ABILITY_TOOLTIPS, GAME_MECHANIC_TOOLTIPS, EQUIPMENT_EFFECT_TOOLTIPS } from '@/game/tooltips'
 import type { ClientMessage } from '@/types/messages'
 import type { Horse, Jockey, Equipment } from '@/types/game'
@@ -24,7 +25,7 @@ interface ShopUnit {
 
 export function ShopPhase({ sendMessage }: ShopPhaseProps) {
   const playerId = useGameStore((state) => state.playerId)
-  const { gold, shopUnits, horses, hiredJockey, equipment, currentRound } = useGameStore()
+  const { gold, shopUnits, horses, hiredJockey, equipment, currentRound, stableSlots } = useGameStore()
   const playSfx = useAudioStore((state) => state.playSfx)
   const [selectedTab, setSelectedTab] = useState<'shop' | 'inventory'>('shop')
 
@@ -32,6 +33,12 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
     // Jockeys use hire_jockey message instead
     if (unit.type === 'jockey') {
       handleHireJockey(unit.id, unit.cost)
+      return
+    }
+
+    // Check stable capacity for horses
+    if (unit.type === 'horse' && horses.length >= stableSlots) {
+      toast.error(`Stable full! You can only hold ${stableSlots} horses. Expand your stable with Prestige.`)
       return
     }
 
@@ -202,19 +209,23 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
           <div className="space-y-4 sm:space-y-6">
             {/* Horses */}
             <div className="th-panel rounded-lg p-3 sm:p-4 md:p-6">
-              <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">🐴 Horses</h2>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 sm:mb-4">
+                <h2 className="text-lg sm:text-xl font-bold">🐴 Horses</h2>
+                <StableCapacityBar sendMessage={sendMessage} inline />
+              </div>
               {shopHorses.length === 0 ? (
                 <div className="text-center th-label py-4">No horses available</div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
                   {shopHorses.map((unit) => {
                     const horse = unit.data as Horse
+                    const isStableFull = horses.length >= stableSlots
                     return (
                       <HorseCard
                         key={unit.id}
                         horse={horse}
                         cost={unit.cost}
-                        canAfford={gold >= unit.cost}
+                        canAfford={gold >= unit.cost && !isStableFull}
                         onPurchase={() => handlePurchase(unit)}
                       />
                     )

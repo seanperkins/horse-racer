@@ -743,10 +743,8 @@ export class GameRoom {
   startPhase(phase: GamePhase): void {
     this.currentPhase = phase
     const duration = PHASE_DURATIONS[phase] || 30
-    const alivePlayers = Array.from(this.players.values()).filter((p) => !p.eliminated)
-    const isSinglePlayer = alivePlayers.length === 1
 
-    console.log(`Room ${this.roomId}: Starting ${phase} phase (${duration}s)${isSinglePlayer ? ' - single player mode' : ''}`)
+    console.log(`Room ${this.roomId}: Starting ${phase} phase (${duration}s)${this.isSinglePlayerMode() ? ' - single player mode' : ''}`)
 
     // Reset ready state when starting shop, preparation, betting, or results phase
     if (phase === 'shop' || phase === 'preparation' || phase === 'betting' || phase === 'results') {
@@ -788,7 +786,7 @@ export class GameRoom {
 
     // Single player mode: skip timer for most phases, wait for ready
     // Race phase still uses timer as it's automatic
-    if (!isSinglePlayer || phase === 'race') {
+    if (!this.isSinglePlayerMode() || phase === 'race') {
       this.phaseTimer = setTimeout(() => {
         this.advancePhase()
       }, duration * 1000)
@@ -1066,6 +1064,22 @@ export class GameRoom {
     return Array.from(this.players.values())
       .filter(p => !p.eliminated && !p.isAI)
       .length
+  }
+
+  /**
+   * Get count of all human players (including eliminated)
+   */
+  private getHumanPlayerCount(): number {
+    return Array.from(this.players.values())
+      .filter(p => !p.isAI)
+      .length
+  }
+
+  /**
+   * Check if this is a single-player game (one human + AI opponents)
+   */
+  private isSinglePlayerMode(): boolean {
+    return this.getHumanPlayerCount() === 1
   }
 
   /**
@@ -1462,6 +1476,12 @@ export class GameRoom {
       return
     }
 
+    // Check stable capacity for horses
+    if (unitType === 'horse' && player.horses.length >= player.stableSlots) {
+      if (ws) this.sendError(ws, `Stable full! You can only hold ${player.stableSlots} horses. Expand your stable with Prestige.`)
+      return
+    }
+
     // Deduct gold and add unit to player's inventory
     player.gold -= unit.cost
 
@@ -1622,6 +1642,56 @@ export class GameRoom {
         hiredJockey: player.hiredJockey,
         equipment: player.equipment,
       },
+    })
+  }
+
+  handleExpandStable(playerId: string): void {
+    const player = this.players.get(playerId)
+    if (!player) return
+
+    const ws = this.playerSockets.get(playerId)
+
+    // Only allow expansion during shop phase
+    if (this.currentPhase !== 'shop') {
+      if (ws) this.sendError(ws, 'Can only expand stable during shop phase')
+      return
+    }
+
+    // Check if already at max capacity
+    if (player.stableSlots >= 3) {
+      if (ws) this.sendError(ws, 'Stable already at maximum capacity (3 slots)')
+      return
+    }
+
+    // Calculate expansion cost: 2 Prestige for slot 2, 3 Prestige for slot 3
+    const expansionCost = player.stableSlots === 1 ? 2 : 3
+
+    // Check if player has enough Prestige
+    if (player.prestige < expansionCost) {
+      if (ws) this.sendError(ws, `Not enough Prestige to expand. Need ${expansionCost} Prestige.`)
+      return
+    }
+
+    // Deduct Prestige and expand stable
+    player.prestige -= expansionCost
+    player.stableSlots += 1
+
+    console.log(`Player ${playerId} expanded stable to ${player.stableSlots} slots for ${expansionCost} Prestige`)
+
+    // Send updated player state
+    this.sendToPlayer(playerId, {
+      type: 'player_state',
+      gold: player.gold,
+      hearts: player.hearts,
+      prestige: player.prestige,
+      stableSlots: player.stableSlots,
+      inventory: {
+        horses: player.horses,
+        hiredJockey: player.hiredJockey,
+        equipment: player.equipment,
+      },
+      wins: player.wins,
+      currentRound: this.currentRound,
     })
   }
 
@@ -1858,8 +1928,9 @@ export class GameRoom {
 
     console.log(`Player ${playerId} set up race entry`)
 
-    // Check if all players are ready during preparation phase
-    if (this.currentPhase === 'preparation' && this.shouldAdvancePhase()) {
+    // In multiplayer, check if all players are ready during preparation phase
+    // In single-player, only advance on explicit ready or timer
+    if (!this.isSinglePlayerMode() && this.currentPhase === 'preparation' && this.shouldAdvancePhase()) {
       console.log(`All players ready in preparation phase, advancing to next phase`)
       if (this.phaseTimer) {
         clearTimeout(this.phaseTimer)
@@ -1970,8 +2041,9 @@ export class GameRoom {
 
     console.log(`Player ${playerId} placed ${message.betType} bet for ${message.amount} gold`)
 
-    // Check if all players are ready during betting phase
-    if (this.currentPhase === 'betting' && this.shouldAdvancePhase()) {
+    // In multiplayer, check if all players are ready during betting phase
+    // In single-player, only advance on explicit ready or timer
+    if (!this.isSinglePlayerMode() && this.currentPhase === 'betting' && this.shouldAdvancePhase()) {
       console.log(`All players ready in betting phase, advancing to next phase`)
       if (this.phaseTimer) {
         clearTimeout(this.phaseTimer)
@@ -2004,8 +2076,9 @@ export class GameRoom {
 
     console.log(`Player ${playerId} skipped betting`)
 
-    // Check if all players are ready during betting phase
-    if (this.shouldAdvancePhase()) {
+    // In multiplayer, check if all players are ready during betting phase
+    // In single-player, only advance on explicit ready or timer
+    if (!this.isSinglePlayerMode() && this.shouldAdvancePhase()) {
       console.log(`All players ready in betting phase, advancing to next phase`)
       if (this.phaseTimer) {
         clearTimeout(this.phaseTimer)

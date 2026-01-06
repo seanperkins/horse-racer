@@ -5,9 +5,10 @@ import type { ClientMessage } from '@/types/messages'
 
 interface StableCapacityBarProps {
   sendMessage: (message: ClientMessage) => void
+  inline?: boolean
 }
 
-export function StableCapacityBar({ sendMessage }: StableCapacityBarProps) {
+export function StableCapacityBar({ sendMessage, inline = false }: StableCapacityBarProps) {
   const { horses, stableSlots, maxStableSlots, prestige } = useGameStore()
 
   const currentHorses = horses.length
@@ -22,7 +23,50 @@ export function StableCapacityBar({ sendMessage }: StableCapacityBarProps) {
     sendMessage({ type: 'expand_stable' })
   }
 
-  // Calculate fill percentage for progress bar
+  // Inline version (for header)
+  if (inline) {
+    return (
+      <div className="flex items-center gap-2 sm:gap-3">
+        <span className="text-sm sm:text-base th-muted whitespace-nowrap">
+          Stable: {currentHorses}/{stableSlots}
+          {stableSlots < maxStableSlots && (
+            <span className="hidden sm:inline text-xs"> (max {maxStableSlots})</span>
+          )}
+        </span>
+
+        {canExpand && (
+          <button
+            onClick={handleExpand}
+            disabled={!canAffordExpansion}
+            className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded text-xs sm:text-sm font-bold transition-colors flex items-center gap-1 ${
+              canAffordExpansion
+                ? 'bg-[var(--accent-gold)] text-black hover:bg-[var(--accent-gold)]/80'
+                : 'bg-[var(--bg-secondary)] text-[var(--text-muted)] cursor-not-allowed'
+            }`}
+            title={
+              canAffordExpansion
+                ? `Expand stable to ${stableSlots + 1} slots`
+                : `Need ${expansionCost} Prestige to expand`
+            }
+          >
+            <span className="hidden sm:inline">Expand</span>
+            <span className="flex items-center gap-0.5">
+              <span>⭐</span>
+              <span>{expansionCost}</span>
+            </span>
+          </button>
+        )}
+
+        {stableSlots === maxStableSlots && (
+          <span className="text-xs sm:text-sm text-[var(--accent-green)] font-semibold">
+            Max
+          </span>
+        )}
+      </div>
+    )
+  }
+
+  // Full version (standalone panel)
   const fillPercentage = (currentHorses / maxStableSlots) * 100
 
   return (
