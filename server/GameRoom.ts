@@ -480,7 +480,7 @@ export class GameRoom {
       const jockey = sortedJockeys[0]
       player.hiredJockey = jockey
       shopInventory.jockeys = shopInventory.jockeys.filter(j => j.id !== jockey.id)
-      console.log(`${player.username} hired ${jockey.name} (${jockey.upkeepCost}g/round upkeep)`)
+      console.log(`${player.username} hired ${jockey.name} (no upkeep)`)
     }
 
     player.ready = true
@@ -869,7 +869,7 @@ export class GameRoom {
 
       const alivePlayers = Array.from(this.players.values()).filter((p) => !p.eliminated)
 
-      // Game ends when only one participant remains (AI or real player)
+      // Primary win condition: Last player standing
       if (alivePlayers.length === 1) {
         this.endGame(alivePlayers[0])
         return
@@ -878,6 +878,21 @@ export class GameRoom {
       // Game ends if all players are eliminated
       if (alivePlayers.length === 0) {
         this.endGame()
+        return
+      }
+
+      // Secondary win condition: At round 10, highest Total Score wins
+      // Total Score = Gold Earned + Reputation Earned
+      if (this.currentRound > 10) {
+        // Find winner by highest total score (gold + reputation)
+        const winner = alivePlayers.reduce((best, player) => {
+          const playerScore = player.gold + player.reputation
+          const bestScore = best.gold + best.reputation
+          return playerScore > bestScore ? player : best
+        }, alivePlayers[0])
+
+        console.log(`🏆 Game ending at round 10+ - Winner by score: ${winner.username} (${winner.gold}g + ${winner.reputation} rep = ${winner.gold + winner.reputation})`)
+        this.endGame(winner)
         return
       }
 
@@ -897,23 +912,8 @@ export class GameRoom {
       track: this.currentTrack,
     })
 
-    // Deduct jockey upkeep at start of each round (except round 1)
-    if (this.currentRound > 1) {
-      for (const [playerId, player] of this.players) {
-        if (player.hiredJockey && !player.eliminated) {
-          const upkeep = player.hiredJockey.upkeepCost
-          player.gold -= upkeep
-          console.log(`Player ${playerId} paid ${upkeep}g upkeep for jockey ${player.hiredJockey.name}`)
-
-          // If player can't afford upkeep, fire the jockey automatically
-          if (player.gold < 0) {
-            console.log(`Player ${playerId} can't afford upkeep - firing jockey ${player.hiredJockey.name}`)
-            player.hiredJockey = null
-            player.gold += upkeep // Refund the upkeep we just deducted
-          }
-        }
-      }
-    }
+    // Jockey upkeep removed - jockeys are now free to maintain
+    // (Previously deducted upkeep at start of each round)
 
     // Generate per-player shop inventories
     for (const [playerId, player] of this.players) {
@@ -1190,7 +1190,21 @@ export class GameRoom {
       if (!player) continue // Skip if player doesn't exist
 
       player.gold += placement.goldReward
+
+      // Catch-up mechanic: +2 reputation per heart lost
+      if (placement.heartsDamage > 0) {
+        const catchUpReputation = placement.heartsDamage * 2
+        player.reputation += catchUpReputation
+        console.log(`Player ${placement.playerId} earned ${catchUpReputation} reputation from catch-up (lost ${placement.heartsDamage} hearts)`)
+      }
+
       player.hearts -= placement.heartsDamage
+
+      // Award reputation for top 3 finishers (+1 each)
+      if (placement.position <= 3) {
+        player.reputation += 1
+        console.log(`Player ${placement.playerId} earned 1 reputation for finishing ${placement.position}${placement.position === 1 ? 'st' : placement.position === 2 ? 'nd' : 'rd'}`)
+      }
 
       if (player.hearts <= 0) {
         player.eliminated = true
@@ -1482,17 +1496,37 @@ export class GameRoom {
   }
 
   calculateHeartsDamage(position: number): number {
-    if (this.currentRound < 5) {
-      if (position <= 5) return 0
-      if (position <= 7) return 1
-      return 2
-    } else {
-      if (position <= 3) return 0
-      if (position <= 5) return 1
-      if (position === 6) return 2
-      if (position === 7) return 2
-      return 3
+    // V8 Progressive Heart Damage Curve
+    // Rounds 1-3: No damage (grace period)
+    // Rounds 4-6: Only 8th place takes 1 damage
+    // Rounds 7-8: 8th=2, 7th=1
+    // Rounds 9-10: 8th=2, 7th=1, 6th=1
+
+    const round = this.currentRound
+
+    // Grace period: rounds 1-3
+    if (round <= 3) {
+      return 0
     }
+
+    // Rounds 4-6: Only dead last takes damage
+    if (round <= 6) {
+      if (position === 8) return 1
+      return 0
+    }
+
+    // Rounds 7-8: 7th and 8th take damage
+    if (round <= 8) {
+      if (position === 8) return 2
+      if (position === 7) return 1
+      return 0
+    }
+
+    // Rounds 9-10+: Endgame acceleration
+    if (position === 8) return 2
+    if (position === 7) return 1
+    if (position === 6) return 1
+    return 0
   }
 
   getEliminationPlacement(): number {
@@ -1731,8 +1765,8 @@ export class GameRoom {
       return
     }
 
-    // Calculate expansion cost: 2 Reputation for slot 2, 3 Reputation for slot 3
-    const expansionCost = player.stableSlots === 1 ? 2 : 3
+    // Calculate expansion cost: 1 Reputation for slot 2, 2 Reputation for slot 3
+    const expansionCost = player.stableSlots === 1 ? 1 : 2
 
     // Check if player has enough Reputation
     if (player.reputation < expansionCost) {
@@ -1869,7 +1903,7 @@ export class GameRoom {
       return
     }
 
-    // Hiring is free - player just pays upkeep after each race
+    // Hiring is free - no upkeep costs
     player.hiredJockey = jockey
 
     // Remove from shop inventory
@@ -1878,7 +1912,7 @@ export class GameRoom {
       shopInventory.jockeys.splice(jockeyIndex, 1)
     }
 
-    console.log(`Player ${playerId} hired jockey ${jockey.name} (${jockey.upkeepCost}g/round upkeep)`)
+    console.log(`Player ${playerId} hired jockey ${jockey.name} (no upkeep)`)
 
     // Send updated player state
     this.sendToPlayer(playerId, {

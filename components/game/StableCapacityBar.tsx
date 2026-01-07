@@ -14,8 +14,8 @@ export function StableCapacityBar({ sendMessage, inline = false }: StableCapacit
   const currentHorses = horses.length
   const canExpand = stableSlots < maxStableSlots
 
-  // Expansion costs: 2 Reputation for slot 2, 3 Reputation for slot 3
-  const expansionCost = stableSlots === 1 ? 2 : 3
+  // Expansion costs: 1 Reputation for slot 2, 2 Reputation for slot 3
+  const expansionCost = stableSlots === 1 ? 1 : 2
   const canAffordExpansion = reputation >= expansionCost
 
   const handleExpand = () => {
