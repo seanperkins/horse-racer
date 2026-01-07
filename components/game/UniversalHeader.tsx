@@ -65,7 +65,7 @@ export function UniversalHeader() {
   // Ready status - for betting phase, use bettingStatus from store
   const isReady = playerId ? playerReadyStatus[playerId] : false
   const isBettingDone = currentPhase === 'betting' && bettingStatus !== 'open'
-  const isEntryDone = currentPhase === 'preparation' && entryStatus === 'submitted'
+  const isEntryDone = currentPhase === 'preparation' && (entryStatus === 'submitted' || entryStatus === 'skipped')
   const canReady = currentPhase === 'shop' || currentPhase === 'results' || currentPhase === 'betting' || currentPhase === 'preparation'
 
   const handleToggleReady = () => {
@@ -76,34 +76,41 @@ export function UniversalHeader() {
 
     console.log('Sending ready_up:', { playerId, isReady, currentPhase, bettingStatus, entryStatus })
 
-    // For preparation phase, handle confirm entry
+    // For preparation phase, handle confirm entry or skip
     if (currentPhase === 'preparation') {
-      // Don't allow if already submitted
-      if (entryStatus === 'submitted') {
-        console.warn('Entry already submitted')
+      // Don't allow if already submitted or skipped
+      if (entryStatus === 'submitted' || entryStatus === 'skipped') {
+        console.warn('Entry already submitted or skipped')
         return
       }
 
-      // Validate selection from prepSelection
-      if (!prepSelection || !prepSelection.horse || !prepSelection.jockey) {
-        console.warn('No horse or jockey selected', prepSelection)
-        return
-      }
+      // Check if player can submit a valid entry
+      const canSubmitEntry = prepSelection && prepSelection.horse && prepSelection.jockey
 
-      // Send setup_race_entry message (this also marks player as ready on server)
-      playSfx('ready_up')
-      setEntryStatus('submitted', prepSelection)
-      sendMessage({
-        type: 'setup_race_entry',
-        horseId: prepSelection.horse.id,
-        jockeyId: prepSelection.jockey.id,
-        equipment: {
-          saddle: prepSelection.equipment.saddle?.id,
-          horseshoes: prepSelection.equipment.horseshoes?.id,
-          blinders: prepSelection.equipment.blinders?.id,
-        },
-        strategy: prepSelection.strategy
-      })
+      if (canSubmitEntry) {
+        // Send setup_race_entry message (this also marks player as ready on server)
+        playSfx('ready_up')
+        setEntryStatus('submitted', prepSelection)
+        sendMessage({
+          type: 'setup_race_entry',
+          horseId: prepSelection.horse.id,
+          jockeyId: prepSelection.jockey.id,
+          equipment: {
+            saddle: prepSelection.equipment.saddle?.id,
+            horseshoes: prepSelection.equipment.horseshoes?.id,
+            blinders: prepSelection.equipment.blinders?.id,
+          },
+          strategy: prepSelection.strategy
+        })
+      } else {
+        // Player doesn't have a horse or jockey - skip the race
+        playSfx('ready_up')
+        setEntryStatus('skipped')
+        sendMessage({
+          type: 'ready_up',
+          ready: true,
+        })
+      }
       return
     }
 
@@ -129,10 +136,16 @@ export function UniversalHeader() {
     })
   }
 
+  // Check if player can submit a valid entry (has both horse and jockey)
+  const canSubmitEntry = prepSelection && prepSelection.horse && prepSelection.jockey
+
   // Get button text based on phase
   const getReadyButtonText = () => {
     if (currentPhase === 'preparation') {
-      return entryStatus === 'submitted' ? '✓ Entry' : 'Confirm Entry'
+      if (entryStatus === 'submitted') return '✓ Entry'
+      if (entryStatus === 'skipped') return '✓ Skip'
+      // Show "Skip" if player can't submit (no horse or jockey)
+      return canSubmitEntry ? 'Confirm Entry' : 'Skip'
     }
     if (currentPhase === 'betting') {
       if (bettingStatus === 'submitted') return '✓ Bet'
@@ -146,10 +159,9 @@ export function UniversalHeader() {
   const isButtonDisabled = () => {
     if (eliminated) return true
     if (currentPhase === 'preparation') {
-      // Disable if already submitted or if missing required selections
-      if (entryStatus === 'submitted') return true
-      if (!prepSelection || !prepSelection.horse || !prepSelection.jockey) return true
-      return false
+      // Disable only if already submitted or skipped
+      // Allow clicking to skip even if no horse/jockey
+      return entryStatus === 'submitted' || entryStatus === 'skipped'
     }
     if (currentPhase === 'betting') return bettingStatus !== 'open'
     return isReady

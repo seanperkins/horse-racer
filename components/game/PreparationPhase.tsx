@@ -202,9 +202,38 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
   // Always show preview panel - it shows current loadout regardless of selection state
   const showPreview = true
 
+  // Check if player can submit a valid entry
+  const canSubmitEntry = selectedHorse && hiredJockey
+  const missingHorse = horses.length === 0
+  const missingJockey = !hiredJockey
+
   return (
     <div className="min-h-screen p-2 sm:p-4 md:p-8 th-bg">
       <div className="max-w-7xl mx-auto">
+        {/* Warning banner when player can't submit entry */}
+        {!canSubmitEntry && (
+          <div className="mb-4 p-3 sm:p-4 rounded-lg bg-[var(--accent-orange)]/20 border border-[var(--accent-orange)]/50">
+            <div className="flex items-start gap-2 sm:gap-3">
+              <span className="text-lg sm:text-xl">⚠️</span>
+              <div className="flex-1">
+                <h3 className="font-bold text-sm sm:text-base text-[var(--accent-orange)]">
+                  Cannot Enter Race
+                </h3>
+                <p className="text-xs sm:text-sm th-label mt-1">
+                  {missingHorse && missingJockey
+                    ? "You don't have a horse or jockey. You can skip this race and spectate."
+                    : missingHorse
+                    ? "You don't have a horse. You can skip this race and spectate."
+                    : "You don't have a jockey hired. You can skip this race and spectate."}
+                </p>
+                <p className="text-xs th-muted mt-2">
+                  Press "Skip" in the header to continue to the betting phase.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Preview toggle button - visible on mobile/tablet when preview is available */}
         {showPreview && (
           <div className="lg:hidden flex justify-end mb-4">

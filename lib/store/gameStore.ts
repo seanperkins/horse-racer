@@ -31,7 +31,7 @@ interface GameState {
 
   // UI state for phase actions
   bettingStatus: 'open' | 'submitted' | 'skipped'
-  entryStatus: 'open' | 'submitted'
+  entryStatus: 'open' | 'submitted' | 'skipped'
   lastSubmittedEntry: SubmittedEntry | null
   prepSelection: SubmittedEntry | null
 
@@ -106,7 +106,7 @@ interface GameState {
 
   // UI state actions
   setBettingStatus: (status: 'open' | 'submitted' | 'skipped') => void
-  setEntryStatus: (status: 'open' | 'submitted', entry?: SubmittedEntry) => void
+  setEntryStatus: (status: 'open' | 'submitted' | 'skipped', entry?: SubmittedEntry) => void
   setPrepSelection: (selection: SubmittedEntry | null) => void
 
   // Economy actions
