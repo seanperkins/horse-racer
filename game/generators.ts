@@ -252,6 +252,29 @@ function generateHorseAbility(tier: 3 | 4, bloodline: Bloodline) {
 
 let jockeyCounter = 0
 
+// Generate a free "drunken jockey" with very low stats and no upkeep
+export function generateDrunkenJockey(): Jockey {
+  const id = `jockey-drunk-${++jockeyCounter}`
+  const drunkNames = [
+    'Tipsy Tim', 'Wobbly Wilson', 'Stagger Stan', 'Dizzy Duke',
+    'Sway Steve', 'Stumble Sam', 'Wobbles McGee', 'Hiccup Harry'
+  ]
+  const name = drunkNames[Math.floor(Math.random() * drunkNames.length)]
+
+  return {
+    id,
+    name,
+    stats: {
+      skill: 1,
+      timing: 1,
+      weight: 3, // A bit heavy from all the drinking
+    },
+    trait: undefined,
+    hireCost: 0,
+    upkeepCost: 0,
+  }
+}
+
 export function generateJockey(quality: 1 | 2 | 3 | 4 = 2, trait?: JockeyTrait): Jockey {
   const id = `jockey-${++jockeyCounter}`
 
@@ -417,8 +440,9 @@ export function generateShopOffering(round: number): {
     horses.push(generateHorse(tier))
   }
 
-  // Generate 3 jockeys (mixed quality)
+  // Generate jockeys (mixed quality + always include a free drunken jockey)
   const jockeys: Jockey[] = [
+    generateDrunkenJockey(), // Free but terrible jockey (no upkeep)
     generateJockey(1), // Budget jockey
     generateJockey(2), // Average jockey
     generateJockey(Math.random() > 0.5 ? 2 : 3), // Variable quality
