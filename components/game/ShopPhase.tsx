@@ -100,7 +100,7 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
   const handlePurchase = (unit: ShopUnit) => {
     // Jockeys use hire_jockey message instead
     if (unit.type === 'jockey') {
-      handleHireJockey(unit.id, unit.cost)
+      handleHireJockey(unit.id)
       return
     }
 
@@ -123,17 +123,13 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
     })
   }
 
-  const handleHireJockey = (jockeyId: string, cost: number) => {
+  const handleHireJockey = (jockeyId: string) => {
     if (hiredJockey) {
       toast.error('You already have a jockey. Fire them first to hire another.')
       return
     }
 
-    if (gold < cost) {
-      toast.error('Not enough gold!')
-      return
-    }
-
+    // Hiring is free - only pay upkeep after races
     playSfx('purchase')
     sendMessage({
       type: 'hire_jockey',
@@ -344,7 +340,7 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
                             <JockeyCard
                               jockey={jockey}
                               cost={unit.cost}
-                              canAfford={gold >= unit.cost && !hiredJockey}
+                              canAfford={!hiredJockey}
                               onPurchase={() => handlePurchase(unit)}
                               isHireMode={true}
                               onPreview={() => setMobilePreviewItem({ type: 'jockey', data: jockey })}
@@ -579,7 +575,7 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
                       return gold < shopUnit.cost || horses.length >= stableSlots
                     }
                     if (mobilePreviewItem.type === 'jockey') {
-                      return gold < shopUnit.cost || !!hiredJockey
+                      return !!hiredJockey  // Hiring is free, only check if already hired
                     }
                     return gold < shopUnit.cost
                   })()}
@@ -595,7 +591,7 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
                     }
                     if (mobilePreviewItem.type === 'jockey') {
                       if (hiredJockey) return 'Already Hired'
-                      return `Hire ${cost}g`
+                      return 'Hire'
                     }
                     return `Buy ${cost}g`
                   })()}
@@ -897,7 +893,7 @@ function JockeyCard({
       >
         {isInventory
           ? `Fire (${cost}g upkeep)`
-          : `Hire ${cost}g`
+          : 'Hire'
         }
       </button>
     </div>
