@@ -139,6 +139,14 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
             }
             break
 
+          case 'unlock_equipment_slot':
+            if (ensureRoom()) {
+              currentRoom!.handleUnlockEquipmentSlot(playerId, validatedMessage)
+            } else {
+              sendError(ws, 'Not in a room')
+            }
+            break
+
           case 'train_horse':
             if (ensureRoom()) {
               currentRoom!.handleTrain(playerId, validatedMessage)

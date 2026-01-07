@@ -20,7 +20,7 @@ export default function TutorialPage() {
             Horse Racer Auto Battler is a competitive multiplayer game where you build a stable of
             racing horses, bet on races, and compete to be the last player standing. Each round
             consists of several phases where you'll make strategic decisions to strengthen your stable
-            and earn gold.
+            and earn gold and reputation.
           </p>
           <p className="text-gray-300">
             The game continues until only one player remains. Lose all your hearts, and you're eliminated!
@@ -42,6 +42,8 @@ export default function TutorialPage() {
                 <li>Spend gold to purchase horses with different stats and bloodlines</li>
                 <li>Buy equipment to enhance your horses' performance</li>
                 <li>Hire jockeys with unique traits and abilities</li>
+                <li>Expand your stable capacity (max 3) using ⭐ Reputation</li>
+                <li>Unlock equipment slots (saddle, horseshoes, blinders) with ⭐ Reputation</li>
                 <li>Sell units you no longer want to get gold back</li>
                 <li>Refresh the shop to see new options (costs 1 gold)</li>
               </ul>
@@ -56,7 +58,8 @@ export default function TutorialPage() {
               <ul className="list-disc list-inside text-gray-400 space-y-1 ml-4">
                 <li>View the race track details (distance, surface, category)</li>
                 <li>Assign jockeys to your horses</li>
-                <li>Equip items to boost horse performance</li>
+                <li>Equip items in unlocked slots to boost horse performance</li>
+                <li>Pick a race strategy (start/mid/finish focus)</li>
                 <li>Consider track conditions when making decisions</li>
               </ul>
             </div>
@@ -65,13 +68,14 @@ export default function TutorialPage() {
             <div className="border-l-4 border-yellow-500 pl-4">
               <h3 className="text-xl font-bold mb-2">💰 Betting Phase</h3>
               <p className="text-gray-300 mb-2">
-                Place bets on horses (including your own) to win gold.
+                Place bets to earn ⭐ Reputation (bets are free, no gold cost).
               </p>
               <ul className="list-disc list-inside text-gray-400 space-y-1 ml-4">
                 <li>View all horses competing in the race with their odds</li>
-                <li>Place win, place (top 2), or show (top 3) bets</li>
-                <li>Higher odds mean higher potential payouts but lower win probability</li>
-                <li>You can bet on your own horses for guaranteed returns if they perform well</li>
+                <li>Choose Place (top 3), Win (1st), or Exacta (1st + 2nd in order)</li>
+                <li>Winning bets reward fixed ⭐ Reputation based on bet type</li>
+                <li>You cannot bet on your own horse</li>
+                <li>If you are below max hearts, Exacta can be a heart recovery bet</li>
                 <li>You can skip betting if you prefer to save your gold</li>
               </ul>
             </div>
@@ -98,12 +102,23 @@ export default function TutorialPage() {
               </p>
               <ul className="list-disc list-inside text-gray-400 space-y-1 ml-4">
                 <li>View race results and final placements</li>
-                <li>Collect gold from winning bets</li>
-                <li>Earn bonus gold if your horses placed well (1st, 2nd, or 3rd)</li>
-                <li>Players who didn't earn enough gold lose hearts</li>
+                <li>Earn gold rewards based on race placement</li>
+                <li>Earn ⭐ Reputation for top-3 finishes and winning bets</li>
+                <li>Players in lower placements lose hearts as rounds progress</li>
+                <li>Losing hearts grants catch-up ⭐ Reputation</li>
                 <li>Eliminated players are shown</li>
               </ul>
             </div>
+          </div>
+        </section>
+
+        {/* Resources */}
+        <section className="th-card p-6 mb-6">
+          <h2 className="text-2xl font-bold mb-4">Resources</h2>
+          <div className="space-y-2 text-gray-400">
+            <p><span className="font-semibold text-gray-200">Gold (💰)</span> buys horses, equipment, and jockeys.</p>
+            <p><span className="font-semibold text-gray-200">Reputation (⭐)</span> expands stable slots and unlocks equipment slots.</p>
+            <p><span className="font-semibold text-gray-200">Hearts (❤️)</span> track elimination risk; lose them for poor placements.</p>
           </div>
         </section>
 
@@ -120,12 +135,12 @@ export default function TutorialPage() {
               <p className="text-gray-400">Endurance over distance. Important for longer races.</p>
             </div>
             <div>
-              <h3 className="text-lg font-bold mb-2 text-yellow-400">🎯 Consistency</h3>
-              <p className="text-gray-400">Performance reliability. Reduces chance of mistakes.</p>
+              <h3 className="text-lg font-bold mb-2 text-yellow-400">🛡 Grit</h3>
+              <p className="text-gray-400">Resilience in tough moments. Helps maintain performance under pressure.</p>
             </div>
             <div>
-              <h3 className="text-lg font-bold mb-2 text-green-400">⭐ Overall Rating</h3>
-              <p className="text-gray-400">Combined quality measure. Higher is generally better.</p>
+              <h3 className="text-lg font-bold mb-2 text-green-400">🌪 Temper</h3>
+              <p className="text-gray-400">Composure and discipline. Affects consistency and risk of mistakes.</p>
             </div>
           </div>
         </section>
@@ -138,27 +153,35 @@ export default function TutorialPage() {
           </p>
           <div className="grid md:grid-cols-2 gap-3">
             <div className="bg-gray-800/50 p-3 rounded">
-              <span className="font-bold text-blue-400">Thoroughbred</span>
-              <p className="text-sm text-gray-400">Balanced stats, versatile</p>
+              <span className="font-bold text-blue-400">Northern Storm</span>
+              <p className="text-sm text-gray-400">Endurance in harsh weather, grit and stamina synergy.</p>
             </div>
             <div className="bg-gray-800/50 p-3 rounded">
-              <span className="font-bold text-purple-400">Arabian</span>
-              <p className="text-sm text-gray-400">High stamina, great for long races</p>
+              <span className="font-bold text-purple-400">Desert Wind</span>
+              <p className="text-sm text-gray-400">Dry-track specialists with speed and terrain bonuses.</p>
             </div>
             <div className="bg-gray-800/50 p-3 rounded">
-              <span className="font-bold text-yellow-400">Quarter Horse</span>
-              <p className="text-sm text-gray-400">Explosive speed, sprint specialist</p>
+              <span className="font-bold text-yellow-400">Iron Heart</span>
+              <p className="text-sm text-gray-400">Stamina monsters that scale hard with synergy.</p>
             </div>
             <div className="bg-gray-800/50 p-3 rounded">
-              <span className="font-bold text-green-400">Andalusian</span>
-              <p className="text-sm text-gray-400">High consistency, reliable performer</p>
+              <span className="font-bold text-green-400">Wild Card</span>
+              <p className="text-sm text-gray-400">High variance with powerful synergy perks.</p>
+            </div>
+            <div className="bg-gray-800/50 p-3 rounded">
+              <span className="font-bold text-emerald-400">Mudblood</span>
+              <p className="text-sm text-gray-400">Thrives in wet and muddy conditions.</p>
+            </div>
+            <div className="bg-gray-800/50 p-3 rounded">
+              <span className="font-bold text-amber-400">Royal Line</span>
+              <p className="text-sm text-gray-400">Elite bloodline that buffs your best horse.</p>
             </div>
           </div>
         </section>
 
         {/* Jockey Traits */}
         <section className="th-card p-6 mb-6">
-          <h2 className="text-2xl font-bold mb-4">Jockey Traits</h2>
+          <h2 className="text-2xl font-bold mb-4">Jockey Traits (Skills)</h2>
           <p className="text-gray-300 mb-4">
             Jockeys provide stat bonuses and special abilities:
           </p>
@@ -166,29 +189,50 @@ export default function TutorialPage() {
             <div className="flex items-start gap-2">
               <span className="text-purple-400">•</span>
               <div>
-                <span className="font-bold">Speed Specialist</span>
-                <span className="text-gray-400"> - Increases horse speed</span>
+                <span className="font-bold">Front-Runner</span>
+                <span className="text-gray-400"> - Speed boost while leading</span>
               </div>
             </div>
             <div className="flex items-start gap-2">
               <span className="text-blue-400">•</span>
               <div>
-                <span className="font-bold">Stamina Coach</span>
-                <span className="text-gray-400"> - Boosts stamina for endurance</span>
+                <span className="font-bold">Closer</span>
+                <span className="text-gray-400"> - Surge in the final stretch when behind</span>
               </div>
             </div>
             <div className="flex items-start gap-2">
               <span className="text-green-400">•</span>
               <div>
-                <span className="font-bold">Consistency Expert</span>
-                <span className="text-gray-400"> - Improves reliability</span>
+                <span className="font-bold">Mudder</span>
+                <span className="text-gray-400"> - Big grit bonus on wet tracks</span>
               </div>
             </div>
             <div className="flex items-start gap-2">
               <span className="text-yellow-400">•</span>
               <div>
-                <span className="font-bold">Track Master</span>
-                <span className="text-gray-400"> - Bonuses on specific track types</span>
+                <span className="font-bold">Horse Whisperer</span>
+                <span className="text-gray-400"> - Lowers temper for steadier performance</span>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-rose-400">•</span>
+              <div>
+                <span className="font-bold">Lightweight</span>
+                <span className="text-gray-400"> - Reduced weight for better speed</span>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-sky-400">•</span>
+              <div>
+                <span className="font-bold">Veteran</span>
+                <span className="text-gray-400"> - Timing boost under low stamina</span>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-amber-300">•</span>
+              <div>
+                <span className="font-bold">Lucky</span>
+                <span className="text-gray-400"> - Chance to avoid stumbles</span>
               </div>
             </div>
           </div>
@@ -203,19 +247,19 @@ export default function TutorialPage() {
           <div className="grid md:grid-cols-2 gap-3">
             <div className="bg-gray-800/50 p-3 rounded">
               <span className="font-bold text-purple-400">Racing Saddle</span>
-              <p className="text-sm text-gray-400">Lightweight, increases speed</p>
+              <p className="text-sm text-gray-400">Speed boost with a small stamina tradeoff</p>
             </div>
             <div className="bg-gray-800/50 p-3 rounded">
-              <span className="font-bold text-blue-400">Endurance Shoes</span>
-              <p className="text-sm text-gray-400">Special horseshoes, boosts stamina</p>
+              <span className="font-bold text-blue-400">Mud Cleats</span>
+              <p className="text-sm text-gray-400">Ignore penalties on wet/muddy tracks</p>
             </div>
             <div className="bg-gray-800/50 p-3 rounded">
-              <span className="font-bold text-green-400">Training Bridle</span>
-              <p className="text-sm text-gray-400">Improves control and consistency</p>
+              <span className="font-bold text-green-400">Calming Blinders</span>
+              <p className="text-sm text-gray-400">Lower temper for steadier races</p>
             </div>
             <div className="bg-gray-800/50 p-3 rounded">
-              <span className="font-bold text-yellow-400">Champion Blanket</span>
-              <p className="text-sm text-gray-400">All-around stat boost</p>
+              <span className="font-bold text-yellow-400">Lucky Horseshoe</span>
+              <p className="text-sm text-gray-400">Chance to avoid stumbles</p>
             </div>
           </div>
         </section>
@@ -270,19 +314,20 @@ export default function TutorialPage() {
               <h3 className="text-lg font-bold text-green-400 mb-2">🏆 How to Win</h3>
               <p className="text-gray-300">
                 Be the last player standing! Outlast your opponents by managing your gold wisely,
-                building strong horses, and making smart bets.
+                building strong horses, and making smart bets. If a game reaches late rounds, total
+                score (gold + reputation) can decide the winner.
               </p>
             </div>
             <div>
               <h3 className="text-lg font-bold text-red-400 mb-2">💔 How You Lose Hearts</h3>
               <p className="text-gray-300 mb-2">
-                After each race, players must meet a minimum gold threshold. Fall below it, and you
-                lose a heart. Lose all your hearts, and you're eliminated from the game.
+                After each race, heart loss depends on your placement and the current round. Lose all
+                your hearts, and you're eliminated from the game.
               </p>
               <ul className="list-disc list-inside text-gray-400 ml-4">
-                <li>The gold threshold increases as rounds progress</li>
-                <li>Placing well in races earns bonus gold</li>
-                <li>Winning bets is crucial to maintaining your gold reserve</li>
+                <li>Early rounds are forgiving, later rounds punish low placements</li>
+                <li>Lower placements can cost 1-2 hearts</li>
+                <li>Good race results still earn gold for growth</li>
               </ul>
             </div>
           </div>

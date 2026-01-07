@@ -7,6 +7,7 @@ import { useAudioStore } from '@/lib/store/audioStore'
 import { HorizontalStatBars } from './HorizontalStatBars'
 import { InfoTooltip } from './InfoTooltip'
 import { StableCapacityBar } from './StableCapacityBar'
+import { EquipmentSlotsBar } from './EquipmentSlotsBar'
 import { StrategyImpactPanel } from './StrategyImpactPanel'
 import { useStrategyImpact } from '@/lib/hooks/useStrategyImpact'
 import { BLOODLINE_TOOLTIPS, JOCKEY_TRAIT_TOOLTIPS, ABILITY_TOOLTIPS, GAME_MECHANIC_TOOLTIPS, EQUIPMENT_EFFECT_TOOLTIPS } from '@/game/tooltips'
@@ -27,7 +28,7 @@ interface ShopUnit {
 
 export function ShopPhase({ sendMessage }: ShopPhaseProps) {
   const playerId = useGameStore((state) => state.playerId)
-  const { gold, shopUnits, horses, hiredJockey, equipment, currentRound, stableSlots, currentTrack } = useGameStore()
+  const { gold, shopUnits, horses, hiredJockey, equipment, currentRound, stableSlots, currentTrack, unlockedEquipmentSlots } = useGameStore()
   const playSfx = useAudioStore((state) => state.playSfx)
   const [selectedTab, setSelectedTab] = useState<'shop' | 'inventory'>('shop')
 
@@ -376,7 +377,10 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
 
                 {/* Equipment */}
                 <div className="th-panel rounded-lg p-3 sm:p-4 md:p-6">
-                  <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">⚙️ Equipment</h2>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 sm:mb-4">
+                    <h2 className="text-lg sm:text-xl font-bold">⚙️ Equipment</h2>
+                    <EquipmentSlotsBar sendMessage={sendMessage} inline />
+                  </div>
                   {shopEquipment.length === 0 ? (
                     <div className="text-center th-label py-4">No equipment available</div>
                   ) : (
@@ -496,7 +500,10 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
 
                 {/* Equipment Inventory */}
                 <div className="th-panel rounded-lg p-3 sm:p-4 md:p-6">
-                  <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">⚙️ Equipment ({equipment.length})</h2>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 sm:mb-4">
+                    <h2 className="text-lg sm:text-xl font-bold">⚙️ Equipment ({equipment.length})</h2>
+                    <EquipmentSlotsBar sendMessage={sendMessage} inline />
+                  </div>
                   {equipment.length === 0 ? (
                     <div className="text-center th-label py-6 sm:py-8 text-sm sm:text-base">No equipment owned. Buy some from the shop!</div>
                   ) : (

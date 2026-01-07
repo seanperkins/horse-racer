@@ -85,6 +85,11 @@ export const ExpandStableSchema = BaseMessageSchema.extend({
   type: z.literal('expand_stable'),
 })
 
+export const UnlockEquipmentSlotSchema = BaseMessageSchema.extend({
+  type: z.literal('unlock_equipment_slot'),
+  slot: z.enum(['saddle', 'horseshoes', 'blinders']),
+})
+
 export const LeaveGameSchema = BaseMessageSchema.extend({
   type: z.literal('leave_game'),
   userId: z.string().optional(), // Optional - server uses authenticated connection ID
@@ -293,6 +298,7 @@ export const PlayerStateSchema = BaseMessageSchema.extend({
   hearts: z.number(),
   reputation: z.number(),
   stableSlots: z.number(),
+  unlockedEquipmentSlots: z.array(z.enum(['saddle', 'horseshoes', 'blinders'])).optional(),
   inventory: z.object({
     horses: z.array(z.any()),
     hiredJockey: z.any().nullable(),
@@ -362,6 +368,7 @@ export const ClientMessageSchema = z.discriminatedUnion('type', [
   PlaceBetSchema,
   SkipBettingSchema,
   ExpandStableSchema,
+  UnlockEquipmentSlotSchema,
   LeaveGameSchema,
   AnimationCompleteSchema,
   PingSchema,

@@ -26,6 +26,7 @@ interface GameState {
   reputation: number
   stableSlots: number
   maxStableSlots: number
+  unlockedEquipmentSlots: ('saddle' | 'horseshoes' | 'blinders')[]
   eliminated: boolean
 
   // UI state for phase actions
@@ -112,6 +113,7 @@ interface GameState {
   setReputation: (reputation: number) => void
   addReputation: (amount: number) => void
   setStableSlots: (slots: number) => void
+  setUnlockedEquipmentSlots: (slots: ('saddle' | 'horseshoes' | 'blinders')[]) => void
 }
 
 const initialState = {
@@ -129,6 +131,7 @@ const initialState = {
   reputation: 0,
   stableSlots: 1,
   maxStableSlots: 3,
+  unlockedEquipmentSlots: [],
   eliminated: false,
   bettingStatus: 'open' as const,
   entryStatus: 'open' as const,
@@ -181,10 +184,11 @@ export const useGameStore = create<GameState>((set) => ({
     }
 
     // Reset entry status when entering preparation phase
+    // Keep lastSubmittedEntry to restore previous selection
     if (phase === 'preparation') {
       updates.entryStatus = 'open'
-      updates.lastSubmittedEntry = null
-      updates.prepSelection = null
+      // Don't clear lastSubmittedEntry - we want to preserve the previous selection
+      // prepSelection will be restored from lastSubmittedEntry in PreparationPhase
     }
 
     set(updates)
@@ -257,4 +261,6 @@ export const useGameStore = create<GameState>((set) => ({
     set((state) => ({ reputation: state.reputation + amount })),
 
   setStableSlots: (slots) => set({ stableSlots: slots }),
+
+  setUnlockedEquipmentSlots: (slots) => set({ unlockedEquipmentSlots: slots }),
 }))

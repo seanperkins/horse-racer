@@ -34,6 +34,7 @@ interface PlayerData extends Omit<Player, 'userId' | 'raceEntry' | 'currentBet'>
   userId?: string  // Optional for AI players
   reputation: number  // Economy currency for progression
   stableSlots: number  // Number of horse slots (1-3)
+  unlockedEquipmentSlots: ('saddle' | 'horseshoes' | 'blinders')[]  // Equipment slots unlocked with reputation
   // Override raceEntry from Player with more flexible types for server-side use
   raceEntry?: {
     horse: Horse
@@ -233,6 +234,7 @@ export class GameRoom {
       hearts: 5,
       reputation: 0,
       stableSlots: 1,
+      unlockedEquipmentSlots: [],  // All equipment slots locked by default
       eliminated: false,
       ready: false,
       horses: [],
@@ -357,6 +359,7 @@ export class GameRoom {
         hearts: 5,
         reputation: 0,
         stableSlots: 1,
+        unlockedEquipmentSlots: ['saddle', 'horseshoes', 'blinders'],  // AI has all slots unlocked
         eliminated: false,
         ready: true,  // AI always ready
         isAI: true,
@@ -410,6 +413,7 @@ export class GameRoom {
           hearts: 5,
           reputation: 0,
           stableSlots: 1,
+          unlockedEquipmentSlots: ['saddle', 'horseshoes', 'blinders'],  // AI has all slots unlocked
           eliminated: false,
           ready: true,
           isAI: true,
@@ -556,6 +560,7 @@ export class GameRoom {
       hearts: player.hearts,
       reputation: player.reputation,
       stableSlots: player.stableSlots,
+      unlockedEquipmentSlots: player.unlockedEquipmentSlots,
       inventory: {
         horses: player.horses,
         hiredJockey: player.hiredJockey,
@@ -1296,6 +1301,7 @@ export class GameRoom {
           hearts: player.hearts,
           reputation: player.reputation,
           stableSlots: player.stableSlots,
+          unlockedEquipmentSlots: player.unlockedEquipmentSlots,
           inventory: {
             horses: player.horses,
             hiredJockey: player.hiredJockey,
@@ -1675,6 +1681,7 @@ export class GameRoom {
       hearts: player.hearts,
       reputation: player.reputation,
       stableSlots: player.stableSlots,
+      unlockedEquipmentSlots: player.unlockedEquipmentSlots,
       inventory: {
         horses: player.horses,
         hiredJockey: player.hiredJockey,
@@ -1757,6 +1764,7 @@ export class GameRoom {
       hearts: player.hearts,
       reputation: player.reputation,
       stableSlots: player.stableSlots,
+      unlockedEquipmentSlots: player.unlockedEquipmentSlots,
       inventory: {
         horses: player.horses,
         hiredJockey: player.hiredJockey,
@@ -1849,6 +1857,66 @@ export class GameRoom {
       hearts: player.hearts,
       reputation: player.reputation,
       stableSlots: player.stableSlots,
+      unlockedEquipmentSlots: player.unlockedEquipmentSlots,
+      inventory: {
+        horses: player.horses,
+        hiredJockey: player.hiredJockey,
+        equipment: player.equipment,
+      },
+      wins: player.wins,
+      currentRound: this.currentRound,
+    })
+  }
+
+  handleUnlockEquipmentSlot(playerId: string, message: { slot: 'saddle' | 'horseshoes' | 'blinders' }): void {
+    const player = this.players.get(playerId)
+    if (!player) return
+
+    const ws = this.playerSockets.get(playerId)
+
+    // Only allow during shop phase
+    if (this.currentPhase !== 'shop') {
+      if (ws) this.sendError(ws, 'Can only unlock equipment slots during shop phase')
+      return
+    }
+
+    const { slot } = message
+    const validSlots: ('saddle' | 'horseshoes' | 'blinders')[] = ['saddle', 'horseshoes', 'blinders']
+
+    if (!validSlots.includes(slot)) {
+      if (ws) this.sendError(ws, 'Invalid equipment slot')
+      return
+    }
+
+    // Check if already unlocked
+    if (player.unlockedEquipmentSlots.includes(slot)) {
+      if (ws) this.sendError(ws, 'Equipment slot already unlocked')
+      return
+    }
+
+    // Cost depends on how many slots already unlocked: 1st costs 1, 2nd costs 2, 3rd costs 3
+    const unlockCost = player.unlockedEquipmentSlots.length + 1
+
+    // Check if player has enough reputation
+    if (player.reputation < unlockCost) {
+      if (ws) this.sendError(ws, `Not enough Reputation. Need ${unlockCost} Reputation.`)
+      return
+    }
+
+    // Deduct reputation and unlock slot
+    player.reputation -= unlockCost
+    player.unlockedEquipmentSlots.push(slot)
+
+    console.log(`Player ${playerId} unlocked ${slot} slot for ${unlockCost} Reputation`)
+
+    // Send updated player state
+    this.sendToPlayer(playerId, {
+      type: 'player_state',
+      gold: player.gold,
+      hearts: player.hearts,
+      reputation: player.reputation,
+      stableSlots: player.stableSlots,
+      unlockedEquipmentSlots: player.unlockedEquipmentSlots,
       inventory: {
         horses: player.horses,
         hiredJockey: player.hiredJockey,
@@ -1922,6 +1990,7 @@ export class GameRoom {
       hearts: player.hearts,
       reputation: player.reputation,
       stableSlots: player.stableSlots,
+      unlockedEquipmentSlots: player.unlockedEquipmentSlots,
       inventory: {
         horses: player.horses,
         hiredJockey: player.hiredJockey,
@@ -1983,6 +2052,7 @@ export class GameRoom {
       hearts: player.hearts,
       reputation: player.reputation,
       stableSlots: player.stableSlots,
+      unlockedEquipmentSlots: player.unlockedEquipmentSlots,
       inventory: {
         horses: player.horses,
         hiredJockey: player.hiredJockey,
@@ -2040,6 +2110,7 @@ export class GameRoom {
       hearts: player.hearts,
       reputation: player.reputation,
       stableSlots: player.stableSlots,
+      unlockedEquipmentSlots: player.unlockedEquipmentSlots,
       inventory: {
         horses: player.horses,
         hiredJockey: player.hiredJockey,

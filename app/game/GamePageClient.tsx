@@ -106,18 +106,22 @@ export default function GamePageClient({ userId, username }: GamePageClientProps
           hearts: message.hearts,
           reputation: message.reputation,
           stableSlots: message.stableSlots,
+          unlockedEquipmentSlots: message.unlockedEquipmentSlots,
         })
         setPlayerState({
           gold: message.gold,
           hearts: message.hearts,
           inventory: message.inventory,
         })
-        // Update reputation and stableSlots from server
+        // Update reputation, stableSlots, and unlockedEquipmentSlots from server
         if ('reputation' in message) {
           useGameStore.getState().setReputation(message.reputation)
         }
         if ('stableSlots' in message) {
           useGameStore.getState().setStableSlots(message.stableSlots)
+        }
+        if ('unlockedEquipmentSlots' in message && message.unlockedEquipmentSlots) {
+          useGameStore.getState().setUnlockedEquipmentSlots(message.unlockedEquipmentSlots)
         }
         break
 

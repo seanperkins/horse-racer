@@ -9,6 +9,7 @@ import type { Horse, Jockey, Equipment } from '@/types/game'
 let mockState: {
   playerId: string
   gold: number
+  reputation: number
   shopUnits: Array<{
     id: string
     type: 'horse' | 'jockey' | 'equipment'
@@ -20,6 +21,7 @@ let mockState: {
   hiredJockey: Jockey | null
   equipment: Equipment[]
   currentRound: number
+  unlockedEquipmentSlots: Array<'saddle' | 'horseshoes' | 'blinders'>
 }
 
 vi.mock('@/lib/store/gameStore', () => ({
@@ -58,6 +60,7 @@ describe('ShopPhase', () => {
     mockState = {
       playerId: 'p1',
       gold: 5,
+      reputation: 0,
       shopUnits: [
         { id: horse.id, type: 'horse', name: horse.name, cost: horse.cost, data: horse },
         { id: jockey.id, type: 'jockey', name: jockey.name, cost: jockey.hireCost, data: jockey },
@@ -67,6 +70,7 @@ describe('ShopPhase', () => {
       hiredJockey: null,
       equipment: [],
       currentRound: 1,
+      unlockedEquipmentSlots: [],
     }
   })
 

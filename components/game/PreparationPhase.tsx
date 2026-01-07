@@ -38,10 +38,10 @@ const STRATEGY_PRESETS: Array<{
 ]
 
 export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
-  const { horses, hiredJockey, equipment, currentRound, currentTrack, setPrepSelection, entryStatus } = useGameStore()
+  const { horses, hiredJockey, equipment, currentRound, currentTrack, setPrepSelection, entryStatus, lastSubmittedEntry, unlockedEquipmentSlots } = useGameStore()
   const playSfx = useAudioStore((state) => state.playSfx)
 
-  // Selection state
+  // Selection state - restore strategy from last entry if available
   const [selectedHorse, setSelectedHorse] = useState<Horse | null>(null)
   const [selectedJockey, setSelectedJockey] = useState<Jockey | null>(null)
   const [selectedEquipment, setSelectedEquipment] = useState<{
@@ -49,13 +49,28 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
     horseshoes?: Equipment
     blinders?: Equipment
   }>({})
-  const [strategy, setStrategy] = useState<RaceStrategy>(STRATEGY_PRESETS[2].strategy)
+  const [strategy, setStrategy] = useState<RaceStrategy>(
+    lastSubmittedEntry?.strategy || STRATEGY_PRESETS[2].strategy
+  )
   const [customStrategy, setCustomStrategy] = useState(false)
 
-  // Auto-select best available on mount - only once
+  // Restore previous selection or auto-select best available on mount
   useEffect(() => {
-    if (horses.length > 0 && !selectedHorse) {
-      // If only one horse, select it. Otherwise select the one with highest total stats.
+    // Try to restore from last submitted entry first
+    if (lastSubmittedEntry?.horse) {
+      // Find the horse in current inventory (it might have been sold)
+      const previousHorse = horses.find(h => h.id === lastSubmittedEntry.horse?.id)
+      if (previousHorse) {
+        setSelectedHorse(previousHorse)
+      } else if (horses.length > 0) {
+        // Previous horse not found, select best available
+        selectBestHorse()
+      }
+    } else if (horses.length > 0 && !selectedHorse) {
+      selectBestHorse()
+    }
+
+    function selectBestHorse() {
       if (horses.length === 1) {
         setSelectedHorse(horses[0])
       } else {
@@ -78,7 +93,7 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Auto-select equipment if there's only one of each type
+  // Restore equipment from last entry or auto-select if only one of each type
   useEffect(() => {
     const newEquipment = { ...selectedEquipment }
     let changed = false
@@ -87,20 +102,52 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
     const horseshoeItems = equipment.filter(e => e.slot === 'horseshoes')
     const blinderItems = equipment.filter(e => e.slot === 'blinders')
 
+    // Try to restore from last entry first
+    if (lastSubmittedEntry?.equipment) {
+      const lastEquip = lastSubmittedEntry.equipment as { saddle?: Equipment; horseshoes?: Equipment; blinders?: Equipment }
+
+      // Restore saddle if still in inventory
+      if (lastEquip.saddle) {
+        const foundSaddle = saddleItems.find(e => e.id === lastEquip.saddle?.id)
+        if (foundSaddle) {
+          newEquipment.saddle = foundSaddle
+          changed = true
+        }
+      }
+
+      // Restore horseshoes if still in inventory
+      if (lastEquip.horseshoes) {
+        const foundShoes = horseshoeItems.find(e => e.id === lastEquip.horseshoes?.id)
+        if (foundShoes) {
+          newEquipment.horseshoes = foundShoes
+          changed = true
+        }
+      }
+
+      // Restore blinders if still in inventory
+      if (lastEquip.blinders) {
+        const foundBlinders = blinderItems.find(e => e.id === lastEquip.blinders?.id)
+        if (foundBlinders) {
+          newEquipment.blinders = foundBlinders
+          changed = true
+        }
+      }
+    }
+
     // Auto-select saddle if exactly one available and none selected
-    if (saddleItems.length === 1 && !selectedEquipment.saddle) {
+    if (saddleItems.length === 1 && !newEquipment.saddle) {
       newEquipment.saddle = saddleItems[0]
       changed = true
     }
 
     // Auto-select horseshoes if exactly one available and none selected
-    if (horseshoeItems.length === 1 && !selectedEquipment.horseshoes) {
+    if (horseshoeItems.length === 1 && !newEquipment.horseshoes) {
       newEquipment.horseshoes = horseshoeItems[0]
       changed = true
     }
 
     // Auto-select blinders if exactly one available and none selected
-    if (blinderItems.length === 1 && !selectedEquipment.blinders) {
+    if (blinderItems.length === 1 && !newEquipment.blinders) {
       newEquipment.blinders = blinderItems[0]
       changed = true
     }
@@ -241,116 +288,149 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
 
             {/* Saddle */}
             <div className="mb-4 sm:mb-6">
-              <h3 className="font-semibold mb-2 text-xs sm:text-sm th-label">Saddle</h3>
-              <div className="space-y-1.5 sm:space-y-2">
-                <div
-                  onClick={() => setSelectedEquipment({ ...selectedEquipment, saddle: undefined })}
-                  className={`min-h-[44px] p-2.5 sm:p-3 rounded border cursor-pointer text-xs sm:text-sm flex items-center active:scale-[0.98] transition ${
-                    !selectedEquipment.saddle
-                      ? 'border-[var(--accent-green)] bg-[var(--accent-green)]/10'
-                      : 'border-[var(--border)] opacity-60 hover:opacity-100'
-                  }`}
-                >
-                  No Saddle
+              <h3 className="font-semibold mb-2 text-xs sm:text-sm th-label flex items-center gap-2">
+                Saddle
+                {!unlockedEquipmentSlots.includes('saddle') && (
+                  <span className="text-[var(--accent-red)] text-xs">🔒 Locked</span>
+                )}
+              </h3>
+              {!unlockedEquipmentSlots.includes('saddle') ? (
+                <div className="min-h-[44px] p-2.5 sm:p-3 rounded border border-[var(--border)] bg-[var(--bg-secondary)] text-xs sm:text-sm th-muted text-center">
+                  Unlock this slot in the Shop with ⭐ Reputation
                 </div>
-                {saddles.map((item) => (
+              ) : (
+                <div className="space-y-1.5 sm:space-y-2">
                   <div
-                    key={item.id}
-                    onClick={() => setSelectedEquipment({ ...selectedEquipment, saddle: item })}
-                    onMouseEnter={() => setHoveredItem({ type: 'equipment', data: item, slot: 'saddle' })}
-                    onMouseLeave={() => setHoveredItem(null)}
-                    className={`min-h-[44px] p-2.5 sm:p-3 rounded border cursor-pointer active:scale-[0.98] transition ${
-                      selectedEquipment.saddle?.id === item.id
+                    onClick={() => setSelectedEquipment({ ...selectedEquipment, saddle: undefined })}
+                    className={`min-h-[44px] p-2.5 sm:p-3 rounded border cursor-pointer text-xs sm:text-sm flex items-center active:scale-[0.98] transition ${
+                      !selectedEquipment.saddle
                         ? 'border-[var(--accent-green)] bg-[var(--accent-green)]/10'
-                        : 'border-[var(--border)] hover:border-[var(--accent-green)]/50'
+                        : 'border-[var(--border)] opacity-60 hover:opacity-100'
                     }`}
                   >
-                    <div className="font-semibold text-xs sm:text-sm">{item.name}</div>
-                    <div className="text-xs opacity-70 mt-0.5 sm:mt-1">
-                      {Object.entries(item.effects)
-                        .filter(([_, value]) => value !== undefined && value !== 0 && typeof value === 'number')
-                        .map(([key, value]) => `${key}: ${(value as number) > 0 ? '+' : ''}${value}`)
-                        .join(', ')}
-                    </div>
+                    No Saddle
                   </div>
-                ))}
-              </div>
+                  {saddles.map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => setSelectedEquipment({ ...selectedEquipment, saddle: item })}
+                      onMouseEnter={() => setHoveredItem({ type: 'equipment', data: item, slot: 'saddle' })}
+                      onMouseLeave={() => setHoveredItem(null)}
+                      className={`min-h-[44px] p-2.5 sm:p-3 rounded border cursor-pointer active:scale-[0.98] transition ${
+                        selectedEquipment.saddle?.id === item.id
+                          ? 'border-[var(--accent-green)] bg-[var(--accent-green)]/10'
+                          : 'border-[var(--border)] hover:border-[var(--accent-green)]/50'
+                      }`}
+                    >
+                      <div className="font-semibold text-xs sm:text-sm">{item.name}</div>
+                      <div className="text-xs opacity-70 mt-0.5 sm:mt-1">
+                        {Object.entries(item.effects)
+                          .filter(([_, value]) => value !== undefined && value !== 0 && typeof value === 'number')
+                          .map(([key, value]) => `${key}: ${(value as number) > 0 ? '+' : ''}${value}`)
+                          .join(', ')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Horseshoes */}
             <div className="mb-4 sm:mb-6">
-              <h3 className="font-semibold mb-2 text-xs sm:text-sm th-label">Horseshoes</h3>
-              <div className="space-y-1.5 sm:space-y-2">
-                <div
-                  onClick={() => setSelectedEquipment({ ...selectedEquipment, horseshoes: undefined })}
-                  className={`min-h-[44px] p-2.5 sm:p-3 rounded border cursor-pointer text-xs sm:text-sm flex items-center active:scale-[0.98] transition ${
-                    !selectedEquipment.horseshoes
-                      ? 'border-[var(--accent-green)] bg-[var(--accent-green)]/10'
-                      : 'border-[var(--border)] opacity-60 hover:opacity-100'
-                  }`}
-                >
-                  No Horseshoes
+              <h3 className="font-semibold mb-2 text-xs sm:text-sm th-label flex items-center gap-2">
+                Horseshoes
+                {!unlockedEquipmentSlots.includes('horseshoes') && (
+                  <span className="text-[var(--accent-red)] text-xs">🔒 Locked</span>
+                )}
+              </h3>
+              {!unlockedEquipmentSlots.includes('horseshoes') ? (
+                <div className="min-h-[44px] p-2.5 sm:p-3 rounded border border-[var(--border)] bg-[var(--bg-secondary)] text-xs sm:text-sm th-muted text-center">
+                  Unlock this slot in the Shop with ⭐ Reputation
                 </div>
-                {horseshoes.map((item) => (
+              ) : (
+                <div className="space-y-1.5 sm:space-y-2">
                   <div
-                    key={item.id}
-                    onClick={() => setSelectedEquipment({ ...selectedEquipment, horseshoes: item })}
-                    onMouseEnter={() => setHoveredItem({ type: 'equipment', data: item, slot: 'horseshoes' })}
-                    onMouseLeave={() => setHoveredItem(null)}
-                    className={`min-h-[44px] p-2.5 sm:p-3 rounded border cursor-pointer active:scale-[0.98] transition ${
-                      selectedEquipment.horseshoes?.id === item.id
+                    onClick={() => setSelectedEquipment({ ...selectedEquipment, horseshoes: undefined })}
+                    className={`min-h-[44px] p-2.5 sm:p-3 rounded border cursor-pointer text-xs sm:text-sm flex items-center active:scale-[0.98] transition ${
+                      !selectedEquipment.horseshoes
                         ? 'border-[var(--accent-green)] bg-[var(--accent-green)]/10'
-                        : 'border-[var(--border)] hover:border-[var(--accent-green)]/50'
+                        : 'border-[var(--border)] opacity-60 hover:opacity-100'
                     }`}
                   >
-                    <div className="font-semibold text-xs sm:text-sm">{item.name}</div>
-                    <div className="text-xs opacity-70 mt-0.5 sm:mt-1">
-                      {Object.entries(item.effects)
-                        .filter(([_, value]) => value !== undefined && value !== 0 && typeof value === 'number')
-                        .map(([key, value]) => `${key}: ${(value as number) > 0 ? '+' : ''}${value}`)
-                        .join(', ')}
-                    </div>
+                    No Horseshoes
                   </div>
-                ))}
-              </div>
+                  {horseshoes.map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => setSelectedEquipment({ ...selectedEquipment, horseshoes: item })}
+                      onMouseEnter={() => setHoveredItem({ type: 'equipment', data: item, slot: 'horseshoes' })}
+                      onMouseLeave={() => setHoveredItem(null)}
+                      className={`min-h-[44px] p-2.5 sm:p-3 rounded border cursor-pointer active:scale-[0.98] transition ${
+                        selectedEquipment.horseshoes?.id === item.id
+                          ? 'border-[var(--accent-green)] bg-[var(--accent-green)]/10'
+                          : 'border-[var(--border)] hover:border-[var(--accent-green)]/50'
+                      }`}
+                    >
+                      <div className="font-semibold text-xs sm:text-sm">{item.name}</div>
+                      <div className="text-xs opacity-70 mt-0.5 sm:mt-1">
+                        {Object.entries(item.effects)
+                          .filter(([_, value]) => value !== undefined && value !== 0 && typeof value === 'number')
+                          .map(([key, value]) => `${key}: ${(value as number) > 0 ? '+' : ''}${value}`)
+                          .join(', ')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Blinders */}
             <div>
-              <h3 className="font-semibold mb-2 text-xs sm:text-sm th-label">Blinders</h3>
-              <div className="space-y-1.5 sm:space-y-2">
-                <div
-                  onClick={() => setSelectedEquipment({ ...selectedEquipment, blinders: undefined })}
-                  className={`min-h-[44px] p-2.5 sm:p-3 rounded border cursor-pointer text-xs sm:text-sm flex items-center active:scale-[0.98] transition ${
-                    !selectedEquipment.blinders
-                      ? 'border-[var(--accent-green)] bg-[var(--accent-green)]/10'
-                      : 'border-[var(--border)] opacity-60 hover:opacity-100'
-                  }`}
-                >
-                  No Blinders
+              <h3 className="font-semibold mb-2 text-xs sm:text-sm th-label flex items-center gap-2">
+                Blinders
+                {!unlockedEquipmentSlots.includes('blinders') && (
+                  <span className="text-[var(--accent-red)] text-xs">🔒 Locked</span>
+                )}
+              </h3>
+              {!unlockedEquipmentSlots.includes('blinders') ? (
+                <div className="min-h-[44px] p-2.5 sm:p-3 rounded border border-[var(--border)] bg-[var(--bg-secondary)] text-xs sm:text-sm th-muted text-center">
+                  Unlock this slot in the Shop with ⭐ Reputation
                 </div>
-                {blinders.map((item) => (
+              ) : (
+                <div className="space-y-1.5 sm:space-y-2">
                   <div
-                    key={item.id}
-                    onClick={() => setSelectedEquipment({ ...selectedEquipment, blinders: item })}
-                    onMouseEnter={() => setHoveredItem({ type: 'equipment', data: item, slot: 'blinders' })}
-                    onMouseLeave={() => setHoveredItem(null)}
-                    className={`min-h-[44px] p-2.5 sm:p-3 rounded border cursor-pointer active:scale-[0.98] transition ${
-                      selectedEquipment.blinders?.id === item.id
+                    onClick={() => setSelectedEquipment({ ...selectedEquipment, blinders: undefined })}
+                    className={`min-h-[44px] p-2.5 sm:p-3 rounded border cursor-pointer text-xs sm:text-sm flex items-center active:scale-[0.98] transition ${
+                      !selectedEquipment.blinders
                         ? 'border-[var(--accent-green)] bg-[var(--accent-green)]/10'
-                        : 'border-[var(--border)] hover:border-[var(--accent-green)]/50'
+                        : 'border-[var(--border)] opacity-60 hover:opacity-100'
                     }`}
                   >
-                    <div className="font-semibold text-xs sm:text-sm">{item.name}</div>
-                    <div className="text-xs opacity-70 mt-0.5 sm:mt-1">
-                      {Object.entries(item.effects)
-                        .filter(([_, value]) => value !== undefined && value !== 0 && typeof value === 'number')
-                        .map(([key, value]) => `${key}: ${(value as number) > 0 ? '+' : ''}${value}`)
-                        .join(', ')}
-                    </div>
+                    No Blinders
                   </div>
-                ))}
-              </div>
+                  {blinders.map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => setSelectedEquipment({ ...selectedEquipment, blinders: item })}
+                      onMouseEnter={() => setHoveredItem({ type: 'equipment', data: item, slot: 'blinders' })}
+                      onMouseLeave={() => setHoveredItem(null)}
+                      className={`min-h-[44px] p-2.5 sm:p-3 rounded border cursor-pointer active:scale-[0.98] transition ${
+                        selectedEquipment.blinders?.id === item.id
+                          ? 'border-[var(--accent-green)] bg-[var(--accent-green)]/10'
+                          : 'border-[var(--border)] hover:border-[var(--accent-green)]/50'
+                      }`}
+                    >
+                      <div className="font-semibold text-xs sm:text-sm">{item.name}</div>
+                      <div className="text-xs opacity-70 mt-0.5 sm:mt-1">
+                        {Object.entries(item.effects)
+                          .filter(([_, value]) => value !== undefined && value !== 0 && typeof value === 'number')
+                          .map(([key, value]) => `${key}: ${(value as number) > 0 ? '+' : ''}${value}`)
+                          .join(', ')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             </div>
 

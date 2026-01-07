@@ -26,7 +26,7 @@ export function StableCapacityBar({ sendMessage, inline = false }: StableCapacit
   // Inline version (for header)
   if (inline) {
     return (
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
         <span className="text-sm sm:text-base th-muted whitespace-nowrap">
           Stable: {currentHorses}/{stableSlots}
           {stableSlots < maxStableSlots && (

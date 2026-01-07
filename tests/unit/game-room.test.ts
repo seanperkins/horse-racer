@@ -2,6 +2,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { GameRoom } from '@/server/GameRoom'
 import type { Horse, Jockey } from '@/types/game'
 
+vi.mock('@/lib/prisma', () => ({
+  prisma: {},
+}))
+
 // Mock WebSocketServer and WebSocket
 const mockWss = {} as any
 const mockWs = {
@@ -271,6 +275,45 @@ describe('GameRoom', () => {
       expect(['dry_dirt', 'wet_muddy', 'turf_grass', 'rocky', 'sand', 'frozen']).toContain(
         room.currentTrack?.surface
       )
+    })
+  })
+
+  describe('Equipment Slot Unlocks', () => {
+    it('charges escalating reputation when unlocking slots', () => {
+      room.addPlayer('player1', 'Player 1', mockWs)
+      room.currentPhase = 'shop'
+
+      const player = room.players.get('player1')!
+      player.reputation = 3
+
+      mockWs.send.mockClear()
+
+      room.handleUnlockEquipmentSlot('player1', { slot: 'saddle' })
+      expect(player.reputation).toBe(2)
+      expect(player.unlockedEquipmentSlots).toEqual(['saddle'])
+
+      room.handleUnlockEquipmentSlot('player1', { slot: 'horseshoes' })
+      expect(player.reputation).toBe(0)
+      expect(player.unlockedEquipmentSlots).toEqual(['saddle', 'horseshoes'])
+    })
+
+    it('rejects unlocks when reputation is below the next cost', () => {
+      room.addPlayer('player1', 'Player 1', mockWs)
+      room.currentPhase = 'shop'
+
+      const player = room.players.get('player1')!
+      player.unlockedEquipmentSlots = ['saddle', 'horseshoes']
+      player.reputation = 2
+
+      mockWs.send.mockClear()
+
+      room.handleUnlockEquipmentSlot('player1', { slot: 'blinders' })
+
+      expect(player.unlockedEquipmentSlots).toEqual(['saddle', 'horseshoes'])
+
+      const lastMessage = JSON.parse(mockWs.send.mock.calls.at(-1)![0])
+      expect(lastMessage.type).toBe('error')
+      expect(lastMessage.message).toMatch(/Need 3 Reputation/i)
     })
   })
 })
