@@ -44,10 +44,10 @@ export function SettingsMenu() {
     console.log('Leave game - WebSocket state:', ws?.readyState, 'playerId:', playerId)
 
     // Send leave_game message directly via WebSocket to ensure it's sent
+    // Server uses authenticated connection ID, no need to send userId
     if (ws && ws.readyState === WebSocket.OPEN) {
       const message = JSON.stringify({
         type: 'leave_game',
-        userId: playerId,
         timestamp: Date.now(),
       })
       console.log('Sending leave_game message:', message)

@@ -55,7 +55,18 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
   // Auto-select best available on mount - only once
   useEffect(() => {
     if (horses.length > 0 && !selectedHorse) {
-      setSelectedHorse(horses[0])
+      // If only one horse, select it. Otherwise select the one with highest total stats.
+      if (horses.length === 1) {
+        setSelectedHorse(horses[0])
+      } else {
+        // Calculate total stats for each horse and select the best
+        const horsesWithTotal = horses.map(h => ({
+          horse: h,
+          totalStats: h.stats.speed + h.stats.stamina + h.stats.grit + h.stats.temper
+        }))
+        horsesWithTotal.sort((a, b) => b.totalStats - a.totalStats)
+        setSelectedHorse(horsesWithTotal[0].horse)
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -63,6 +74,39 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
   useEffect(() => {
     if (hiredJockey && !selectedJockey) {
       setSelectedJockey(hiredJockey)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Auto-select equipment if there's only one of each type
+  useEffect(() => {
+    const newEquipment = { ...selectedEquipment }
+    let changed = false
+
+    const saddleItems = equipment.filter(e => e.slot === 'saddle')
+    const horseshoeItems = equipment.filter(e => e.slot === 'horseshoes')
+    const blinderItems = equipment.filter(e => e.slot === 'blinders')
+
+    // Auto-select saddle if exactly one available and none selected
+    if (saddleItems.length === 1 && !selectedEquipment.saddle) {
+      newEquipment.saddle = saddleItems[0]
+      changed = true
+    }
+
+    // Auto-select horseshoes if exactly one available and none selected
+    if (horseshoeItems.length === 1 && !selectedEquipment.horseshoes) {
+      newEquipment.horseshoes = horseshoeItems[0]
+      changed = true
+    }
+
+    // Auto-select blinders if exactly one available and none selected
+    if (blinderItems.length === 1 && !selectedEquipment.blinders) {
+      newEquipment.blinders = blinderItems[0]
+      changed = true
+    }
+
+    if (changed) {
+      setSelectedEquipment(newEquipment)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -86,30 +130,95 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
   const horseshoes = equipment.filter((e) => e.slot === 'horseshoes')
   const blinders = equipment.filter((e) => e.slot === 'blinders')
 
+  // Off-canvas preview panel state
+  const [isPanelOpen, setIsPanelOpen] = useState(false)
+
+  const showPreview = selectedHorse && selectedJockey
+
   return (
     <div className="min-h-screen p-2 sm:p-4 md:p-8 th-bg">
       <div className="max-w-7xl mx-auto">
         {/* Track Info */}
         {currentTrack && (
           <div className="th-panel rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
-            <h2 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2">{currentTrack.name}</h2>
-            <div className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm th-label">
-              <span>{currentTrack.category}</span>
-              <span>•</span>
-              <span>{currentTrack.surface.replace('_', ' ')}</span>
-              <span>•</span>
-              <span>{currentTrack.distance}f</span>
+            <div className="flex justify-between items-start gap-4">
+              <div className="flex-1">
+                <h2 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2">{currentTrack.name}</h2>
+                <div className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm th-label">
+                  <span>{currentTrack.category}</span>
+                  <span>•</span>
+                  <span>{currentTrack.surface.replace('_', ' ')}</span>
+                  <span>•</span>
+                  <span>{currentTrack.distance}f</span>
+                </div>
+                {currentTrack.description && (
+                  <p className="mt-2 text-xs sm:text-sm opacity-80 hidden sm:block">{currentTrack.description}</p>
+                )}
+              </div>
+
+              {/* Preview toggle button - visible on mobile/tablet when preview is available */}
+              {showPreview && (
+                <button
+                  onClick={() => setIsPanelOpen(!isPanelOpen)}
+                  className="lg:hidden th-button min-h-11 px-4 py-2.5 rounded-lg font-bold text-sm"
+                >
+                  {isPanelOpen ? '✕' : '📊'}
+                </button>
+              )}
             </div>
-            {currentTrack.description && (
-              <p className="mt-2 text-xs sm:text-sm opacity-80 hidden sm:block">{currentTrack.description}</p>
-            )}
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {/* Left Column - Horse Selection */}
-          <div className="th-panel rounded-lg p-3 sm:p-4 md:p-6">
-            <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Select Horse</h2>
+        {/* Current Loadout Summary - compact single card */}
+        <div className="th-panel rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+          <h3 className="text-sm font-bold th-label mb-2">Current Loadout</h3>
+          <div className="space-y-1 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="w-16 text-xs th-muted">Horse:</span>
+              <span className={selectedHorse ? 'th-label' : 'th-muted italic'}>
+                {selectedHorse ? `${selectedHorse.name} (T${selectedHorse.tier})` : 'None selected'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-16 text-xs th-muted">Jockey:</span>
+              <span className={selectedJockey ? 'th-label' : 'th-muted italic'}>
+                {selectedJockey ? selectedJockey.name : 'None hired'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-16 text-xs th-muted">Saddle:</span>
+              <span className={selectedEquipment.saddle ? 'th-label' : 'th-muted'}>
+                {selectedEquipment.saddle?.name || '—'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-16 text-xs th-muted">Shoes:</span>
+              <span className={selectedEquipment.horseshoes ? 'th-label' : 'th-muted'}>
+                {selectedEquipment.horseshoes?.name || '—'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-16 text-xs th-muted">Blinders:</span>
+              <span className={selectedEquipment.blinders ? 'th-label' : 'th-muted'}>
+                {selectedEquipment.blinders?.name || '—'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-16 text-xs th-muted">Strategy:</span>
+              <span className="th-label">
+                {STRATEGY_PRESETS.find(p => JSON.stringify(p.strategy) === JSON.stringify(strategy))?.name || 'Custom'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Two-column layout: Content on left, Preview on right (desktop only) */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 lg:gap-6">
+          {/* Left Column - Main Content */}
+          <div className="space-y-4 sm:space-y-6">
+            {/* Horse Selection */}
+            <div className="th-panel rounded-lg p-3 sm:p-4 md:p-6">
+              <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Select Horse</h2>
             {horses.length === 0 ? (
               <p className="th-label text-center py-6 sm:py-8 text-sm">No horses available</p>
             ) : (
@@ -145,30 +254,30 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
               </div>
             )}
 
-            {/* Jockey Selection */}
-            <h2 className="text-lg sm:text-xl font-bold mt-4 sm:mt-6 mb-3 sm:mb-4">Jockey</h2>
-            {!hiredJockey ? (
-              <p className="th-label text-center py-4 text-sm">No jockey hired</p>
-            ) : (
-              <div className="p-3 sm:p-4 rounded border-2 border-[var(--accent-green)] bg-[var(--accent-green)]/10">
-                <h3 className="font-bold mb-2 text-sm sm:text-base">{hiredJockey.name}</h3>
-                <div className="grid grid-cols-3 gap-1 sm:gap-2 text-xs sm:text-sm mb-2">
-                  <div>SKL: {hiredJockey.stats.skill}</div>
-                  <div>TMG: {hiredJockey.stats.timing}</div>
-                  <div>WGT: {hiredJockey.stats.weight}</div>
-                </div>
-                {hiredJockey.trait && (
-                  <div className="text-xs bg-[var(--accent-blue)]/20 rounded p-2">
-                    Trait: {hiredJockey.trait}
+              {/* Jockey Display (inline within Horse section) */}
+              <h3 className="text-base sm:text-lg font-bold mt-4 sm:mt-6 mb-3">Jockey</h3>
+              {!hiredJockey ? (
+                <p className="th-label text-center py-4 text-sm">No jockey hired</p>
+              ) : (
+                <div className="p-3 sm:p-4 rounded border-2 border-[var(--accent-green)] bg-[var(--accent-green)]/10">
+                  <h4 className="font-bold mb-2 text-sm sm:text-base">{hiredJockey.name}</h4>
+                  <div className="grid grid-cols-3 gap-1 sm:gap-2 text-xs sm:text-sm mb-2">
+                    <div>SKL: {hiredJockey.stats.skill}</div>
+                    <div>TMG: {hiredJockey.stats.timing}</div>
+                    <div>WGT: {hiredJockey.stats.weight}</div>
                   </div>
-                )}
-              </div>
-            )}
-          </div>
+                  {hiredJockey.trait && (
+                    <div className="text-xs bg-[var(--accent-blue)]/20 rounded p-2">
+                      Trait: {hiredJockey.trait}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
-          {/* Middle Column - Equipment */}
-          <div className="th-panel rounded-lg p-3 sm:p-4 md:p-6">
-            <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Equipment</h2>
+            {/* Equipment */}
+            <div className="th-panel rounded-lg p-3 sm:p-4 md:p-6">
+              <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Equipment</h2>
 
             {/* Saddle */}
             <div className="mb-4 sm:mb-6">
@@ -277,11 +386,11 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
                 ))}
               </div>
             </div>
-          </div>
+            </div>
 
-          {/* Right Column - Strategy */}
-          <div className="th-panel rounded-lg p-3 sm:p-4 md:p-6 md:col-span-2 lg:col-span-1">
-            <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Race Strategy</h2>
+            {/* Strategy Selection */}
+            <div className="th-panel rounded-lg p-3 sm:p-4 md:p-6">
+              <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Race Strategy</h2>
 
             {/* Presets */}
             <div className="mb-4 sm:mb-6">
@@ -362,27 +471,54 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
                 </select>
               </div>
             </div>
-
-            {/* Summary - hidden on mobile */}
-            <div className="hidden sm:block mt-4 sm:mt-6 p-3 sm:p-4 bg-[var(--bg-secondary)] rounded">
-              <h4 className="font-semibold mb-2 text-xs sm:text-sm">Current Strategy</h4>
-              <div className="text-xs space-y-1 opacity-80">
-                <div>Start: {strategy.start}</div>
-                <div>Mid: {strategy.mid}</div>
-                <div>Finish: {strategy.finish}</div>
-              </div>
-            </div>
-
-            {/* Strategy Impact Panel */}
-            <div className="mt-4 sm:mt-6">
-              <StrategyImpactPanel
-                horse={selectedHorse}
-                jockey={selectedJockey}
-                equipment={selectedEquipment}
-                strategy={strategy}
-              />
             </div>
           </div>
+
+          {/* Right Column - Preview Panel (desktop: always visible if there's content, mobile: off-canvas) */}
+          {showPreview && (
+            <>
+              {/* Backdrop - mobile only */}
+              {isPanelOpen && (
+                <div
+                  className="lg:hidden fixed inset-0 bg-black/50 z-40 transition-opacity"
+                  onClick={() => setIsPanelOpen(false)}
+                />
+              )}
+
+              {/* Off-canvas panel */}
+              <div className={`
+                fixed lg:sticky
+                top-0 lg:top-4
+                right-0 lg:right-auto
+                lg:self-start
+                h-full lg:h-auto
+                w-[85vw] max-w-md lg:w-auto
+                z-50 lg:z-auto
+                transition-transform duration-300 ease-in-out lg:transition-none
+                ${isPanelOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
+              `}>
+                <div className="h-full lg:h-auto overflow-y-auto bg-[var(--bg-primary)] lg:bg-transparent p-4 lg:p-0">
+                  {/* Close button - mobile only */}
+                  <button
+                    onClick={() => setIsPanelOpen(false)}
+                    className="lg:hidden absolute top-4 right-4 z-10 p-2 rounded-lg bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors"
+                    aria-label="Close preview"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+
+                  <StrategyImpactPanel
+                    horse={selectedHorse}
+                    jockey={selectedJockey}
+                    equipment={selectedEquipment}
+                    strategy={strategy}
+                  />
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

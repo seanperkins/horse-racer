@@ -97,12 +97,7 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
             break
 
           case 'ready_up':
-            // Enforce sender identity - use connection-bound playerId, reject mismatched userId
-            if (validatedMessage.userId !== playerId) {
-              console.error(`❌ ready_up rejected: userId mismatch (message: ${validatedMessage.userId}, connection: ${playerId})`)
-              sendError(ws, 'Invalid sender identity')
-              break
-            }
+            // Use authenticated playerId from connection, ignore any userId in message
             console.log(`📨 Received ready_up from ${playerId}: ${validatedMessage.ready}, currentRoom: ${currentRoom?.roomId || 'none'}`)
             if (ensureRoom()) {
               currentRoom!.handleReadyUp(playerId, validatedMessage.ready)
@@ -193,12 +188,7 @@ export function setupWebSocketServer(wss: WebSocketServer): void {
             break
 
           case 'leave_game':
-            // Enforce sender identity - use connection-bound playerId, reject mismatched userId
-            if (validatedMessage.userId !== playerId) {
-              console.error(`❌ leave_game rejected: userId mismatch (message: ${validatedMessage.userId}, connection: ${playerId})`)
-              sendError(ws, 'Invalid sender identity')
-              break
-            }
+            // Use authenticated playerId from connection, ignore any userId in message
             console.log(`📨 Received leave_game from ${playerId}`)
             if (ensureRoom()) {
               currentRoom!.handleLeaveGame(playerId)

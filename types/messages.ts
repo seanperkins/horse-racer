@@ -18,7 +18,7 @@ export const JoinLobbySchema = BaseMessageSchema.extend({
 export const ReadyUpSchema = BaseMessageSchema.extend({
   type: z.literal('ready_up'),
   ready: z.boolean(),
-  userId: z.string(),
+  userId: z.string().optional(), // Optional - server uses authenticated connection ID
 })
 
 export const PurchaseUnitSchema = BaseMessageSchema.extend({
@@ -87,7 +87,7 @@ export const ExpandStableSchema = BaseMessageSchema.extend({
 
 export const LeaveGameSchema = BaseMessageSchema.extend({
   type: z.literal('leave_game'),
-  userId: z.string(),
+  userId: z.string().optional(), // Optional - server uses authenticated connection ID
 })
 
 export const AnimationCompleteSchema = BaseMessageSchema.extend({
@@ -121,6 +121,7 @@ export const GamePhaseSchema = BaseMessageSchema.extend({
   phase: z.enum(['shop', 'preparation', 'betting', 'race', 'results']),
   duration: z.number(), // seconds
   round: z.number(),
+  phaseEndTime: z.number().optional(), // Unix timestamp (ms) when phase ends - for reconnect sync
 })
 
 export const ShopStateSchema = BaseMessageSchema.extend({
@@ -313,6 +314,40 @@ export const PlayerReadySchema = BaseMessageSchema.extend({
   ready: z.boolean(),
 })
 
+// Sync message for race entry status (sent on reconnect)
+export const RaceEntrySyncSchema = BaseMessageSchema.extend({
+  type: z.literal('race_entry_sync'),
+  submitted: z.boolean(),
+  entry: z.object({
+    horse: z.any(),
+    jockey: z.any(),
+    equipment: z.object({
+      saddle: z.any().optional(),
+      horseshoes: z.any().optional(),
+      blinders: z.any().optional(),
+    }),
+    strategy: z.object({
+      start: z.enum(['burst', 'steady', 'hang_back']),
+      mid: z.enum(['push', 'conserve', 'react']),
+      finish: z.enum(['sprint', 'maintain', 'gamble']),
+    }),
+  }).optional(),
+})
+
+// Sync message for bet status (sent on reconnect)
+export const BetSyncSchema = BaseMessageSchema.extend({
+  type: z.literal('bet_sync'),
+  status: z.enum(['open', 'submitted', 'skipped']),
+  bet: z.object({
+    betType: z.enum(['win', 'place', 'exacta']),
+    targetPlayerId: z.string().optional(),
+    exactaFirst: z.string().optional(),
+    exactaSecond: z.string().optional(),
+    amount: z.number(),
+    betForHeart: z.boolean(),
+  }).optional(),
+})
+
 // Union of all client messages
 export const ClientMessageSchema = z.discriminatedUnion('type', [
   JoinLobbySchema,
@@ -346,6 +381,8 @@ export const ServerMessageSchema = z.discriminatedUnion('type', [
   ErrorMessageSchema,
   PlayerReadySchema,
   PongSchema,
+  RaceEntrySyncSchema,
+  BetSyncSchema,
 ])
 
 // TypeScript types inferred from schemas

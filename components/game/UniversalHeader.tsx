@@ -15,8 +15,7 @@ export function UniversalHeader() {
     currentTrack,
     players,
     eliminated,
-    phaseDuration,
-    phaseStartTime,
+    phaseEndTime,
     playerId,
     playerReadyStatus,
     sendMessage,
@@ -28,24 +27,24 @@ export function UniversalHeader() {
   } = useGameStore()
 
   const playSfx = useAudioStore((state) => state.playSfx)
-  const [timeLeft, setTimeLeft] = useState(phaseDuration)
+  const [timeLeft, setTimeLeft] = useState(0)
 
-  // Timer logic (copied from PhaseTimer)
+  // Timer logic - calculate from phaseEndTime
   useEffect(() => {
     const interval = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - phaseStartTime) / 1000)
-      const remaining = Math.max(0, phaseDuration - elapsed)
+      const remaining = Math.max(0, Math.floor((phaseEndTime - Date.now()) / 1000))
       setTimeLeft(remaining)
     }, 100)
 
     return () => clearInterval(interval)
-  }, [phaseDuration, phaseStartTime])
+  }, [phaseEndTime])
 
   const minutes = Math.floor(timeLeft / 60)
   const seconds = timeLeft % 60
 
-  const safeDuration = Math.max(phaseDuration, 1)
-  const percentage = (timeLeft / safeDuration) * 100
+  // Calculate percentage based on typical phase duration (use 60s as baseline)
+  const typicalDuration = 60
+  const percentage = Math.min(100, (timeLeft / typicalDuration) * 100)
 
   // Format phase name - shorter on mobile
   const phaseNames: Record<string, string> = {
@@ -120,7 +119,6 @@ export function UniversalHeader() {
       sendMessage({
         type: 'ready_up',
         ready: true,
-        userId: playerId
       })
       return
     }
@@ -128,7 +126,6 @@ export function UniversalHeader() {
     sendMessage({
       type: 'ready_up',
       ready: !isReady,
-      userId: playerId
     })
   }
 

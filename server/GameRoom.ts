@@ -68,6 +68,7 @@ export class GameRoom {
   currentRound: number
   gameStarted: boolean
   phaseTimer: NodeJS.Timeout | null
+  phaseEndTime: number | null // Unix timestamp (ms) when current phase ends
   isPrivate: boolean
   lastRaceSeed: string | null
   lastRaceEntries: any[] | null
@@ -94,6 +95,7 @@ export class GameRoom {
     this.currentRound = 0
     this.gameStarted = false
     this.phaseTimer = null
+    this.phaseEndTime = null
     this.isPrivate = !!friendCode
     this.lastRaceSeed = null
     this.lastRaceEntries = null
@@ -471,19 +473,14 @@ export class GameRoom {
       console.log(`${player.username} bought ${horse.name} for ${horse.cost}g`)
     }
 
-    // Try to hire cheapest jockey if don't have one or can afford better
-    if (!player.hiredJockey) {
-      const affordableJockeys = shopInventory.jockeys
-        .filter(j => j.hireCost <= player.gold)
-        .sort((a, b) => a.hireCost - b.hireCost)
-
-      if (affordableJockeys.length > 0) {
-        const jockey = affordableJockeys[0]
-        player.gold -= jockey.hireCost
-        player.hiredJockey = jockey
-        shopInventory.jockeys = shopInventory.jockeys.filter(j => j.id !== jockey.id)
-        console.log(`${player.username} hired ${jockey.name} for ${jockey.hireCost}g`)
-      }
+    // Try to hire a jockey if don't have one (hiring is free now)
+    if (!player.hiredJockey && shopInventory.jockeys.length > 0) {
+      // Pick the best jockey by skill
+      const sortedJockeys = [...shopInventory.jockeys].sort((a, b) => b.stats.skill - a.stats.skill)
+      const jockey = sortedJockeys[0]
+      player.hiredJockey = jockey
+      shopInventory.jockeys = shopInventory.jockeys.filter(j => j.id !== jockey.id)
+      console.log(`${player.username} hired ${jockey.name} (${jockey.upkeepCost}g/round upkeep)`)
     }
 
     player.ready = true
@@ -513,12 +510,21 @@ export class GameRoom {
       return
     }
 
-    // Send current game phase
+    // Send current game phase with phaseEndTime for proper timer sync
+    // If phaseEndTime is null (shouldn't happen), calculate it from now + duration as fallback
+    const duration = PHASE_DURATIONS[this.currentPhase]
+    const effectivePhaseEndTime = this.phaseEndTime || (Date.now() + duration * 1000)
+
+    if (!this.phaseEndTime) {
+      console.warn(`Room ${this.roomId}: phaseEndTime was null during sync, using fallback. Phase: ${this.currentPhase}`)
+    }
+
     this.sendToPlayer(playerId, {
       type: 'game_phase',
       phase: this.currentPhase,
-      duration: PHASE_DURATIONS[this.currentPhase],
+      duration,
       round: this.currentRound,
+      phaseEndTime: effectivePhaseEndTime,
     })
 
     // Send player state
@@ -538,6 +544,14 @@ export class GameRoom {
     // Phase-specific state sync
     switch (this.currentPhase) {
       case 'shop':
+        // Send track info for the upcoming race
+        if (this.currentTrack) {
+          this.sendToPlayer(playerId, {
+            type: 'track_info',
+            track: this.currentTrack,
+          })
+        }
+
         if (player.shopInventory) {
           this.sendToPlayer(playerId, {
             type: 'shop_state',
@@ -583,6 +597,20 @@ export class GameRoom {
           })
         }
 
+        // Sync race entry status (for preparation and betting phases)
+        if (player.raceEntry) {
+          this.sendToPlayer(playerId, {
+            type: 'race_entry_sync',
+            submitted: true,
+            entry: {
+              horse: player.raceEntry.horse,
+              jockey: player.raceEntry.jockey,
+              equipment: player.raceEntry.equipment,
+              strategy: player.raceEntry.strategy,
+            },
+          })
+        }
+
         if (this.currentPhase === 'betting') {
           // Send betting entries
           const entries = Array.from(this.players.values())
@@ -615,12 +643,44 @@ export class GameRoom {
             type: 'betting_open',
             entries,
           })
+
+          // Sync bet status if player already placed a bet
+          if (player.currentBet) {
+            this.sendToPlayer(playerId, {
+              type: 'bet_sync',
+              status: 'submitted',
+              bet: {
+                betType: player.currentBet.betType,
+                targetPlayerId: player.currentBet.targetPlayerId,
+                exactaFirst: player.currentBet.exactaFirst,
+                exactaSecond: player.currentBet.exactaSecond,
+                amount: player.currentBet.amount,
+                betForHeart: player.currentBet.betForHeart || false,
+              },
+            })
+          } else if (player.ready) {
+            // Player skipped betting
+            this.sendToPlayer(playerId, {
+              type: 'bet_sync',
+              status: 'skipped',
+            })
+          }
         }
         break
 
       case 'race':
-        // Send race inputs if available - use stored entries to ensure consistency
-        if (this.lastRaceSeed && this.currentTrack && this.lastRaceEntries) {
+        // Send race_start with precomputed data if available (preferred)
+        // Fall back to race_inputs for legacy compatibility
+        if (this.cachedPrecomputedData && this.currentTrack && this.lastRaceEntries) {
+          this.sendToPlayer(playerId, {
+            type: 'race_start',
+            entries: this.lastRaceEntries,
+            track: this.currentTrack,
+            seed: this.lastRaceSeed,
+            precomputed: this.cachedPrecomputedData,
+          })
+        } else if (this.lastRaceSeed && this.currentTrack && this.lastRaceEntries) {
+          // Fallback to legacy race_inputs
           this.sendToPlayer(playerId, {
             type: 'race_inputs',
             entries: this.lastRaceEntries,
@@ -631,8 +691,11 @@ export class GameRoom {
         break
 
       case 'results':
-        // Results will be shown when the race completes
-        // For now, just ensure player is in the right phase
+        // Send race results if available (for players who reconnect during results phase)
+        if (this.cachedRaceResults) {
+          // The race results should have already been broadcast, but send again for reconnecting player
+          // The client should already have them from the initial broadcast
+        }
         break
     }
 
@@ -744,6 +807,9 @@ export class GameRoom {
     this.currentPhase = phase
     const duration = PHASE_DURATIONS[phase] || 30
 
+    // Calculate when this phase will end (for reconnect sync)
+    this.phaseEndTime = Date.now() + (duration * 1000)
+
     console.log(`Room ${this.roomId}: Starting ${phase} phase (${duration}s)${this.isSinglePlayerMode() ? ' - single player mode' : ''}`)
 
     // Reset ready state when starting shop, preparation, betting, or results phase
@@ -758,6 +824,7 @@ export class GameRoom {
       phase,
       duration,
       round: this.currentRound,
+      phaseEndTime: this.phaseEndTime,
     })
 
     switch (phase) {
@@ -1801,14 +1868,7 @@ export class GameRoom {
       return
     }
 
-    // Check if player can afford it
-    if (player.gold < jockey.hireCost) {
-      if (ws) this.sendError(ws, 'Not enough gold to hire jockey')
-      return
-    }
-
-    // Deduct gold and hire jockey
-    player.gold -= jockey.hireCost
+    // Hiring is free - player just pays upkeep after each race
     player.hiredJockey = jockey
 
     // Remove from shop inventory
@@ -1817,7 +1877,7 @@ export class GameRoom {
       shopInventory.jockeys.splice(jockeyIndex, 1)
     }
 
-    console.log(`Player ${playerId} hired jockey ${jockey.name} for ${jockey.hireCost}g (${jockey.upkeepCost}g/round upkeep)`)
+    console.log(`Player ${playerId} hired jockey ${jockey.name} (${jockey.upkeepCost}g/round upkeep)`)
 
     // Send updated player state
     this.sendToPlayer(playerId, {

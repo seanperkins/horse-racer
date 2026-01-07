@@ -18,8 +18,7 @@ interface GameState {
   // Game state
   currentPhase: GamePhase | 'lobby'
   currentRound: number
-  phaseDuration: number
-  phaseStartTime: number
+  phaseEndTime: number // Unix timestamp (ms) when phase ends - 0 means no timer
 
   // Player resources
   gold: number
@@ -84,7 +83,7 @@ interface GameState {
     friendCode: string
     isPrivate: boolean
   }) => void
-  setGamePhase: (phase: GamePhase | 'lobby', duration: number, round: number) => void
+  setGamePhase: (phase: GamePhase | 'lobby', duration: number, round: number, phaseEndTime?: number) => void
   setPlayerState: (state: {
     gold: number
     hearts: number
@@ -124,8 +123,7 @@ const initialState = {
   requiredPlayers: 8,
   currentPhase: 'lobby' as const,
   currentRound: 0,
-  phaseDuration: 0,
-  phaseStartTime: 0,
+  phaseEndTime: 0,
   gold: 10,
   hearts: 5,
   prestige: 0,
@@ -163,12 +161,13 @@ export const useGameStore = create<GameState>((set) => ({
       isPrivate: state.isPrivate,
     }),
 
-  setGamePhase: (phase, duration, round) => {
+  setGamePhase: (phase, duration, round, phaseEndTime) => {
     const updates: any = {
       currentPhase: phase,
-      phaseDuration: duration,
       currentRound: round,
-      phaseStartTime: Date.now(),
+      // Use server's phaseEndTime if provided, otherwise calculate from duration
+      // Check for undefined specifically since 0 would be falsy but invalid
+      phaseEndTime: phaseEndTime !== undefined ? phaseEndTime : (Date.now() + duration * 1000),
     }
 
     // Reset player ready status when entering results, shop, or betting phase

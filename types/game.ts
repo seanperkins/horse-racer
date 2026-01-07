@@ -327,6 +327,5 @@ export interface MatchState {
   currentRound: number
   players: Player[]
   currentTrack?: Track
-  phaseStartTime: number
-  phaseDuration: number
+  phaseEndTime: number // Unix timestamp (ms) when phase ends
 }

@@ -33,7 +33,13 @@ export default function GamePageClient({ userId, username }: GamePageClientProps
     setShopState,
     setPlayerReadyStatus,
     setWebSocket,
+    setPlayerId,
   } = useGameStore()
+
+  // Set playerId in store on mount
+  useEffect(() => {
+    setPlayerId(userId)
+  }, [userId, setPlayerId])
 
   // Get WebSocket URL (use ws:// in dev, wss:// in prod)
   const wsUrl = useMemo(() => {
@@ -64,12 +70,18 @@ export default function GamePageClient({ userId, username }: GamePageClientProps
         break
 
       case 'game_phase':
-        console.log(`🎮 Phase change: ${message.phase}, round: ${message.round}`)
+        console.log(`🎮 Phase change: ${message.phase}, round: ${message.round}, phaseEndTime: ${message.phaseEndTime}, duration: ${message.duration}`)
+        if (message.phaseEndTime) {
+          const timeLeft = Math.floor((message.phaseEndTime - Date.now()) / 1000)
+          console.log(`⏱️ Time remaining: ${timeLeft}s (phaseEndTime from server)`)
+        } else {
+          console.log(`⏱️ No phaseEndTime from server, will calculate from duration: ${message.duration}s`)
+        }
         if (message.phase === 'results') {
           const currentResults = useGameStore.getState().raceResults
           console.log('📊 Current raceResults when entering results phase:', currentResults)
         }
-        setGamePhase(message.phase, message.duration, message.round)
+        setGamePhase(message.phase, message.duration, message.round, message.phaseEndTime)
         // Play music based on phase
         if (message.phase === 'shop') {
           playMusic('shop')
@@ -145,6 +157,25 @@ export default function GamePageClient({ userId, username }: GamePageClientProps
       case 'error':
         console.error('Server error:', message.message)
         // TODO: Show error toast
+        break
+
+      case 'race_entry_sync':
+        // Sync race entry status on reconnect
+        console.log('🔄 Race entry sync:', message.submitted ? 'submitted' : 'not submitted')
+        if (message.submitted && message.entry) {
+          useGameStore.getState().setEntryStatus('submitted', {
+            horse: message.entry.horse,
+            jockey: message.entry.jockey,
+            equipment: message.entry.equipment,
+            strategy: message.entry.strategy,
+          })
+        }
+        break
+
+      case 'bet_sync':
+        // Sync bet status on reconnect
+        console.log('🔄 Bet sync:', message.status)
+        useGameStore.getState().setBettingStatus(message.status)
         break
     }
   }, [setLobbyState, setGamePhase, setShopState, setPlayerState, setPlayerReadyStatus, roomCode, router])
