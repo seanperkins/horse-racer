@@ -73,7 +73,7 @@ export const PlaceBetSchema = BaseMessageSchema.extend({
   targetPlayerId: z.string().optional(), // For win/place bets
   exactaFirst: z.string().optional(), // For exacta
   exactaSecond: z.string().optional(), // For exacta
-  amount: z.number().min(1).max(10),
+  amount: z.number().min(0).max(10), // Virtual stakes - 0 is allowed (free betting)
   betForHeart: z.boolean().default(false), // Recovery bet
 })
 

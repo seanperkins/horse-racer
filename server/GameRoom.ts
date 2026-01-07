@@ -1406,9 +1406,10 @@ export class GameRoom {
           break
       }
 
-      // Calculate Reputation earned: 1 Reputation per ~2.5 gold wagered on win
-      // Losing bets lose gold but gain nothing
-      const reputationEarned = won && !bet.betForHeart ? Math.floor(bet.amount / 2.5) : 0
+      // Virtual stakes betting - fixed reputation rewards based on bet type
+      // Place = 1, Win = 3, Exacta = 5
+      const BET_REWARDS: Record<string, number> = { place: 1, win: 3, exacta: 5 }
+      const reputationEarned = won && !bet.betForHeart ? (BET_REWARDS[bet.type] || 0) : 0
 
       results.push({
         playerId,
@@ -2029,22 +2030,8 @@ export class GameRoom {
       return
     }
 
-    // Validation: Bet amount limits (min 1, max 10 or remaining gold)
-    if (message.amount < 1) {
-      if (ws) this.sendError(ws, 'Minimum bet is 1 gold')
-      return
-    }
-
-    const maxBet = Math.min(10, player.gold)
-    if (message.amount > maxBet) {
-      if (ws) this.sendError(ws, `Maximum bet is ${maxBet} gold`)
-      return
-    }
-
-    if (player.gold < message.amount) {
-      if (ws) this.sendError(ws, 'Not enough gold')
-      return
-    }
+    // Virtual stakes betting - no gold cost validation needed
+    // Just validate heart recovery rules
 
     // Validation: Heart recovery bet only when hearts < max
     if (message.betForHeart && player.hearts >= 5) {
@@ -2052,14 +2039,9 @@ export class GameRoom {
       return
     }
 
-    // Validation: Heart recovery bet must be exacta and minimum 5 gold
+    // Validation: Heart recovery bet must be exacta
     if (message.betForHeart && message.betType !== 'exacta') {
       if (ws) this.sendError(ws, 'Heart recovery bet must be Exacta')
-      return
-    }
-
-    if (message.betForHeart && message.amount < 5) {
-      if (ws) this.sendError(ws, 'Heart recovery bet requires at least 5 gold')
       return
     }
 
@@ -2088,7 +2070,8 @@ export class GameRoom {
       betForHeart: message.betForHeart,
     }
 
-    player.gold -= message.amount
+    // Virtual stakes betting - no gold cost
+    // player.gold -= message.amount  // Removed: betting is now free
 
     // Mark player as ready after placing bet
     player.ready = true

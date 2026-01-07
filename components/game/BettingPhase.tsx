@@ -22,37 +22,32 @@ interface BettingEntry {
   winProbability: number
 }
 
+// Virtual stakes betting - fixed reputation rewards per bet type
+const BET_REWARDS = {
+  place: 1,   // Easy - 1 reputation
+  win: 3,     // Medium - 3 reputation
+  exacta: 5,  // Hard - 5 reputation
+}
+
 export function BettingPhase({ sendMessage }: BettingPhaseProps) {
-  const { gold, hearts, currentRound, bettingEntries, playerId, bettingStatus, setBettingStatus } = useGameStore()
+  const { hearts, bettingEntries, playerId, bettingStatus, setBettingStatus } = useGameStore()
   const playSfx = useAudioStore((state) => state.playSfx)
 
   const [betType, setBetType] = useState<'win' | 'place' | 'exacta'>('win')
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null)
   const [exactaFirst, setExactaFirst] = useState<string | null>(null)
   const [exactaSecond, setExactaSecond] = useState<string | null>(null)
-  const [betAmount, setBetAmount] = useState<number>(3)
   const [betForHeart, setBetForHeart] = useState<boolean>(false)
 
   // Use store's bettingStatus instead of local state
   const betPlaced = bettingStatus !== 'open'
 
   const entries = bettingEntries as BettingEntry[]
-  const maxBet = Math.min(10, gold)
-  const canBetForHeart = hearts < 5 && gold >= 5
+  const canBetForHeart = hearts < 5
 
   const handlePlaceBet = () => {
     if (betPlaced) {
       toast.error('You have already placed a bet this round!')
-      return
-    }
-
-    if (betAmount < 1 || betAmount > maxBet) {
-      toast.error(`Bet must be between 1 and ${maxBet} gold`)
-      return
-    }
-
-    if (betForHeart && betAmount < 5) {
-      toast.error('Recovery bet requires minimum 5 gold')
       return
     }
 
@@ -75,7 +70,7 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
         type: 'place_bet',
         betType,
         targetPlayerId: selectedPlayer,
-        amount: betAmount,
+        amount: 0, // Virtual stakes - no gold cost
         betForHeart,
       })
     } else if (betType === 'exacta') {
@@ -97,7 +92,7 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
         betType: 'exacta',
         exactaFirst,
         exactaSecond,
-        amount: betAmount,
+        amount: 0, // Virtual stakes - no gold cost
         betForHeart,
       })
     }
@@ -111,16 +106,9 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
     setBettingStatus('skipped')
   }
 
-  const getSelectedEntry = () => {
-    return entries.find((e) => e.playerId === selectedPlayer)
-  }
-
-  // Calculate Prestige earned: 1 Prestige per ~2.5 gold wagered on win
-  const getPotentialPrestige = () => {
-    // Prestige is based on bet amount, not odds
-    // 1 Prestige per 2.5 gold wagered (minimum 1 if bet >= 1)
-    if (betAmount < 1) return 0
-    return Math.max(1, Math.floor(betAmount / 2.5))
+  // Get reputation reward for current bet type
+  const getReputationReward = () => {
+    return BET_REWARDS[betType]
   }
 
   return (
@@ -137,68 +125,66 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {/* Left Column - Bet Type Selection */}
             <div className="th-panel rounded-lg p-3 sm:p-4 md:p-6">
-              <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Bet Type</h2>
+              <h2 className="text-lg sm:text-xl font-bold mb-2">Pick Your Bet</h2>
+              <p className="text-xs sm:text-sm th-muted mb-4">One free bet per race. Choose wisely!</p>
 
               <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
-                <button
-                  onClick={() => {
-                    setBetType('win')
-                    setBetForHeart(false)
-                  }}
-                  className={`w-full min-h-[60px] p-3 sm:p-4 rounded border-2 text-left transition active:scale-[0.98] ${
-                    betType === 'win'
-                      ? 'border-[var(--accent-green)] bg-[var(--accent-green)]/10'
-                      : 'border-[var(--border)] hover:border-[var(--accent-green)]/50'
-                  }`}
-                >
-                  <div className="font-bold mb-0.5 sm:mb-1 text-sm sm:text-base">Win Bet</div>
-                  <div className="text-xs sm:text-sm opacity-70">Pick the winner to earn ⭐ Prestige</div>
-                </button>
-
                 <button
                   onClick={() => {
                     setBetType('place')
                     setBetForHeart(false)
                   }}
-                  className={`w-full min-h-[60px] p-3 sm:p-4 rounded border-2 text-left transition active:scale-[0.98] ${
+                  className={`w-full min-h-[70px] p-3 sm:p-4 rounded border-2 text-left transition active:scale-[0.98] ${
                     betType === 'place'
                       ? 'border-[var(--accent-green)] bg-[var(--accent-green)]/10'
                       : 'border-[var(--border)] hover:border-[var(--accent-green)]/50'
                   }`}
                 >
-                  <div className="font-bold mb-0.5 sm:mb-1 text-sm sm:text-base">Place Bet</div>
-                  <div className="text-xs sm:text-sm opacity-70">Pick top 3 finisher to earn ⭐ Prestige</div>
+                  <div className="flex justify-between items-center mb-0.5 sm:mb-1">
+                    <span className="font-bold text-sm sm:text-base">Place Bet</span>
+                    <span className="text-[var(--accent-gold)] font-bold flex items-center gap-1">
+                      <span>⭐</span> +{BET_REWARDS.place}
+                    </span>
+                  </div>
+                  <div className="text-xs sm:text-sm opacity-70">Pick a horse to finish top 3 (Easy)</div>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setBetType('win')
+                    setBetForHeart(false)
+                  }}
+                  className={`w-full min-h-[70px] p-3 sm:p-4 rounded border-2 text-left transition active:scale-[0.98] ${
+                    betType === 'win'
+                      ? 'border-[var(--accent-green)] bg-[var(--accent-green)]/10'
+                      : 'border-[var(--border)] hover:border-[var(--accent-green)]/50'
+                  }`}
+                >
+                  <div className="flex justify-between items-center mb-0.5 sm:mb-1">
+                    <span className="font-bold text-sm sm:text-base">Win Bet</span>
+                    <span className="text-[var(--accent-gold)] font-bold flex items-center gap-1">
+                      <span>⭐</span> +{BET_REWARDS.win}
+                    </span>
+                  </div>
+                  <div className="text-xs sm:text-sm opacity-70">Pick the winner (Medium)</div>
                 </button>
 
                 <button
                   onClick={() => setBetType('exacta')}
-                  className={`w-full min-h-[60px] p-3 sm:p-4 rounded border-2 text-left transition active:scale-[0.98] ${
+                  className={`w-full min-h-[70px] p-3 sm:p-4 rounded border-2 text-left transition active:scale-[0.98] ${
                     betType === 'exacta'
                       ? 'border-[var(--accent-green)] bg-[var(--accent-green)]/10'
                       : 'border-[var(--border)] hover:border-[var(--accent-green)]/50'
                   }`}
                 >
-                  <div className="font-bold mb-0.5 sm:mb-1 text-sm sm:text-base">Exacta</div>
-                  <div className="text-xs sm:text-sm opacity-70">Pick 1st AND 2nd in order to earn ⭐ Prestige</div>
+                  <div className="flex justify-between items-center mb-0.5 sm:mb-1">
+                    <span className="font-bold text-sm sm:text-base">Exacta</span>
+                    <span className="text-[var(--accent-gold)] font-bold flex items-center gap-1">
+                      <span>⭐</span> +{BET_REWARDS.exacta}
+                    </span>
+                  </div>
+                  <div className="text-xs sm:text-sm opacity-70">Pick 1st AND 2nd in order (Hard)</div>
                 </button>
-              </div>
-
-              {/* Bet Amount */}
-              <div className="mb-4 sm:mb-6">
-                <label className="block font-semibold mb-2 text-sm sm:text-base">Bet Amount</label>
-                <input
-                  type="range"
-                  min="1"
-                  max={maxBet}
-                  value={betAmount}
-                  onChange={(e) => setBetAmount(Number(e.target.value))}
-                  className="w-full h-2 touch-manipulation"
-                />
-                <div className="flex justify-between text-xs sm:text-sm mt-2">
-                  <span>1g</span>
-                  <span className="font-bold text-base sm:text-lg">{betAmount}g</span>
-                  <span>{maxBet}g</span>
-                </div>
               </div>
 
               {/* Recovery Bet Option */}
@@ -214,28 +200,28 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
                     <div>
                       <div className="font-bold text-sm sm:text-base">Recovery Bet</div>
                       <div className="text-xs opacity-80">
-                        Win: +1 ❤️ | Lose: -gold only
+                        Win: +1 ❤️ instead of ⭐
                       </div>
                     </div>
                   </label>
                 </div>
               )}
 
-              {/* Potential Reward */}
+              {/* Reward Preview */}
               <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-[var(--bg-secondary)] rounded">
-                <h4 className="font-semibold mb-1 sm:mb-2 text-xs sm:text-sm">Potential Reward</h4>
+                <h4 className="font-semibold mb-1 sm:mb-2 text-xs sm:text-sm">If You Win</h4>
                 {betForHeart ? (
                   <div className="text-base sm:text-lg font-bold text-[var(--accent-red)]">+1 ❤️</div>
                 ) : (
                   <div className="flex items-center gap-1.5">
                     <span className="text-base sm:text-lg">⭐</span>
                     <span className="text-base sm:text-lg font-bold text-[var(--accent-gold)]">
-                      {getPotentialPrestige()} Prestige
+                      +{getReputationReward()} Reputation
                     </span>
                   </div>
                 )}
                 <div className="text-xs opacity-60 mt-2">
-                  Betting costs gold but wins earn Prestige
+                  Free bet - no gold at stake!
                 </div>
               </div>
             </div>
@@ -328,13 +314,13 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
                                 {entry.horse.name} ({entry.horse.bloodline})
                               </div>
                             </div>
-                            {!isOwnHorse && betType !== 'exacta' && (
+                            {!isOwnHorse && (
                               <div className="text-right ml-2 flex-shrink-0">
                                 <div className="text-xs sm:text-sm th-muted font-semibold">
-                                  {betType === 'win' ? 'Win' : 'Place'}
+                                  Win Chance
                                 </div>
                                 <div className="font-bold text-lg sm:text-xl text-[var(--accent-gold)]">
-                                  {betType === 'win' ? `${(entry.odds ?? 0).toFixed(1)}x` : `${(entry.placeOdds ?? 0).toFixed(1)}x`}
+                                  {entry.winProbability}%
                                 </div>
                               </div>
                             )}
@@ -363,12 +349,6 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
                               </div>
                             </div>
                           </div>
-
-                          {!isOwnHorse && (
-                            <div className="mt-1 sm:mt-2 text-xs sm:text-sm th-muted font-semibold">
-                              Win: {((entry.winProbability ?? 0) * 100).toFixed(0)}%
-                            </div>
-                          )}
                         </div>
                       )
                     })}
@@ -392,13 +372,11 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
               onClick={handlePlaceBet}
               disabled={
                 (betType !== 'exacta' && !selectedPlayer) ||
-                (betType === 'exacta' && (!exactaFirst || !exactaSecond)) ||
-                betAmount < 1 ||
-                betAmount > maxBet
+                (betType === 'exacta' && (!exactaFirst || !exactaSecond))
               }
               className="min-h-[48px] px-6 sm:px-8 py-3 bg-[var(--accent-green)] text-white rounded-lg font-bold text-sm sm:text-base hover:bg-[var(--accent-green)]/80 active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
             >
-              Place Bet - {betAmount}g
+              Place Bet ({betType === 'place' ? 'Place' : betType === 'win' ? 'Win' : 'Exacta'})
             </button>
           </div>
         )}
