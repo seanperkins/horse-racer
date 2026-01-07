@@ -85,6 +85,27 @@ export class GameRoom {
   cachedPrecomputedData: PrecomputedRaceData | null
   playersAnimationComplete: Set<string>
 
+  // Stored race results for reconnection during results phase
+  lastProcessedResults: {
+    placements: Array<{
+      playerId: string
+      playerName: string
+      position: number
+      time: number
+      goldReward: number
+      heartsDamage: number
+    }>
+    betResults: Array<{
+      playerId: string
+      won: boolean
+      payout?: number
+      reputationEarned?: number
+      isHeartBet: boolean
+    }>
+    eliminatedPlayers: string[]
+    events: any[]
+  } | null
+
   constructor(roomId: string, wss: WebSocketServer, friendCode: string | null = null) {
     this.roomId = roomId
     this.friendCode = friendCode || this.generateFriendCode()
@@ -111,6 +132,7 @@ export class GameRoom {
     this.cachedRaceResults = null
     this.cachedPrecomputedData = null
     this.playersAnimationComplete = new Set()
+    this.lastProcessedResults = null
   }
 
   generateFriendCode(): string {
@@ -691,10 +713,16 @@ export class GameRoom {
         break
 
       case 'results':
-        // Send race results if available (for players who reconnect during results phase)
-        if (this.cachedRaceResults) {
-          // The race results should have already been broadcast, but send again for reconnecting player
-          // The client should already have them from the initial broadcast
+        // Send race results for players who reconnect during results phase
+        if (this.lastProcessedResults) {
+          console.log(`Sending stored race_results to reconnecting player ${playerId}`)
+          this.sendToPlayer(playerId, {
+            type: 'race_results',
+            placements: this.lastProcessedResults.placements,
+            betResults: this.lastProcessedResults.betResults,
+            eliminatedPlayers: this.lastProcessedResults.eliminatedPlayers,
+            events: this.lastProcessedResults.events,
+          })
         }
         break
     }
@@ -903,6 +931,9 @@ export class GameRoom {
   }
 
   setupShopPhase(): void {
+    // Clear previous round's race results
+    this.lastProcessedResults = null
+
     // Generate track for this round so players can see what's coming
     this.currentTrack = generateTrackForRound(this.currentRound)
 
@@ -1229,14 +1260,24 @@ export class GameRoom {
       player.currentBet = undefined
     }
 
+    // Store processed results for reconnection during results phase
+    const eliminatedPlayers = Array.from(this.players.values())
+      .filter((p) => p.eliminated)
+      .map((p) => p.id)
+
+    this.lastProcessedResults = {
+      placements,
+      betResults,
+      eliminatedPlayers,
+      events: raceOutcome.events,
+    }
+
     console.log(`📊 Broadcasting race_results with ${placements.length} placements, current phase: ${this.currentPhase}`)
     this.broadcast({
       type: 'race_results',
       placements,
       betResults,
-      eliminatedPlayers: Array.from(this.players.values())
-        .filter((p) => p.eliminated)
-        .map((p) => p.id),
+      eliminatedPlayers,
       events: raceOutcome.events,
     })
 
@@ -1247,8 +1288,8 @@ export class GameRoom {
 
     // Send updated player_state to all human players after race results
     for (const [playerId, player] of this.players) {
-      if (!player.isAI && player.connection) {
-        player.connection.send(JSON.stringify({
+      if (!player.isAI) {
+        this.sendToPlayer(playerId, {
           type: 'player_state',
           gold: player.gold,
           hearts: player.hearts,
@@ -1261,7 +1302,7 @@ export class GameRoom {
           },
           wins: player.betWins,
           currentRound: this.currentRound,
-        }))
+        })
       }
     }
 
