@@ -9,14 +9,14 @@ interface StableCapacityBarProps {
 }
 
 export function StableCapacityBar({ sendMessage, inline = false }: StableCapacityBarProps) {
-  const { horses, stableSlots, maxStableSlots, prestige } = useGameStore()
+  const { horses, stableSlots, maxStableSlots, reputation } = useGameStore()
 
   const currentHorses = horses.length
   const canExpand = stableSlots < maxStableSlots
 
-  // Expansion costs: 2 Prestige for slot 2, 3 Prestige for slot 3
+  // Expansion costs: 2 Reputation for slot 2, 3 Reputation for slot 3
   const expansionCost = stableSlots === 1 ? 2 : 3
-  const canAffordExpansion = prestige >= expansionCost
+  const canAffordExpansion = reputation >= expansionCost
 
   const handleExpand = () => {
     if (!canExpand || !canAffordExpansion) return
@@ -46,7 +46,7 @@ export function StableCapacityBar({ sendMessage, inline = false }: StableCapacit
             title={
               canAffordExpansion
                 ? `Expand stable to ${stableSlots + 1} slots`
-                : `Need ${expansionCost} Prestige to expand`
+                : `Need ${expansionCost} Reputation to expand`
             }
           >
             <span className="hidden sm:inline">Expand</span>
@@ -94,7 +94,7 @@ export function StableCapacityBar({ sendMessage, inline = false }: StableCapacit
             title={
               canAffordExpansion
                 ? `Expand stable to ${stableSlots + 1} slots`
-                : `Need ${expansionCost} Prestige to expand`
+                : `Need ${expansionCost} Reputation to expand`
             }
           >
             <span>Expand</span>
@@ -146,7 +146,7 @@ export function StableCapacityBar({ sendMessage, inline = false }: StableCapacit
       {/* Info text */}
       {currentHorses >= stableSlots && stableSlots < maxStableSlots && (
         <p className="text-xs th-muted mt-2">
-          Stable full! Expand with Prestige to hold more horses.
+          Stable full! Expand with Reputation to hold more horses.
         </p>
       )}
     </div>

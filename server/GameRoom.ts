@@ -32,7 +32,7 @@ interface PlayerData extends Omit<Player, 'userId' | 'raceEntry' | 'currentBet'>
   ready: boolean
   isAI?: boolean  // Flag to identify AI players
   userId?: string  // Optional for AI players
-  prestige: number  // Economy currency for progression
+  reputation: number  // Economy currency for progression
   stableSlots: number  // Number of horse slots (1-3)
   // Override raceEntry from Player with more flexible types for server-side use
   raceEntry?: {
@@ -209,7 +209,7 @@ export class GameRoom {
       username: playerName,
       gold: 10,
       hearts: 5,
-      prestige: 0,
+      reputation: 0,
       stableSlots: 1,
       eliminated: false,
       ready: false,
@@ -333,7 +333,7 @@ export class GameRoom {
         username: `AI Racer ${i}`,
         gold: 10,
         hearts: 5,
-        prestige: 0,
+        reputation: 0,
         stableSlots: 1,
         eliminated: false,
         ready: true,  // AI always ready
@@ -386,7 +386,7 @@ export class GameRoom {
           username: `AI Racer ${nextAINumber}`,
           gold: 10,
           hearts: 5,
-          prestige: 0,
+          reputation: 0,
           stableSlots: 1,
           eliminated: false,
           ready: true,
@@ -532,7 +532,7 @@ export class GameRoom {
       type: 'player_state',
       gold: player.gold,
       hearts: player.hearts,
-      prestige: player.prestige,
+      reputation: player.reputation,
       stableSlots: player.stableSlots,
       inventory: {
         horses: player.horses,
@@ -1206,8 +1206,8 @@ export class GameRoom {
         if (betResult.isHeartBet) {
           player.hearts = Math.min(player.hearts + 1, 5)
         } else {
-          // Award Prestige instead of gold for winning bets
-          player.prestige += betResult.prestigeEarned || 0
+          // Award Reputation instead of gold for winning bets
+          player.reputation += betResult.reputationEarned || 0
         }
         player.betWins += 1
       }
@@ -1371,10 +1371,10 @@ export class GameRoom {
     playerId: string
     won: boolean
     payout?: number
-    prestigeEarned?: number
+    reputationEarned?: number
     isHeartBet: boolean
   }> {
-    const results: Array<{ playerId: string; won: boolean; payout?: number; prestigeEarned?: number; isHeartBet: boolean }> = []
+    const results: Array<{ playerId: string; won: boolean; payout?: number; reputationEarned?: number; isHeartBet: boolean }> = []
 
     for (const [playerId, player] of this.players) {
       if (!player.currentBet) continue
@@ -1406,15 +1406,15 @@ export class GameRoom {
           break
       }
 
-      // Calculate Prestige earned: 1 Prestige per ~2.5 gold wagered on win
+      // Calculate Reputation earned: 1 Reputation per ~2.5 gold wagered on win
       // Losing bets lose gold but gain nothing
-      const prestigeEarned = won && !bet.betForHeart ? Math.floor(bet.amount / 2.5) : 0
+      const reputationEarned = won && !bet.betForHeart ? Math.floor(bet.amount / 2.5) : 0
 
       results.push({
         playerId,
         won,
-        payout: 0, // Betting no longer pays gold, only Prestige
-        prestigeEarned,
+        payout: 0, // Betting no longer pays gold, only Reputation
+        reputationEarned,
         isHeartBet: bet.betForHeart || false,
       })
     }
@@ -1545,7 +1545,7 @@ export class GameRoom {
 
     // Check stable capacity for horses
     if (unitType === 'horse' && player.horses.length >= player.stableSlots) {
-      if (ws) this.sendError(ws, `Stable full! You can only hold ${player.stableSlots} horses. Expand your stable with Prestige.`)
+      if (ws) this.sendError(ws, `Stable full! You can only hold ${player.stableSlots} horses. Expand your stable with Reputation.`)
       return
     }
 
@@ -1576,7 +1576,7 @@ export class GameRoom {
       type: 'player_state',
       gold: player.gold,
       hearts: player.hearts,
-      prestige: player.prestige,
+      reputation: player.reputation,
       stableSlots: player.stableSlots,
       inventory: {
         horses: player.horses,
@@ -1658,7 +1658,7 @@ export class GameRoom {
       type: 'player_state',
       gold: player.gold,
       hearts: player.hearts,
-      prestige: player.prestige,
+      reputation: player.reputation,
       stableSlots: player.stableSlots,
       inventory: {
         horses: player.horses,
@@ -1730,27 +1730,27 @@ export class GameRoom {
       return
     }
 
-    // Calculate expansion cost: 2 Prestige for slot 2, 3 Prestige for slot 3
+    // Calculate expansion cost: 2 Reputation for slot 2, 3 Reputation for slot 3
     const expansionCost = player.stableSlots === 1 ? 2 : 3
 
-    // Check if player has enough Prestige
-    if (player.prestige < expansionCost) {
-      if (ws) this.sendError(ws, `Not enough Prestige to expand. Need ${expansionCost} Prestige.`)
+    // Check if player has enough Reputation
+    if (player.reputation < expansionCost) {
+      if (ws) this.sendError(ws, `Not enough Reputation to expand. Need ${expansionCost} Reputation.`)
       return
     }
 
-    // Deduct Prestige and expand stable
-    player.prestige -= expansionCost
+    // Deduct Reputation and expand stable
+    player.reputation -= expansionCost
     player.stableSlots += 1
 
-    console.log(`Player ${playerId} expanded stable to ${player.stableSlots} slots for ${expansionCost} Prestige`)
+    console.log(`Player ${playerId} expanded stable to ${player.stableSlots} slots for ${expansionCost} Reputation`)
 
     // Send updated player state
     this.sendToPlayer(playerId, {
       type: 'player_state',
       gold: player.gold,
       hearts: player.hearts,
-      prestige: player.prestige,
+      reputation: player.reputation,
       stableSlots: player.stableSlots,
       inventory: {
         horses: player.horses,
@@ -1823,7 +1823,7 @@ export class GameRoom {
       type: 'player_state',
       gold: player.gold,
       hearts: player.hearts,
-      prestige: player.prestige,
+      reputation: player.reputation,
       stableSlots: player.stableSlots,
       inventory: {
         horses: player.horses,
@@ -1884,7 +1884,7 @@ export class GameRoom {
       type: 'player_state',
       gold: player.gold,
       hearts: player.hearts,
-      prestige: player.prestige,
+      reputation: player.reputation,
       stableSlots: player.stableSlots,
       inventory: {
         horses: player.horses,
@@ -1941,7 +1941,7 @@ export class GameRoom {
       type: 'player_state',
       gold: player.gold,
       hearts: player.hearts,
-      prestige: player.prestige,
+      reputation: player.reputation,
       stableSlots: player.stableSlots,
       inventory: {
         horses: player.horses,

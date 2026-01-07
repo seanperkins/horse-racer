@@ -11,7 +11,7 @@ export function UniversalHeader() {
     currentRound,
     gold,
     hearts,
-    prestige,
+    reputation,
     currentTrack,
     players,
     eliminated,
@@ -206,7 +206,7 @@ export function UniversalHeader() {
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="text-base">⭐</span>
-                <span className="text-sm font-semibold th-label">{prestige}</span>
+                <span className="text-sm font-semibold th-label">{reputation}</span>
               </div>
             </div>
           </div>

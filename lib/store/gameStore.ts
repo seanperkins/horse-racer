@@ -23,7 +23,7 @@ interface GameState {
   // Player resources
   gold: number
   hearts: number
-  prestige: number
+  reputation: number
   stableSlots: number
   maxStableSlots: number
   eliminated: boolean
@@ -109,8 +109,8 @@ interface GameState {
   setPrepSelection: (selection: SubmittedEntry | null) => void
 
   // Economy actions
-  setPrestige: (prestige: number) => void
-  addPrestige: (amount: number) => void
+  setReputation: (reputation: number) => void
+  addReputation: (amount: number) => void
   setStableSlots: (slots: number) => void
 }
 
@@ -126,7 +126,7 @@ const initialState = {
   phaseEndTime: 0,
   gold: 10,
   hearts: 5,
-  prestige: 0,
+  reputation: 0,
   stableSlots: 1,
   maxStableSlots: 3,
   eliminated: false,
@@ -251,10 +251,10 @@ export const useGameStore = create<GameState>((set) => ({
   setPrepSelection: (selection) => set({ prepSelection: selection }),
 
   // Economy actions
-  setPrestige: (prestige) => set({ prestige }),
+  setReputation: (reputation) => set({ reputation }),
 
-  addPrestige: (amount) =>
-    set((state) => ({ prestige: state.prestige + amount })),
+  addReputation: (amount) =>
+    set((state) => ({ reputation: state.reputation + amount })),
 
   setStableSlots: (slots) => set({ stableSlots: slots }),
 }))

@@ -272,7 +272,7 @@ export const RaceResultsSchema = BaseMessageSchema.extend({
       playerId: z.string(),
       won: z.boolean(),
       payout: z.number().optional(),
-      prestigeEarned: z.number().optional(), // Prestige from winning bets (replaces gold payout)
+      reputationEarned: z.number().optional(), // Reputation from winning bets (replaces gold payout)
       isHeartBet: z.boolean().optional(),
     }),
   ),
@@ -291,7 +291,7 @@ export const PlayerStateSchema = BaseMessageSchema.extend({
   type: z.literal('player_state'),
   gold: z.number(),
   hearts: z.number(),
-  prestige: z.number(),
+  reputation: z.number(),
   stableSlots: z.number(),
   inventory: z.object({
     horses: z.array(z.any()),
