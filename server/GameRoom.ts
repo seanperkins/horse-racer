@@ -650,7 +650,7 @@ export class GameRoom {
               type: 'bet_sync',
               status: 'submitted',
               bet: {
-                betType: player.currentBet.betType,
+                betType: player.currentBet.type,
                 targetPlayerId: player.currentBet.targetPlayerId,
                 exactaFirst: player.currentBet.exactaFirst,
                 exactaSecond: player.currentBet.exactaSecond,

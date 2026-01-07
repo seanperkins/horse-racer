@@ -24,7 +24,10 @@ export function ResultsPhase() {
   const playSfx = useAudioStore((state) => state.playSfx)
 
   // Derive values for the effect (must be before any conditional returns)
+  // Note: After the guard check below, we know placements is defined
   const placements = raceResults?.placements as PlacementResult[] | undefined
+  // Re-derive after guard for type narrowing (used after early return)
+  const safePlacements = raceResults?.placements as PlacementResult[]
   const betResults = (raceResults?.betResults as BetResult[]) || []
   const eliminatedPlayers = raceResults?.eliminatedPlayers || []
   const myPlacement = placements?.find((p) => p.playerId === playerId)
@@ -151,7 +154,7 @@ export function ResultsPhase() {
           <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-center">Final Standings</h2>
 
           <div className="space-y-2 sm:space-y-3">
-            {placements
+            {safePlacements
               .sort((a, b) => a.position - b.position)
               .map((placement) => {
                 const isYou = placement.playerId === playerId
@@ -208,7 +211,7 @@ export function ResultsPhase() {
             </h3>
             <div className="flex flex-wrap gap-2 justify-center">
               {eliminatedPlayers.map((playerIdElim) => {
-                const player = placements.find((p) => p.playerId === playerIdElim)
+                const player = safePlacements.find((p) => p.playerId === playerIdElim)
                 return (
                   <div
                     key={playerIdElim}
@@ -230,7 +233,7 @@ export function ResultsPhase() {
             </div>
             <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-center">
               {Object.entries(playerReadyStatus).map(([pid, ready]) => {
-                const player = placements.find((p) => p.playerId === pid)
+                const player = safePlacements.find((p) => p.playerId === pid)
                 if (!player) return null
 
                 return (
