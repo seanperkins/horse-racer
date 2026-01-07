@@ -101,6 +101,12 @@ export default function GamePageClient({ userId, username }: GamePageClientProps
         break
 
       case 'player_state':
+        console.log('📊 Received player_state:', {
+          gold: message.gold,
+          hearts: message.hearts,
+          reputation: message.reputation,
+          stableSlots: message.stableSlots,
+        })
         setPlayerState({
           gold: message.gold,
           hearts: message.hearts,

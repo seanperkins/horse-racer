@@ -1289,6 +1289,7 @@ export class GameRoom {
     // Send updated player_state to all human players after race results
     for (const [playerId, player] of this.players) {
       if (!player.isAI) {
+        console.log(`📤 Sending player_state to ${playerId}: gold=${player.gold}, hearts=${player.hearts}, reputation=${player.reputation}`)
         this.sendToPlayer(playerId, {
           type: 'player_state',
           gold: player.gold,

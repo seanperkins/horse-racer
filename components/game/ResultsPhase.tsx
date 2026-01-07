@@ -84,7 +84,7 @@ export function ResultsPhase() {
         {myPlacement && (
           <div className="th-panel rounded-lg p-3 sm:p-4 md:p-6 mb-4 sm:mb-6">
             <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 text-center">Your Performance</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 text-center">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4 text-center">
               <div>
                 <div className="text-xs sm:text-sm th-label mb-1">Position</div>
                 <div className="text-xl sm:text-2xl md:text-3xl font-bold">
@@ -102,6 +102,12 @@ export function ResultsPhase() {
                 <div className="text-xs sm:text-sm th-label mb-1">Gold</div>
                 <div className="text-xl sm:text-2xl md:text-3xl font-bold text-[var(--accent-gold)]">
                   +{myPlacement.goldReward}g
+                </div>
+              </div>
+              <div>
+                <div className="text-xs sm:text-sm th-label mb-1">Reputation</div>
+                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-[var(--accent-purple)]">
+                  {myPlacement.position <= 3 ? '+1 ⭐' : '—'}
                 </div>
               </div>
               <div>
