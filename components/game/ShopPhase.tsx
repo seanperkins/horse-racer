@@ -47,6 +47,12 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
     slot?: 'saddle' | 'horseshoes' | 'blinders'
   } | null>(null)
 
+  // Hover state for training preview (shows what stats would look like after training)
+  const [hoveredTraining, setHoveredTraining] = useState<{
+    horse: Horse
+    stat: 'speed' | 'stamina' | 'grit' | 'temper'
+  } | null>(null)
+
   // Mobile preview modal state
   const [mobilePreviewItem, setMobilePreviewItem] = useState<{
     type: 'horse' | 'jockey' | 'equipment'
@@ -79,9 +85,24 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
   }, [horses, hiredJockey, equipment, previewHorse, previewJockey])
 
   // Determine what to show in Strategy Impact Panel
-  const displayHorse = hoveredShopItem?.type === 'horse'
-    ? (hoveredShopItem.data as Horse)
-    : previewHorse
+  // Training preview takes priority - creates a modified horse with the trained stat
+  const getTrainedHorse = (): Horse | null => {
+    if (!hoveredTraining) return null
+    const { horse, stat } = hoveredTraining
+    return {
+      ...horse,
+      stats: {
+        ...horse.stats,
+        [stat]: horse.potential[stat], // Show the stat at its potential value
+      },
+    }
+  }
+
+  const displayHorse = hoveredTraining
+    ? getTrainedHorse()
+    : hoveredShopItem?.type === 'horse'
+      ? (hoveredShopItem.data as Horse)
+      : previewHorse
 
   const displayJockey = hoveredShopItem?.type === 'jockey'
     ? (hoveredShopItem.data as Jockey)
@@ -95,7 +116,7 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
     : previewEquipment
 
   // Show panel if we have a complete loadout OR if we're hovering over an item (even without complete loadout)
-  const showStrategyPanel = (displayHorse && displayJockey) || hoveredShopItem
+  const showStrategyPanel = (displayHorse && displayJockey) || hoveredShopItem || hoveredTraining
 
   const handlePurchase = (unit: ShopUnit) => {
     // Jockeys use hire_jockey message instead
@@ -399,7 +420,10 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
               <>
                 {/* Horses Inventory */}
                 <div className="th-panel rounded-lg p-3 sm:p-4 md:p-6">
-                  <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">🐴 Horses ({horses.length})</h2>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 sm:mb-4">
+                    <h2 className="text-lg sm:text-xl font-bold">🐴 Horses ({horses.length})</h2>
+                    <StableCapacityBar sendMessage={sendMessage} inline />
+                  </div>
                   {horses.length === 0 ? (
                     <div className="text-center th-label py-6 sm:py-8 text-sm sm:text-base">No horses owned. Buy some from the shop!</div>
                   ) : (
@@ -419,6 +443,13 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
                             onPurchase={() => handleSell(horse.id)}
                             isInventory
                             onTrain={handleTrain}
+                            onTrainHover={(h, stat) => {
+                              if (h && stat) {
+                                setHoveredTraining({ horse: h, stat })
+                              } else {
+                                setHoveredTraining(null)
+                              }
+                            }}
                             currentGold={gold}
                             isSelected={previewHorse?.id === horse.id}
                           />
@@ -512,6 +543,7 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
                 previewJockey={previewJockey}
                 previewEquipment={previewEquipment}
                 hoveredItem={hoveredShopItem}
+                hoveredTraining={hoveredTraining}
                 displayHorse={displayHorse}
                 displayJockey={displayJockey}
                 displayEquipment={displayEquipment}
@@ -614,6 +646,7 @@ function HorseCard({
   onPurchase,
   isInventory = false,
   onTrain,
+  onTrainHover,
   currentGold = 0,
   onPreview,
   showPreviewButton = false,
@@ -625,6 +658,7 @@ function HorseCard({
   onPurchase: () => void
   isInventory?: boolean
   onTrain?: (horseId: string, stat: 'speed' | 'stamina' | 'grit' | 'temper') => void
+  onTrainHover?: (horse: Horse, stat: 'speed' | 'stamina' | 'grit' | 'temper') => void
   currentGold?: number
   onPreview?: () => void
   showPreviewButton?: boolean
@@ -760,6 +794,8 @@ function HorseCard({
                   }
                   onTrain(horse.id, stat)
                 }}
+                onMouseEnter={() => onTrainHover?.(horse, stat)}
+                onMouseLeave={() => onTrainHover?.(null as any, null as any)}
                 disabled={currentGold < trainCost}
                 className="w-full text-sm px-2 py-1 bg-yellow-600 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed rounded flex justify-between items-center"
               >
@@ -787,12 +823,17 @@ function HorseCard({
             {isInventory ? `Sell ${cost}g` : `Buy ${cost}g`}
           </button>
           {canTrain && (
-            <button
-              onClick={() => setShowTraining(!showTraining)}
-              className="min-h-11 min-w-11 px-3 py-2.5 bg-yellow-600 hover:bg-yellow-500 active:bg-yellow-400 rounded font-bold text-sm sm:text-base"
+            <InfoTooltip
+              title="Training"
+              description="Train your horse to improve stats up to their genetic potential. Higher stats cost more gold."
             >
-              {showTraining ? '✕' : '⬆'}
-            </button>
+              <button
+                onClick={() => setShowTraining(!showTraining)}
+                className="min-h-11 min-w-11 px-3 py-2.5 bg-yellow-600 hover:bg-yellow-500 active:bg-yellow-400 rounded font-bold text-sm sm:text-base"
+              >
+                {showTraining ? '✕' : '⬆'}
+              </button>
+            </InfoTooltip>
           )}
         </div>
       </div>
@@ -1016,6 +1057,7 @@ function ShopComparisonPanel({
   previewJockey,
   previewEquipment,
   hoveredItem,
+  hoveredTraining,
   displayHorse,
   displayJockey,
   displayEquipment,
@@ -1026,6 +1068,7 @@ function ShopComparisonPanel({
   previewJockey: Jockey | null
   previewEquipment: { saddle?: Equipment; horseshoes?: Equipment; blinders?: Equipment }
   hoveredItem: { type: string; data: any; slot?: string } | null
+  hoveredTraining?: { horse: Horse; stat: 'speed' | 'stamina' | 'grit' | 'temper' } | null
   displayHorse: Horse | null
   displayJockey: Jockey | null
   displayEquipment: { saddle?: Equipment; horseshoes?: Equipment; blinders?: Equipment }
@@ -1038,9 +1081,12 @@ function ShopComparisonPanel({
   // Calculate hovered stats
   const hoveredStats = useStrategyImpact(displayHorse, displayJockey, displayEquipment, strategy)
 
+  // Check if we're hovering over anything (shop item OR training)
+  const isHovering = hoveredItem || hoveredTraining
+
   // Helper to format delta
   const formatDelta = (current: number | undefined, hovered: number | undefined) => {
-    if (current === undefined || hovered === undefined || !hoveredItem) return null
+    if (current === undefined || hovered === undefined || !isHovering) return null
     const delta = hovered - current
     if (Math.abs(delta) < 0.01) return null
     return delta
@@ -1130,7 +1176,11 @@ function ShopComparisonPanel({
   return (
     <div className="th-panel rounded-lg p-4 shadow-2xl max-w-md">
       <h3 className="font-bold mb-3 text-sm">
-        {hoveredItem ? '👀 Preview' : '📊 Current Loadout'}
+        {hoveredTraining
+          ? `⬆ Training ${hoveredTraining.stat.charAt(0).toUpperCase() + hoveredTraining.stat.slice(1)}`
+          : hoveredItem
+            ? '👀 Preview'
+            : '📊 Current Loadout'}
       </h3>
 
       {/* Compact loadout summary - same format for hover and non-hover */}
@@ -1205,25 +1255,25 @@ function ShopComparisonPanel({
           <div className="space-y-2">
             <StatRow
               label="Speed"
-              value={hoveredItem ? hoveredStats.speedBreakdown?.final || 0 : currentStats.speedBreakdown?.final || 0}
+              value={isHovering ? hoveredStats.speedBreakdown?.final || 0 : currentStats.speedBreakdown?.final || 0}
               delta={formatDelta(currentStats.speedBreakdown?.final, hoveredStats.speedBreakdown?.final)}
               tooltip={statDescriptions['Speed']}
             />
             <StatRow
               label="Stamina"
-              value={hoveredItem ? hoveredStats.staminaBreakdown?.final || 0 : currentStats.staminaBreakdown?.final || 0}
+              value={isHovering ? hoveredStats.staminaBreakdown?.final || 0 : currentStats.staminaBreakdown?.final || 0}
               delta={formatDelta(currentStats.staminaBreakdown?.final, hoveredStats.staminaBreakdown?.final)}
               tooltip={statDescriptions['Stamina']}
             />
             <StatRow
               label="Grit"
-              value={hoveredItem ? hoveredStats.gritBreakdown?.final || 0 : currentStats.gritBreakdown?.final || 0}
+              value={isHovering ? hoveredStats.gritBreakdown?.final || 0 : currentStats.gritBreakdown?.final || 0}
               delta={formatDelta(currentStats.gritBreakdown?.final, hoveredStats.gritBreakdown?.final)}
               tooltip={statDescriptions['Grit']}
             />
             <StatRow
               label="Temper"
-              value={hoveredItem ? hoveredStats.temperBreakdown?.final || 0 : currentStats.temperBreakdown?.final || 0}
+              value={isHovering ? hoveredStats.temperBreakdown?.final || 0 : currentStats.temperBreakdown?.final || 0}
               delta={formatDelta(currentStats.temperBreakdown?.final, hoveredStats.temperBreakdown?.final)}
               tooltip={statDescriptions['Temper']}
             />
@@ -1315,26 +1365,26 @@ function ShopComparisonPanel({
           <div className="space-y-2">
             <StatRow
               label="Effective Speed"
-              value={hoveredItem && hoveredStats.derivedStats ? hoveredStats.derivedStats.baseSpeed.toFixed(1) : currentStats.derivedStats?.baseSpeed.toFixed(1) || '0'}
+              value={isHovering && hoveredStats.derivedStats ? hoveredStats.derivedStats.baseSpeed.toFixed(1) : currentStats.derivedStats?.baseSpeed.toFixed(1) || '0'}
               delta={formatDelta(currentStats.derivedStats?.baseSpeed, hoveredStats.derivedStats?.baseSpeed)}
               tooltip={statDescriptions['Effective Speed']}
             />
             <StatRow
               label="Stamina Pool"
-              value={hoveredItem && hoveredStats.derivedStats ? hoveredStats.derivedStats.staminaPool.toFixed(1) : currentStats.derivedStats?.staminaPool.toFixed(1) || '0'}
+              value={isHovering && hoveredStats.derivedStats ? hoveredStats.derivedStats.staminaPool.toFixed(1) : currentStats.derivedStats?.staminaPool.toFixed(1) || '0'}
               delta={formatDelta(currentStats.derivedStats?.staminaPool, hoveredStats.derivedStats?.staminaPool)}
               tooltip={statDescriptions['Stamina Pool']}
             />
             <StatRow
               label="Burn Rate"
-              value={hoveredItem && hoveredStats.derivedStats ? `${hoveredStats.derivedStats.burnRate.toFixed(2)}/tk` : `${currentStats.derivedStats?.burnRate.toFixed(2) || '0'}/tk`}
+              value={isHovering && hoveredStats.derivedStats ? `${hoveredStats.derivedStats.burnRate.toFixed(2)}/tk` : `${currentStats.derivedStats?.burnRate.toFixed(2) || '0'}/tk`}
               delta={formatDelta(currentStats.derivedStats?.burnRate, hoveredStats.derivedStats?.burnRate)}
               inverse={true}
               tooltip={statDescriptions['Burn Rate']}
             />
             <StatRow
               label="Efficiency"
-              value={hoveredItem && hoveredStats.derivedStats ? `${(hoveredStats.derivedStats.efficiency * 100).toFixed(0)}%` : `${((currentStats.derivedStats?.efficiency || 0) * 100).toFixed(0)}%`}
+              value={isHovering && hoveredStats.derivedStats ? `${(hoveredStats.derivedStats.efficiency * 100).toFixed(0)}%` : `${((currentStats.derivedStats?.efficiency || 0) * 100).toFixed(0)}%`}
               delta={formatDelta(currentStats.derivedStats ? currentStats.derivedStats.efficiency * 100 : undefined, hoveredStats.derivedStats ? hoveredStats.derivedStats.efficiency * 100 : undefined)}
               tooltip={statDescriptions['Efficiency']}
             />
