@@ -4,11 +4,11 @@ import { generateHorse } from '@/game/generators'
 
 describe('Shop System', () => {
   describe('generateShopInventory', () => {
-    it('should generate 5 horses, 3 jockeys, and 3 equipment items', () => {
+    it('should generate 5 horses, 4 jockeys, and 3 equipment items', () => {
       const inventory = generateShopInventory(1)
 
       expect(inventory.horses).toHaveLength(5)
-      expect(inventory.jockeys).toHaveLength(3)
+      expect(inventory.jockeys).toHaveLength(4) // Includes free drunken jockey
       expect(inventory.equipment).toHaveLength(3)
     })
 
@@ -41,8 +41,9 @@ describe('Shop System', () => {
         expect(jockey.stats.timing).toBeGreaterThanOrEqual(1)
         expect(jockey.stats.timing).toBeLessThanOrEqual(10)
         expect(jockey.stats.weight).toBeGreaterThanOrEqual(1)
-        expect(jockey.hireCost).toBeGreaterThan(0)
-        expect(jockey.upkeepCost).toBeGreaterThan(0)
+        // Jockeys are now free to hire and maintain (economy rebalancing)
+        expect(jockey.hireCost).toBe(0)
+        expect(jockey.upkeepCost).toBe(0)
       })
     })
 
@@ -83,7 +84,7 @@ describe('Shop System', () => {
       const equipmentIds = new Set(inventory.equipment.map(e => e.id))
 
       expect(horseIds.size).toBe(5)
-      expect(jockeyIds.size).toBe(3)
+      expect(jockeyIds.size).toBe(4) // Includes free drunken jockey
       expect(equipmentIds.size).toBe(3)
     })
   })

@@ -307,10 +307,9 @@ export function generateJockey(quality: 1 | 2 | 3 | 4 = 2, trait?: JockeyTrait):
     ? traits[Math.floor(Math.random() * traits.length)]
     : trait
 
-  // Calculate hire and upkeep costs based on quality
-  // Hire cost is cheaper than old purchase cost, upkeep is per-round
-  const hireCost = quality === 1 ? 1 : quality === 2 ? 2 : quality === 3 ? 3 : 4
-  const upkeepCost = quality === 1 ? 1 : quality === 2 ? 1 : quality === 3 ? 2 : 2
+  // Jockeys are now free to hire and maintain (economy rebalancing)
+  const hireCost = 0
+  const upkeepCost = 0
 
   return {
     id,

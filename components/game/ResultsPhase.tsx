@@ -17,6 +17,8 @@ interface BetResult {
   playerId: string
   won: boolean
   payout: number
+  reputationEarned?: number
+  isHeartBet?: boolean
 }
 
 export function ResultsPhase() {
@@ -122,18 +124,18 @@ export function ResultsPhase() {
                 {myBetResult.won ? (
                   <div className="flex items-center justify-between">
                     <div className="font-bold text-sm sm:text-base text-[var(--accent-green)]">✓ Bet Won!</div>
-                    <div className="text-base sm:text-lg font-bold text-[var(--accent-gold)]">
-                      +{myBetResult.payout}g
+                    <div className="text-base sm:text-lg font-bold text-[var(--accent-purple)]">
+                      {myBetResult.isHeartBet ? '+1 ❤️' : `+${myBetResult.reputationEarned || 0} ⭐`}
                     </div>
                   </div>
-                ) : myBetResult.payout < 0 ? (
+                ) : (
                   <div className="flex items-center justify-between">
                     <div className="font-bold text-sm sm:text-base text-[var(--accent-red)]">✗ Bet Lost</div>
-                    <div className="text-base sm:text-lg font-bold text-[var(--accent-red)]">
-                      {myBetResult.payout}g
+                    <div className="text-base sm:text-lg font-bold th-label">
+                      No penalty
                     </div>
                   </div>
-                ) : null}
+                )}
               </div>
             )}
 

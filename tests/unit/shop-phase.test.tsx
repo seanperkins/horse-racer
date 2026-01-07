@@ -43,8 +43,8 @@ describe('ShopPhase', () => {
       id: 'j1',
       name: 'Test Jockey',
       stats: { skill: 2, timing: 2, weight: 55 },
-      hireCost: 5,
-      upkeepCost: 1,
+      hireCost: 0, // Jockeys are now free to hire
+      upkeepCost: 0, // No upkeep costs
     }
 
     const equipment: Equipment = {
@@ -70,22 +70,24 @@ describe('ShopPhase', () => {
     }
   })
 
-  it('disables hire when gold is insufficient', () => {
+  it('shows free hire button for jockeys', () => {
     mockState.gold = 2
 
     render(<ShopPhase sendMessage={vi.fn()} />)
 
-    const hireButton = screen.getByRole('button', { name: /Hire 5g/i })
-    expect(hireButton).toBeDisabled()
+    // Jockeys are now free to hire, so button should say "Hire" without cost
+    const hireButton = screen.getByRole('button', { name: /Hire$/i })
+    expect(hireButton).toBeEnabled()
   })
 
-  it('sends a hire message when the player can afford a jockey', async () => {
+  it('sends a hire message when clicking hire button', async () => {
     const user = userEvent.setup()
     const sendMessage = vi.fn()
 
     render(<ShopPhase sendMessage={sendMessage} />)
 
-    const hireButton = screen.getByRole('button', { name: /Hire 5g/i })
+    // Jockeys are now free to hire
+    const hireButton = screen.getByRole('button', { name: /Hire$/i })
     await user.click(hireButton)
 
     expect(sendMessage).toHaveBeenCalledWith({

@@ -1245,6 +1245,26 @@ export class GameRoom {
     this.cachedPrecomputedData = null
     this.playersAnimationComplete = new Set()
 
+    // Send updated player_state to all human players after race results
+    for (const [playerId, player] of this.players) {
+      if (!player.isAI && player.connection) {
+        player.connection.send(JSON.stringify({
+          type: 'player_state',
+          gold: player.gold,
+          hearts: player.hearts,
+          reputation: player.reputation,
+          stableSlots: player.stableSlots,
+          inventory: {
+            horses: player.horses,
+            hiredJockey: player.hiredJockey,
+            equipment: player.equipment,
+          },
+          wins: player.betWins,
+          currentRound: this.currentRound,
+        }))
+      }
+    }
+
     // AI players auto-ready for next round
     for (const [playerId, player] of this.players) {
       if (player.isAI && !player.eliminated) {
