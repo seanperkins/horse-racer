@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useGameStore } from '@/lib/store/gameStore'
 import { useAudioStore } from '@/lib/store/audioStore'
-import { StrategyImpactPanel } from './StrategyImpactPanel'
+import { useStrategyImpact } from '@/lib/hooks/useStrategyImpact'
 import type { Horse, Jockey, Equipment, RaceStrategy } from '@/types/game'
 
 interface PreparationPhaseProps {
@@ -133,84 +133,42 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
   // Off-canvas preview panel state
   const [isPanelOpen, setIsPanelOpen] = useState(false)
 
-  const showPreview = selectedHorse && selectedJockey
+  // Hover state for preview comparison
+  const [hoveredItem, setHoveredItem] = useState<{
+    type: 'horse' | 'equipment'
+    data: Horse | Equipment
+    slot?: 'saddle' | 'horseshoes' | 'blinders'
+  } | null>(null)
+
+  // Determine what to show in preview panel
+  const displayHorse = hoveredItem?.type === 'horse'
+    ? (hoveredItem.data as Horse)
+    : selectedHorse
+
+  const displayEquipment = hoveredItem?.type === 'equipment'
+    ? {
+        ...selectedEquipment,
+        [hoveredItem.slot!]: hoveredItem.data as Equipment,
+      }
+    : selectedEquipment
+
+  // Always show preview panel - it shows current loadout regardless of selection state
+  const showPreview = true
 
   return (
     <div className="min-h-screen p-2 sm:p-4 md:p-8 th-bg">
       <div className="max-w-7xl mx-auto">
-        {/* Track Info */}
-        {currentTrack && (
-          <div className="th-panel rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
-            <div className="flex justify-between items-start gap-4">
-              <div className="flex-1">
-                <h2 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2">{currentTrack.name}</h2>
-                <div className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm th-label">
-                  <span>{currentTrack.category}</span>
-                  <span>•</span>
-                  <span>{currentTrack.surface.replace('_', ' ')}</span>
-                  <span>•</span>
-                  <span>{currentTrack.distance}f</span>
-                </div>
-                {currentTrack.description && (
-                  <p className="mt-2 text-xs sm:text-sm opacity-80 hidden sm:block">{currentTrack.description}</p>
-                )}
-              </div>
-
-              {/* Preview toggle button - visible on mobile/tablet when preview is available */}
-              {showPreview && (
-                <button
-                  onClick={() => setIsPanelOpen(!isPanelOpen)}
-                  className="lg:hidden th-button min-h-11 px-4 py-2.5 rounded-lg font-bold text-sm"
-                >
-                  {isPanelOpen ? '✕' : '📊'}
-                </button>
-              )}
-            </div>
+        {/* Preview toggle button - visible on mobile/tablet when preview is available */}
+        {showPreview && (
+          <div className="lg:hidden flex justify-end mb-4">
+            <button
+              onClick={() => setIsPanelOpen(!isPanelOpen)}
+              className="th-button min-h-11 px-4 py-2.5 rounded-lg font-bold text-sm"
+            >
+              {isPanelOpen ? '✕' : '📊 Preview'}
+            </button>
           </div>
         )}
-
-        {/* Current Loadout Summary - compact single card */}
-        <div className="th-panel rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
-          <h3 className="text-sm font-bold th-label mb-2">Current Loadout</h3>
-          <div className="space-y-1 text-sm">
-            <div className="flex items-center gap-2">
-              <span className="w-16 text-xs th-muted">Horse:</span>
-              <span className={selectedHorse ? 'th-label' : 'th-muted italic'}>
-                {selectedHorse ? `${selectedHorse.name} (T${selectedHorse.tier})` : 'None selected'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-16 text-xs th-muted">Jockey:</span>
-              <span className={selectedJockey ? 'th-label' : 'th-muted italic'}>
-                {selectedJockey ? selectedJockey.name : 'None hired'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-16 text-xs th-muted">Saddle:</span>
-              <span className={selectedEquipment.saddle ? 'th-label' : 'th-muted'}>
-                {selectedEquipment.saddle?.name || '—'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-16 text-xs th-muted">Shoes:</span>
-              <span className={selectedEquipment.horseshoes ? 'th-label' : 'th-muted'}>
-                {selectedEquipment.horseshoes?.name || '—'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-16 text-xs th-muted">Blinders:</span>
-              <span className={selectedEquipment.blinders ? 'th-label' : 'th-muted'}>
-                {selectedEquipment.blinders?.name || '—'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-16 text-xs th-muted">Strategy:</span>
-              <span className="th-label">
-                {STRATEGY_PRESETS.find(p => JSON.stringify(p.strategy) === JSON.stringify(strategy))?.name || 'Custom'}
-              </span>
-            </div>
-          </div>
-        </div>
 
         {/* Two-column layout: Content on left, Preview on right (desktop only) */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 lg:gap-6">
@@ -227,6 +185,8 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
                   <div
                     key={horse.id}
                     onClick={() => setSelectedHorse(horse)}
+                    onMouseEnter={() => setHoveredItem({ type: 'horse', data: horse })}
+                    onMouseLeave={() => setHoveredItem(null)}
                     className={`p-3 sm:p-4 rounded border-2 cursor-pointer transition active:scale-[0.98] ${
                       selectedHorse?.id === horse.id
                         ? 'border-[var(--accent-green)] bg-[var(--accent-green)]/10'
@@ -297,6 +257,8 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
                   <div
                     key={item.id}
                     onClick={() => setSelectedEquipment({ ...selectedEquipment, saddle: item })}
+                    onMouseEnter={() => setHoveredItem({ type: 'equipment', data: item, slot: 'saddle' })}
+                    onMouseLeave={() => setHoveredItem(null)}
                     className={`min-h-[44px] p-2.5 sm:p-3 rounded border cursor-pointer active:scale-[0.98] transition ${
                       selectedEquipment.saddle?.id === item.id
                         ? 'border-[var(--accent-green)] bg-[var(--accent-green)]/10'
@@ -333,6 +295,8 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
                   <div
                     key={item.id}
                     onClick={() => setSelectedEquipment({ ...selectedEquipment, horseshoes: item })}
+                    onMouseEnter={() => setHoveredItem({ type: 'equipment', data: item, slot: 'horseshoes' })}
+                    onMouseLeave={() => setHoveredItem(null)}
                     className={`min-h-[44px] p-2.5 sm:p-3 rounded border cursor-pointer active:scale-[0.98] transition ${
                       selectedEquipment.horseshoes?.id === item.id
                         ? 'border-[var(--accent-green)] bg-[var(--accent-green)]/10'
@@ -369,6 +333,8 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
                   <div
                     key={item.id}
                     onClick={() => setSelectedEquipment({ ...selectedEquipment, blinders: item })}
+                    onMouseEnter={() => setHoveredItem({ type: 'equipment', data: item, slot: 'blinders' })}
+                    onMouseLeave={() => setHoveredItem(null)}
                     className={`min-h-[44px] p-2.5 sm:p-3 rounded border cursor-pointer active:scale-[0.98] transition ${
                       selectedEquipment.blinders?.id === item.id
                         ? 'border-[var(--accent-green)] bg-[var(--accent-green)]/10'
@@ -509,11 +475,15 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
                     </svg>
                   </button>
 
-                  <StrategyImpactPanel
-                    horse={selectedHorse}
-                    jockey={selectedJockey}
-                    equipment={selectedEquipment}
+                  <PreparationComparisonPanel
+                    selectedHorse={selectedHorse}
+                    selectedJockey={selectedJockey}
+                    selectedEquipment={selectedEquipment}
+                    hoveredItem={hoveredItem}
+                    displayHorse={displayHorse}
+                    displayEquipment={displayEquipment}
                     strategy={strategy}
+                    currentTrack={currentTrack}
                   />
                 </div>
               </div>
@@ -521,6 +491,242 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+// Preparation Comparison Panel Component
+function PreparationComparisonPanel({
+  selectedHorse,
+  selectedJockey,
+  selectedEquipment,
+  hoveredItem,
+  displayHorse,
+  displayEquipment,
+  strategy,
+  currentTrack,
+}: {
+  selectedHorse: Horse | null
+  selectedJockey: Jockey | null
+  selectedEquipment: { saddle?: Equipment; horseshoes?: Equipment; blinders?: Equipment }
+  hoveredItem: { type: string; data: any; slot?: string } | null
+  displayHorse: Horse | null
+  displayEquipment: { saddle?: Equipment; horseshoes?: Equipment; blinders?: Equipment }
+  strategy: RaceStrategy
+  currentTrack: any
+}) {
+  // Calculate current selected stats
+  const currentStats = useStrategyImpact(selectedHorse, selectedJockey, selectedEquipment, strategy)
+
+  // Calculate hovered/display stats
+  const hoveredStats = useStrategyImpact(displayHorse, selectedJockey, displayEquipment, strategy)
+
+  // Helper to format delta
+  const formatDelta = (current: number | undefined, hovered: number | undefined) => {
+    if (current === undefined || hovered === undefined || !hoveredItem) return null
+    const delta = hovered - current
+    if (Math.abs(delta) < 0.01) return null
+    return delta
+  }
+
+  // Stat descriptions for tooltips
+  const statDescriptions: Record<string, string> = {
+    'Speed': 'Base movement speed - higher is better',
+    'Stamina': 'Energy pool for maintaining pace - higher is better',
+    'Grit': 'Ability to push through fatigue - higher is better',
+    'Temper': 'Consistency and control - higher is more stable',
+    'Effective Speed': 'Final speed after all modifiers',
+    'Stamina Pool': 'Total available energy for the race',
+    'Burn Rate': 'Energy consumed per tick - lower is better',
+    'Efficiency': 'How effectively stamina is converted to speed - higher is better',
+  }
+
+  const DeltaDisplay = ({ delta, inverse = false }: { delta: number | null; inverse?: boolean }) => {
+    if (delta === null) return <span className="w-16 text-right text-xs th-label">-</span>
+    const isPositive = inverse ? delta < 0 : delta > 0
+    return (
+      <span className={`w-16 text-right text-xs font-semibold ${isPositive ? 'text-[var(--accent-green)]' : 'text-[var(--accent-red)]'}`}>
+        {delta > 0 ? '+' : ''}{delta.toFixed(2)}
+      </span>
+    )
+  }
+
+  const StatRow = ({
+    label,
+    value,
+    delta,
+    inverse = false,
+  }: {
+    label: string
+    value: string | number
+    delta: number | null
+    inverse?: boolean
+  }) => {
+    return (
+      <div className="flex justify-between items-center text-sm">
+        <span className="th-label">{label}</span>
+        <div className="flex items-center gap-2">
+          <span className="font-bold tabular-nums">{value}</span>
+          <DeltaDisplay delta={delta} inverse={inverse} />
+        </div>
+      </div>
+    )
+  }
+
+  // Get strategy preset name
+  const getStrategyName = () => {
+    const presets = [
+      { name: 'Front-Runner', strategy: { start: 'burst', mid: 'push', finish: 'maintain' } },
+      { name: 'Closer', strategy: { start: 'hang_back', mid: 'conserve', finish: 'sprint' } },
+      { name: 'Steady', strategy: { start: 'steady', mid: 'react', finish: 'maintain' } },
+      { name: 'Chaos', strategy: { start: 'burst', mid: 'push', finish: 'gamble' } },
+    ]
+    const match = presets.find(p => JSON.stringify(p.strategy) === JSON.stringify(strategy))
+    return match?.name || 'Custom'
+  }
+
+  return (
+    <div className="th-panel rounded-lg p-4 shadow-2xl max-w-md">
+      <h3 className="font-bold mb-3 text-sm">
+        {hoveredItem ? '👀 Preview' : '📊 Current Loadout'}
+      </h3>
+
+      {/* Compact loadout summary */}
+      <div className="mb-4 space-y-1.5 text-sm">
+        <div className="flex items-center gap-2">
+          <span className="w-14 text-xs th-muted">Horse:</span>
+          <span className={displayHorse ? 'th-label' : 'th-muted italic'}>
+            {displayHorse ? `${displayHorse.name} (T${displayHorse.tier})` : '—'}
+          </span>
+          {hoveredItem?.type === 'horse' && selectedHorse && (
+            <span className="text-xs text-yellow-400">← preview</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-14 text-xs th-muted">Jockey:</span>
+          <span className={selectedJockey ? 'th-label' : 'th-muted italic'}>
+            {selectedJockey?.name || '—'}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-14 text-xs th-muted">Saddle:</span>
+          <span className={displayEquipment.saddle ? 'th-label' : 'th-muted'}>
+            {displayEquipment.saddle?.name || '—'}
+          </span>
+          {hoveredItem?.type === 'equipment' && hoveredItem.slot === 'saddle' && selectedEquipment.saddle && (
+            <span className="text-xs text-yellow-400">← preview</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-14 text-xs th-muted">Shoes:</span>
+          <span className={displayEquipment.horseshoes ? 'th-label' : 'th-muted'}>
+            {displayEquipment.horseshoes?.name || '—'}
+          </span>
+          {hoveredItem?.type === 'equipment' && hoveredItem.slot === 'horseshoes' && selectedEquipment.horseshoes && (
+            <span className="text-xs text-yellow-400">← preview</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-14 text-xs th-muted">Blinders:</span>
+          <span className={displayEquipment.blinders ? 'th-label' : 'th-muted'}>
+            {displayEquipment.blinders?.name || '—'}
+          </span>
+          {hoveredItem?.type === 'equipment' && hoveredItem.slot === 'blinders' && selectedEquipment.blinders && (
+            <span className="text-xs text-yellow-400">← preview</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-14 text-xs th-muted">Strategy:</span>
+          <span className="th-label">{getStrategyName()}</span>
+        </div>
+        {/* Terrain */}
+        {currentTrack && (
+          <div className="flex items-center gap-2">
+            <span className="w-14 text-xs th-muted">Terrain:</span>
+            <span className="th-label capitalize">{currentTrack.surface?.replace('_', ' ')}</span>
+            {hoveredStats.terrainAlignment && (
+              <span className={`text-xs font-semibold ${
+                hoveredStats.terrainAlignment.modifier < 1.0 ? 'text-[var(--accent-red)]' :
+                hoveredStats.terrainAlignment.modifier > 1.0 ? 'text-[var(--accent-green)]' : 'th-muted'
+              }`}>
+                ({hoveredStats.terrainAlignment.modifier >= 1.0 ? '+' : ''}
+                {((hoveredStats.terrainAlignment.modifier - 1) * 100).toFixed(0)}%)
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Base Stats */}
+      {(currentStats.speedBreakdown || hoveredStats.speedBreakdown) && (
+        <div className="mb-4">
+          <h4 className="text-xs th-label mb-2 uppercase tracking-wide">Base Stats</h4>
+          <div className="space-y-1">
+            <StatRow
+              label="Speed"
+              value={hoveredItem ? hoveredStats.speedBreakdown?.final || 0 : currentStats.speedBreakdown?.final || 0}
+              delta={formatDelta(currentStats.speedBreakdown?.final, hoveredStats.speedBreakdown?.final)}
+            />
+            <StatRow
+              label="Stamina"
+              value={hoveredItem ? hoveredStats.staminaBreakdown?.final || 0 : currentStats.staminaBreakdown?.final || 0}
+              delta={formatDelta(currentStats.staminaBreakdown?.final, hoveredStats.staminaBreakdown?.final)}
+            />
+            <StatRow
+              label="Grit"
+              value={hoveredItem ? hoveredStats.gritBreakdown?.final || 0 : currentStats.gritBreakdown?.final || 0}
+              delta={formatDelta(currentStats.gritBreakdown?.final, hoveredStats.gritBreakdown?.final)}
+            />
+            <StatRow
+              label="Temper"
+              value={hoveredItem ? hoveredStats.temperBreakdown?.final || 0 : currentStats.temperBreakdown?.final || 0}
+              delta={formatDelta(currentStats.temperBreakdown?.final, hoveredStats.temperBreakdown?.final)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Derived Stats */}
+      {(currentStats.derivedStats || hoveredStats.derivedStats) && (
+        <div className="mb-4">
+          <h4 className="text-xs th-label mb-2 uppercase tracking-wide">Derived Stats</h4>
+          <div className="space-y-1">
+            <StatRow
+              label="Effective Speed"
+              value={hoveredItem && hoveredStats.derivedStats ? hoveredStats.derivedStats.baseSpeed.toFixed(1) : currentStats.derivedStats?.baseSpeed.toFixed(1) || '0'}
+              delta={formatDelta(currentStats.derivedStats?.baseSpeed, hoveredStats.derivedStats?.baseSpeed)}
+            />
+            <StatRow
+              label="Stamina Pool"
+              value={hoveredItem && hoveredStats.derivedStats ? hoveredStats.derivedStats.staminaPool.toFixed(1) : currentStats.derivedStats?.staminaPool.toFixed(1) || '0'}
+              delta={formatDelta(currentStats.derivedStats?.staminaPool, hoveredStats.derivedStats?.staminaPool)}
+            />
+            <StatRow
+              label="Burn Rate"
+              value={hoveredItem && hoveredStats.derivedStats ? `${hoveredStats.derivedStats.burnRate.toFixed(2)}/tk` : `${currentStats.derivedStats?.burnRate.toFixed(2) || '0'}/tk`}
+              delta={formatDelta(currentStats.derivedStats?.burnRate, hoveredStats.derivedStats?.burnRate)}
+              inverse={true}
+            />
+            <StatRow
+              label="Efficiency"
+              value={hoveredItem && hoveredStats.derivedStats ? `${(hoveredStats.derivedStats.efficiency * 100).toFixed(0)}%` : `${((currentStats.derivedStats?.efficiency || 0) * 100).toFixed(0)}%`}
+              delta={formatDelta(currentStats.derivedStats ? currentStats.derivedStats.efficiency * 100 : undefined, hoveredStats.derivedStats ? hoveredStats.derivedStats.efficiency * 100 : undefined)}
+            />
+            <div className="flex justify-between items-center text-sm">
+              <span className="th-label">Consistency</span>
+              <span
+                className={`font-medium ${
+                  (hoveredItem ? hoveredStats : currentStats).derivedStats?.consistency.isStable
+                    ? 'text-[var(--accent-green)]'
+                    : 'text-[var(--accent-orange)]'
+                }`}
+              >
+                {(hoveredItem ? hoveredStats : currentStats).derivedStats?.consistency.isStable ? 'Stable' : 'Volatile'} (±{((hoveredItem ? hoveredStats : currentStats).derivedStats?.consistency.variance || 0) * 100 | 0}%)
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

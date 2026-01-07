@@ -317,7 +317,17 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
 
                 {/* Jockeys */}
                 <div className="th-panel rounded-lg p-3 sm:p-4 md:p-6">
-                  <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">🏇 Jockeys for Hire</h2>
+                  <div className="flex items-center justify-between mb-3 sm:mb-4">
+                    <h2 className="text-lg sm:text-xl font-bold">🏇 Jockeys for Hire</h2>
+                    {hiredJockey && (
+                      <button
+                        onClick={handleFireJockey}
+                        className="text-xs px-3 py-1.5 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors border border-red-500/30"
+                      >
+                        Fire Jockey
+                      </button>
+                    )}
+                  </div>
                   {shopJockeys.length === 0 ? (
                     <div className="text-center th-label py-4">No jockeys available</div>
                   ) : (

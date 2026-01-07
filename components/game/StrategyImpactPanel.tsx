@@ -73,6 +73,18 @@ export function StrategyImpactPanel({
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed)
   const impact = useStrategyImpact(horse, jockey, equipment, strategy)
 
+  // Get strategy preset name
+  const getStrategyName = () => {
+    const presets = [
+      { name: 'Front-Runner', strategy: { start: 'burst', mid: 'push', finish: 'maintain' } },
+      { name: 'Closer', strategy: { start: 'hang_back', mid: 'conserve', finish: 'sprint' } },
+      { name: 'Steady', strategy: { start: 'steady', mid: 'react', finish: 'maintain' } },
+      { name: 'Chaos', strategy: { start: 'burst', mid: 'push', finish: 'gamble' } },
+    ]
+    const match = presets.find(p => JSON.stringify(p.strategy) === JSON.stringify(strategy))
+    return match?.name || 'Custom'
+  }
+
   if (!horse || !jockey) {
     return (
       <div className="th-panel rounded-lg p-4">
@@ -117,6 +129,39 @@ export function StrategyImpactPanel({
       {/* Expanded view */}
       {!isCollapsed && (
         <div className="mt-3 space-y-4">
+          {/* Compact Loadout Summary */}
+          <div className="space-y-1.5 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="w-14 text-xs th-muted">Horse:</span>
+              <span className="th-label">{horse.name} (T{horse.tier})</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-14 text-xs th-muted">Jockey:</span>
+              <span className="th-label">{jockey.name}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-14 text-xs th-muted">Saddle:</span>
+              <span className={equipment.saddle ? 'th-label' : 'th-muted'}>
+                {equipment.saddle?.name || '—'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-14 text-xs th-muted">Shoes:</span>
+              <span className={equipment.horseshoes ? 'th-label' : 'th-muted'}>
+                {equipment.horseshoes?.name || '—'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-14 text-xs th-muted">Blinders:</span>
+              <span className={equipment.blinders ? 'th-label' : 'th-muted'}>
+                {equipment.blinders?.name || '—'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-14 text-xs th-muted">Strategy:</span>
+              <span className="th-label">{getStrategyName()}</span>
+            </div>
+          </div>
           {/* Base Stats */}
           <div>
             <h4 className="text-xs th-label mb-2 uppercase tracking-wide">Base Stats</h4>
@@ -132,7 +177,7 @@ export function StrategyImpactPanel({
           {impact.derivedStats && (
             <div>
               <h4 className="text-xs th-label mb-2 uppercase tracking-wide">Derived Stats</h4>
-              <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span className="th-label">Effective Speed</span>
                   <span className="font-medium">{impact.derivedStats.baseSpeed.toFixed(1)}</span>
@@ -149,7 +194,7 @@ export function StrategyImpactPanel({
                   <span className="th-label">Efficiency</span>
                   <span className="font-medium">{(impact.derivedStats.efficiency * 100).toFixed(0)}%</span>
                 </div>
-                <div className="flex justify-between col-span-2">
+                <div className="flex justify-between">
                   <span className="th-label">Consistency</span>
                   <span
                     className={`font-medium ${
@@ -158,8 +203,7 @@ export function StrategyImpactPanel({
                         : 'text-[var(--accent-orange)]'
                     }`}
                   >
-                    {impact.derivedStats.consistency.isStable ? 'Stable' : 'Volatile'} (
-                    ±{(impact.derivedStats.consistency.variance * 100).toFixed(0)}%)
+                    {impact.derivedStats.consistency.isStable ? 'Stable' : 'Volatile'} (±{(impact.derivedStats.consistency.variance * 100).toFixed(0)}%)
                   </span>
                 </div>
               </div>
