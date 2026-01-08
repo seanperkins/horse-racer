@@ -42,7 +42,7 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
   )
   const playSfx = useAudioStore((state) => state.playSfx)
 
-  const [betType, setBetType] = useState<'win' | 'place' | 'exacta'>('win')
+  const [betType, setBetType] = useState<'win' | 'place' | 'exacta'>('place')
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null)
   const [exactaFirst, setExactaFirst] = useState<string | null>(null)
   const [exactaSecond, setExactaSecond] = useState<string | null>(null)
