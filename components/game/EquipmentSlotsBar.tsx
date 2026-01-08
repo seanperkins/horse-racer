@@ -11,10 +11,10 @@ interface EquipmentSlotsBarProps {
 
 type EquipmentSlot = 'saddle' | 'horseshoes' | 'blinders'
 
-const EQUIPMENT_SLOT_LABELS: Record<EquipmentSlot, string> = {
-  saddle: '🪑 Saddle',
-  horseshoes: '🧲 Horseshoes',
-  blinders: '👁️ Blinders',
+const EQUIPMENT_SLOT_INFO: Record<EquipmentSlot, { icon: string; name: string; description: string }> = {
+  saddle: { icon: '🪑', name: 'Saddle', description: 'Improves stamina and endurance during races' },
+  horseshoes: { icon: '🧲', name: 'Horseshoes', description: 'Boosts speed and acceleration' },
+  blinders: { icon: '👁️', name: 'Blinders', description: 'Increases focus and reduces temper penalties' },
 }
 
 const ALL_EQUIPMENT_SLOTS: EquipmentSlot[] = ['saddle', 'horseshoes', 'blinders']
@@ -47,16 +47,16 @@ export function EquipmentSlotsBar({ sendMessage, inline = false }: EquipmentSlot
         {ALL_EQUIPMENT_SLOTS.map((slot) => {
           const isUnlocked = unlockedEquipmentSlots.includes(slot)
           const canUnlock = reputation >= nextCost && !isUnlocked
-          const icon = EQUIPMENT_SLOT_LABELS[slot].split(' ')[0]
+          const info = EQUIPMENT_SLOT_INFO[slot]
 
           if (isUnlocked) {
             return (
               <span
                 key={slot}
                 className="px-2 py-1 rounded text-xs font-semibold bg-[var(--accent-purple)]/20 text-[var(--accent-purple)] border border-[var(--accent-purple)]/30"
-                title={`${EQUIPMENT_SLOT_LABELS[slot]} - Unlocked`}
+                title={`${info.name} Slot Unlocked - ${info.description}`}
               >
-                {icon} ✓
+                {info.icon} <span className="hidden sm:inline">{info.name}</span> ✓
               </span>
             )
           }
@@ -73,11 +73,11 @@ export function EquipmentSlotsBar({ sendMessage, inline = false }: EquipmentSlot
               }`}
               title={
                 canUnlock
-                  ? `Unlock ${EQUIPMENT_SLOT_LABELS[slot]} for ${nextCost} Reputation`
-                  : `Need ${nextCost} Reputation to unlock`
+                  ? `Unlock ${info.name} Slot (⭐${nextCost}) - ${info.description}`
+                  : `Need ⭐${nextCost} Reputation to unlock ${info.name} - ${info.description}`
               }
             >
-              {icon} ⭐{nextCost}
+              {info.icon} <span className="hidden sm:inline">{info.name}</span> ⭐{nextCost}
             </button>
           )
         })}
@@ -107,6 +107,7 @@ export function EquipmentSlotsBar({ sendMessage, inline = false }: EquipmentSlot
         {ALL_EQUIPMENT_SLOTS.map((slot) => {
           const isUnlocked = unlockedEquipmentSlots.includes(slot)
           const canUnlock = reputation >= nextCost && !isUnlocked
+          const info = EQUIPMENT_SLOT_INFO[slot]
 
           return (
             <div
@@ -116,8 +117,10 @@ export function EquipmentSlotsBar({ sendMessage, inline = false }: EquipmentSlot
                   ? 'bg-[var(--accent-purple)]/20 border-[var(--accent-purple)] text-[var(--accent-purple)]'
                   : 'bg-[var(--bg-secondary)] border-[var(--border)] th-muted'
               }`}
+              title={info.description}
             >
-              <div className="font-semibold">{EQUIPMENT_SLOT_LABELS[slot]}</div>
+              <div className="font-semibold">{info.icon} {info.name}</div>
+              <div className="text-xs opacity-70 mt-0.5 hidden sm:block">{info.description}</div>
               {isUnlocked ? (
                 <div className="text-xs mt-1">✓ Unlocked</div>
               ) : (
@@ -129,6 +132,7 @@ export function EquipmentSlotsBar({ sendMessage, inline = false }: EquipmentSlot
                       ? 'bg-[var(--accent-purple)] text-white hover:bg-[var(--accent-purple)]/80'
                       : 'bg-[var(--bg-tertiary)] text-[var(--text-muted)] cursor-not-allowed'
                   }`}
+                  title={canUnlock ? `Unlock for ⭐${nextCost} Reputation` : `Need ⭐${nextCost} Reputation`}
                 >
                   Unlock ⭐{nextCost}
                 </button>
