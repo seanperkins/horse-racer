@@ -88,6 +88,9 @@ interface GameState {
   setPlayerState: (state: {
     gold: number
     hearts: number
+    reputation?: number
+    stableSlots?: number
+    unlockedEquipmentSlots?: ('saddle' | 'horseshoes' | 'blinders')[]
     inventory: { horses: Horse[]; hiredJockey: Jockey | null; equipment: Equipment[] }
   }) => void
   setShopState: (state: {
@@ -201,6 +204,9 @@ export const useGameStore = create<GameState>((set) => ({
       horses: state.inventory.horses,
       hiredJockey: state.inventory.hiredJockey,
       equipment: state.inventory.equipment,
+      ...(state.reputation !== undefined && { reputation: state.reputation }),
+      ...(state.stableSlots !== undefined && { stableSlots: state.stableSlots }),
+      ...(state.unlockedEquipmentSlots !== undefined && { unlockedEquipmentSlots: state.unlockedEquipmentSlots }),
     }),
 
   setShopState: (state: { units: any[]; playerGold: number; playerUnits?: { horses: Horse[]; hiredJockey: Jockey | null; equipment: Equipment[] } }) => {
@@ -237,7 +243,7 @@ export const useGameStore = create<GameState>((set) => ({
   sendMessage: (message) => {
     const state = useGameStore.getState()
     if (state.ws && state.ws.readyState === WebSocket.OPEN) {
-      state.ws.send(JSON.stringify(message))
+      state.ws.send(JSON.stringify({ ...message, timestamp: Date.now() }))
     }
   },
 

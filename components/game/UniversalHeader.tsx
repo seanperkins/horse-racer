@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { useGameStore } from '@/lib/store/gameStore'
 import { useAudioStore } from '@/lib/store/audioStore'
 import { SettingsMenu } from '@/components/game/SettingsMenu'
@@ -24,7 +25,27 @@ export function UniversalHeader() {
     entryStatus,
     setEntryStatus,
     prepSelection
-  } = useGameStore()
+  } = useGameStore(
+    useShallow((state) => ({
+      currentPhase: state.currentPhase,
+      currentRound: state.currentRound,
+      gold: state.gold,
+      hearts: state.hearts,
+      reputation: state.reputation,
+      currentTrack: state.currentTrack,
+      players: state.players,
+      eliminated: state.eliminated,
+      phaseEndTime: state.phaseEndTime,
+      playerId: state.playerId,
+      playerReadyStatus: state.playerReadyStatus,
+      sendMessage: state.sendMessage,
+      bettingStatus: state.bettingStatus,
+      setBettingStatus: state.setBettingStatus,
+      entryStatus: state.entryStatus,
+      setEntryStatus: state.setEntryStatus,
+      prepSelection: state.prepSelection,
+    }))
+  )
 
   const playSfx = useAudioStore((state) => state.playSfx)
   const [timeLeft, setTimeLeft] = useState(0)

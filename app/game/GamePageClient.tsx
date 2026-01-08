@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { useShallow } from 'zustand/react/shallow'
 import { useWebSocket } from '@/lib/hooks/useWebSocket'
 import { useGameStore } from '@/lib/store/gameStore'
 import { useAudioStore } from '@/lib/store/audioStore'
@@ -34,7 +35,18 @@ export default function GamePageClient({ userId, username }: GamePageClientProps
     setPlayerReadyStatus,
     setWebSocket,
     setPlayerId,
-  } = useGameStore()
+  } = useGameStore(
+    useShallow((state) => ({
+      currentPhase: state.currentPhase,
+      setLobbyState: state.setLobbyState,
+      setGamePhase: state.setGamePhase,
+      setPlayerState: state.setPlayerState,
+      setShopState: state.setShopState,
+      setPlayerReadyStatus: state.setPlayerReadyStatus,
+      setWebSocket: state.setWebSocket,
+      setPlayerId: state.setPlayerId,
+    }))
+  )
 
   // Set playerId in store on mount
   useEffect(() => {
@@ -111,18 +123,11 @@ export default function GamePageClient({ userId, username }: GamePageClientProps
         setPlayerState({
           gold: message.gold,
           hearts: message.hearts,
+          reputation: message.reputation,
+          stableSlots: message.stableSlots,
+          unlockedEquipmentSlots: message.unlockedEquipmentSlots,
           inventory: message.inventory,
         })
-        // Update reputation, stableSlots, and unlockedEquipmentSlots from server
-        if ('reputation' in message) {
-          useGameStore.getState().setReputation(message.reputation)
-        }
-        if ('stableSlots' in message) {
-          useGameStore.getState().setStableSlots(message.stableSlots)
-        }
-        if ('unlockedEquipmentSlots' in message && message.unlockedEquipmentSlots) {
-          useGameStore.getState().setUnlockedEquipmentSlots(message.unlockedEquipmentSlots)
-        }
         break
 
       case 'track_info':
@@ -150,11 +155,12 @@ export default function GamePageClient({ userId, username }: GamePageClientProps
 
       case 'race_results':
         // Store race results for results phase
-        console.log('📊 Received race_results:', message.placements?.length, 'placements')
+        console.log('📊 Received race_results:', message.placements?.length, 'placements', message.events?.length || 0, 'events')
         useGameStore.getState().setRaceResults({
           placements: message.placements,
           betResults: message.betResults,
           eliminatedPlayers: message.eliminatedPlayers,
+          events: message.events,
         })
         break
 

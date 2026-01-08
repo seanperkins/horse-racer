@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { useGameStore } from '@/lib/store/gameStore'
 import { useAudioStore } from '@/lib/store/audioStore'
 import { useStrategyImpact } from '@/lib/hooks/useStrategyImpact'
@@ -38,7 +39,17 @@ const STRATEGY_PRESETS: Array<{
 ]
 
 export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
-  const { horses, hiredJockey, equipment, currentRound, currentTrack, setPrepSelection, entryStatus, lastSubmittedEntry, unlockedEquipmentSlots } = useGameStore()
+  const { horses, hiredJockey, equipment, currentTrack, setPrepSelection, lastSubmittedEntry, unlockedEquipmentSlots } = useGameStore(
+    useShallow((state) => ({
+      horses: state.horses,
+      hiredJockey: state.hiredJockey,
+      equipment: state.equipment,
+      currentTrack: state.currentTrack,
+      setPrepSelection: state.setPrepSelection,
+      lastSubmittedEntry: state.lastSubmittedEntry,
+      unlockedEquipmentSlots: state.unlockedEquipmentSlots,
+    }))
+  )
   const playSfx = useAudioStore((state) => state.playSfx)
 
   // Selection state - restore strategy from last entry if available
@@ -54,7 +65,8 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
   )
   const [customStrategy, setCustomStrategy] = useState(false)
 
-  // Restore previous selection or auto-select best available on mount
+  // Restore previous selection or auto-select best available
+  // Re-runs when horses or lastSubmittedEntry changes (e.g., reconnect, inventory update)
   useEffect(() => {
     // Try to restore from last submitted entry first
     if (lastSubmittedEntry?.horse) {
@@ -62,15 +74,17 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
       const previousHorse = horses.find(h => h.id === lastSubmittedEntry.horse?.id)
       if (previousHorse) {
         setSelectedHorse(previousHorse)
-      } else if (horses.length > 0) {
-        // Previous horse not found, select best available
-        selectBestHorse()
+        return
       }
-    } else if (horses.length > 0 && !selectedHorse) {
-      selectBestHorse()
     }
 
-    function selectBestHorse() {
+    // If current selection is still valid, keep it
+    if (selectedHorse && horses.find(h => h.id === selectedHorse.id)) {
+      return
+    }
+
+    // Otherwise, select best available horse
+    if (horses.length > 0) {
       if (horses.length === 1) {
         setSelectedHorse(horses[0])
       } else {
@@ -82,81 +96,73 @@ export function PreparationPhase({ sendMessage }: PreparationPhaseProps) {
         horsesWithTotal.sort((a, b) => b.totalStats - a.totalStats)
         setSelectedHorse(horsesWithTotal[0].horse)
       }
+    } else {
+      setSelectedHorse(null)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [horses, lastSubmittedEntry])
 
+  // Sync jockey selection with hiredJockey changes
   useEffect(() => {
-    if (hiredJockey && !selectedJockey) {
+    if (hiredJockey) {
       setSelectedJockey(hiredJockey)
+    } else {
+      setSelectedJockey(null)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [hiredJockey])
 
   // Restore equipment from last entry or auto-select if only one of each type
+  // Re-runs when equipment or lastSubmittedEntry changes
   useEffect(() => {
-    const newEquipment = { ...selectedEquipment }
-    let changed = false
-
     const saddleItems = equipment.filter(e => e.slot === 'saddle')
     const horseshoeItems = equipment.filter(e => e.slot === 'horseshoes')
     const blinderItems = equipment.filter(e => e.slot === 'blinders')
 
-    // Try to restore from last entry first
+    const newEquipment: { saddle?: Equipment; horseshoes?: Equipment; blinders?: Equipment } = {}
+
+    // Try to restore from last entry first, then validate against current inventory
     if (lastSubmittedEntry?.equipment) {
       const lastEquip = lastSubmittedEntry.equipment as { saddle?: Equipment; horseshoes?: Equipment; blinders?: Equipment }
-
-      // Restore saddle if still in inventory
       if (lastEquip.saddle) {
-        const foundSaddle = saddleItems.find(e => e.id === lastEquip.saddle?.id)
-        if (foundSaddle) {
-          newEquipment.saddle = foundSaddle
-          changed = true
-        }
+        newEquipment.saddle = saddleItems.find(e => e.id === lastEquip.saddle?.id)
       }
-
-      // Restore horseshoes if still in inventory
       if (lastEquip.horseshoes) {
-        const foundShoes = horseshoeItems.find(e => e.id === lastEquip.horseshoes?.id)
-        if (foundShoes) {
-          newEquipment.horseshoes = foundShoes
-          changed = true
-        }
+        newEquipment.horseshoes = horseshoeItems.find(e => e.id === lastEquip.horseshoes?.id)
       }
-
-      // Restore blinders if still in inventory
       if (lastEquip.blinders) {
-        const foundBlinders = blinderItems.find(e => e.id === lastEquip.blinders?.id)
-        if (foundBlinders) {
-          newEquipment.blinders = foundBlinders
-          changed = true
-        }
+        newEquipment.blinders = blinderItems.find(e => e.id === lastEquip.blinders?.id)
       }
     }
 
-    // Auto-select saddle if exactly one available and none selected
+    // Validate current selection is still in inventory, clear if not
+    if (selectedEquipment.saddle && !saddleItems.find(e => e.id === selectedEquipment.saddle?.id)) {
+      // Current saddle no longer in inventory
+    } else if (selectedEquipment.saddle) {
+      newEquipment.saddle = selectedEquipment.saddle
+    }
+    if (selectedEquipment.horseshoes && !horseshoeItems.find(e => e.id === selectedEquipment.horseshoes?.id)) {
+      // Current horseshoes no longer in inventory
+    } else if (selectedEquipment.horseshoes) {
+      newEquipment.horseshoes = selectedEquipment.horseshoes
+    }
+    if (selectedEquipment.blinders && !blinderItems.find(e => e.id === selectedEquipment.blinders?.id)) {
+      // Current blinders no longer in inventory
+    } else if (selectedEquipment.blinders) {
+      newEquipment.blinders = selectedEquipment.blinders
+    }
+
+    // Auto-select if exactly one available and none selected
     if (saddleItems.length === 1 && !newEquipment.saddle) {
       newEquipment.saddle = saddleItems[0]
-      changed = true
     }
-
-    // Auto-select horseshoes if exactly one available and none selected
     if (horseshoeItems.length === 1 && !newEquipment.horseshoes) {
       newEquipment.horseshoes = horseshoeItems[0]
-      changed = true
     }
-
-    // Auto-select blinders if exactly one available and none selected
     if (blinderItems.length === 1 && !newEquipment.blinders) {
       newEquipment.blinders = blinderItems[0]
-      changed = true
     }
 
-    if (changed) {
-      setSelectedEquipment(newEquipment)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    setSelectedEquipment(newEquipment)
+  }, [equipment, lastSubmittedEntry])
 
   // Update store whenever selections change
   useEffect(() => {

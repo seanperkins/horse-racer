@@ -4,6 +4,7 @@ import { useMemo, useRef, useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
+import { useShallow } from 'zustand/react/shallow'
 import { useGameStore } from '@/lib/store/gameStore'
 import type { ClientMessage } from '@/types/messages'
 
@@ -15,8 +16,16 @@ interface LobbyProps {
 
 export function Lobby({ sendMessage, roomCode, isConnected }: LobbyProps) {
   const { data: session } = useSession()
-  const { players, requiredPlayers, friendCode, isPrivate, playerId, playerName } =
-    useGameStore()
+  const { players, requiredPlayers, friendCode, isPrivate, playerId, playerName } = useGameStore(
+    useShallow((state) => ({
+      players: state.players,
+      requiredPlayers: state.requiredPlayers,
+      friendCode: state.friendCode,
+      isPrivate: state.isPrivate,
+      playerId: state.playerId,
+      playerName: state.playerName,
+    }))
+  )
   const [isReady, setIsReady] = useState(false)
   const [codeInput, setCodeInput] = useState('')
   const [hasJoined, setHasJoined] = useState(false)

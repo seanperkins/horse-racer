@@ -6,7 +6,7 @@ import { PixiRaceRenderer } from './PixiRaceRenderer'
 import type { RaceOutcome } from '@/types/game'
 
 export function RacePhase() {
-  const { raceInputs } = useGameStore()
+  const raceInputs = useGameStore((state) => state.raceInputs)
   const [simulationResult, setSimulationResult] = useState<RaceOutcome | null>(null)
 
   const handleRaceEvent = (_events: any[]) => {

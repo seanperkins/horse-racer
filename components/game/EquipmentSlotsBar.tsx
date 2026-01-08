@@ -1,5 +1,6 @@
 'use client'
 
+import { useShallow } from 'zustand/react/shallow'
 import { useGameStore } from '@/lib/store/gameStore'
 import type { ClientMessage } from '@/types/messages'
 
@@ -19,7 +20,12 @@ const EQUIPMENT_SLOT_LABELS: Record<EquipmentSlot, string> = {
 const ALL_EQUIPMENT_SLOTS: EquipmentSlot[] = ['saddle', 'horseshoes', 'blinders']
 
 export function EquipmentSlotsBar({ sendMessage, inline = false }: EquipmentSlotsBarProps) {
-  const { reputation, unlockedEquipmentSlots } = useGameStore()
+  const { reputation, unlockedEquipmentSlots } = useGameStore(
+    useShallow((state) => ({
+      reputation: state.reputation,
+      unlockedEquipmentSlots: state.unlockedEquipmentSlots,
+    }))
+  )
 
   // Cost depends on how many slots already unlocked: 1st costs 1, 2nd costs 2, 3rd costs 3
   const getUnlockCost = () => unlockedEquipmentSlots.length + 1

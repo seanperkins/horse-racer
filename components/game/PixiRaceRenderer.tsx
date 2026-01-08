@@ -62,7 +62,8 @@ export function PixiRaceRenderer({
   onRaceComplete,
   onRaceEvent,
 }: PixiRaceRendererProps) {
-  const { playerId, sendMessage } = useGameStore();
+  const playerId = useGameStore((state) => state.playerId);
+  const sendMessage = useGameStore((state) => state.sendMessage);
   const canvasRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<PIXI.Application | null>(null);
   const horsesRef = useRef<Map<string, HorseSprite>>(new Map());

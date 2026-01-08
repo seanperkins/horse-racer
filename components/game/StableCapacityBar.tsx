@@ -1,5 +1,6 @@
 'use client'
 
+import { useShallow } from 'zustand/react/shallow'
 import { useGameStore } from '@/lib/store/gameStore'
 import type { ClientMessage } from '@/types/messages'
 
@@ -9,7 +10,14 @@ interface StableCapacityBarProps {
 }
 
 export function StableCapacityBar({ sendMessage, inline = false }: StableCapacityBarProps) {
-  const { horses, stableSlots, maxStableSlots, reputation } = useGameStore()
+  const { horses, stableSlots, maxStableSlots, reputation } = useGameStore(
+    useShallow((state) => ({
+      horses: state.horses,
+      stableSlots: state.stableSlots,
+      maxStableSlots: state.maxStableSlots,
+      reputation: state.reputation,
+    }))
+  )
 
   const currentHorses = horses.length
   const canExpand = stableSlots < maxStableSlots

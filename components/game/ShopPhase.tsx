@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
+import { useShallow } from 'zustand/react/shallow'
 import { useGameStore } from '@/lib/store/gameStore'
 import { useAudioStore } from '@/lib/store/audioStore'
 import { HorizontalStatBars } from './HorizontalStatBars'
@@ -27,8 +28,20 @@ interface ShopUnit {
 }
 
 export function ShopPhase({ sendMessage }: ShopPhaseProps) {
-  const playerId = useGameStore((state) => state.playerId)
-  const { gold, shopUnits, horses, hiredJockey, equipment, currentRound, stableSlots, currentTrack, unlockedEquipmentSlots } = useGameStore()
+  const { playerId, gold, shopUnits, horses, hiredJockey, equipment, currentRound, stableSlots, currentTrack, unlockedEquipmentSlots } = useGameStore(
+    useShallow((state) => ({
+      playerId: state.playerId,
+      gold: state.gold,
+      shopUnits: state.shopUnits,
+      horses: state.horses,
+      hiredJockey: state.hiredJockey,
+      equipment: state.equipment,
+      currentRound: state.currentRound,
+      stableSlots: state.stableSlots,
+      currentTrack: state.currentTrack,
+      unlockedEquipmentSlots: state.unlockedEquipmentSlots,
+    }))
+  )
   const playSfx = useAudioStore((state) => state.playSfx)
   const [selectedTab, setSelectedTab] = useState<'shop' | 'inventory'>('shop')
 

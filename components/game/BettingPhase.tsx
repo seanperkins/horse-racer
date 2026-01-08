@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import toast from 'react-hot-toast'
+import { useShallow } from 'zustand/react/shallow'
 import { useGameStore } from '@/lib/store/gameStore'
 import { useAudioStore } from '@/lib/store/audioStore'
 import type { ClientMessage } from '@/types/messages'
@@ -30,7 +31,15 @@ const BET_REWARDS = {
 }
 
 export function BettingPhase({ sendMessage }: BettingPhaseProps) {
-  const { hearts, bettingEntries, playerId, bettingStatus, setBettingStatus } = useGameStore()
+  const { hearts, bettingEntries, playerId, bettingStatus, setBettingStatus } = useGameStore(
+    useShallow((state) => ({
+      hearts: state.hearts,
+      bettingEntries: state.bettingEntries,
+      playerId: state.playerId,
+      bettingStatus: state.bettingStatus,
+      setBettingStatus: state.setBettingStatus,
+    }))
+  )
   const playSfx = useAudioStore((state) => state.playSfx)
 
   const [betType, setBetType] = useState<'win' | 'place' | 'exacta'>('win')

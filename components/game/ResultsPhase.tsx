@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { useGameStore } from '@/lib/store/gameStore'
 import { useAudioStore } from '@/lib/store/audioStore'
 
@@ -22,7 +23,16 @@ interface BetResult {
 }
 
 export function ResultsPhase() {
-  const { currentRound, gold, hearts, raceResults, playerId, playerReadyStatus } = useGameStore()
+  const { currentRound, gold, hearts, raceResults, playerId, playerReadyStatus } = useGameStore(
+    useShallow((state) => ({
+      currentRound: state.currentRound,
+      gold: state.gold,
+      hearts: state.hearts,
+      raceResults: state.raceResults,
+      playerId: state.playerId,
+      playerReadyStatus: state.playerReadyStatus,
+    }))
+  )
   const playSfx = useAudioStore((state) => state.playSfx)
 
   // Derive values for the effect (must be before any conditional returns)
