@@ -1652,6 +1652,15 @@ export class GameRoom {
       return
     }
 
+    // Check equipment slot is unlocked
+    if (unitType === 'equipment') {
+      const equipmentSlot = (unit as Equipment).slot as 'saddle' | 'horseshoes' | 'blinders'
+      if (!player.unlockedEquipmentSlots.includes(equipmentSlot)) {
+        if (ws) this.sendError(ws, `Equipment slot "${equipmentSlot}" is locked. Unlock it with Reputation first.`)
+        return
+      }
+    }
+
     // Deduct gold and add unit to player's inventory
     player.gold -= unit.cost
 

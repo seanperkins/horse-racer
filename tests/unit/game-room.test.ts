@@ -315,5 +315,61 @@ describe('GameRoom', () => {
       expect(lastMessage.type).toBe('error')
       expect(lastMessage.message).toMatch(/Need 3 Reputation/i)
     })
+
+    it('rejects equipment purchase for locked slots', () => {
+      room.addPlayer('player1', 'Player 1', mockWs)
+      room.currentPhase = 'shop'
+
+      const player = room.players.get('player1')!
+      player.gold = 10
+      player.unlockedEquipmentSlots = [] // No slots unlocked
+
+      // Add equipment to shop inventory
+      player.shopInventory = {
+        horses: [],
+        jockeys: [],
+        equipment: [
+          { id: 'test-saddle', name: 'Test Saddle', slot: 'saddle', cost: 2, effects: {} },
+        ],
+      }
+
+      mockWs.send.mockClear()
+
+      room.handlePurchase('player1', { unitType: 'equipment', unitId: 'test-saddle' })
+
+      // Should not have purchased
+      expect(player.equipment.length).toBe(0)
+      expect(player.gold).toBe(10)
+
+      const lastMessage = JSON.parse(mockWs.send.mock.calls.at(-1)![0])
+      expect(lastMessage.type).toBe('error')
+      expect(lastMessage.message).toMatch(/locked/i)
+    })
+
+    it('allows equipment purchase for unlocked slots', () => {
+      room.addPlayer('player1', 'Player 1', mockWs)
+      room.currentPhase = 'shop'
+
+      const player = room.players.get('player1')!
+      player.gold = 10
+      player.unlockedEquipmentSlots = ['saddle'] // Saddle slot unlocked
+
+      // Add equipment to shop inventory
+      player.shopInventory = {
+        horses: [],
+        jockeys: [],
+        equipment: [
+          { id: 'test-saddle', name: 'Test Saddle', slot: 'saddle', cost: 2, effects: {} },
+        ],
+      }
+
+      mockWs.send.mockClear()
+
+      room.handlePurchase('player1', { unitType: 'equipment', unitId: 'test-saddle' })
+
+      // Should have purchased
+      expect(player.equipment.length).toBe(1)
+      expect(player.gold).toBe(8)
+    })
   })
 })

@@ -132,6 +132,15 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
       return
     }
 
+    // Check equipment slot is unlocked
+    if (unit.type === 'equipment') {
+      const equipmentSlot = (unit.data as Equipment).slot as 'saddle' | 'horseshoes' | 'blinders'
+      if (!unlockedEquipmentSlots.includes(equipmentSlot)) {
+        toast.error(`Unlock the ${equipmentSlot} slot first!`)
+        return
+      }
+    }
+
     if (gold < unit.cost) {
       toast.error('Not enough gold!')
       return
@@ -387,13 +396,15 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                       {shopEquipment.map((unit) => {
                         const item = unit.data as Equipment
+                        const slotType = item.slot as 'saddle' | 'horseshoes' | 'blinders'
+                        const isSlotLocked = !unlockedEquipmentSlots.includes(slotType)
                         return (
                           <div
                             key={unit.id}
                             onMouseEnter={() => setHoveredShopItem({
                               type: 'equipment',
                               data: item,
-                              slot: item.slot as 'saddle' | 'horseshoes' | 'blinders'
+                              slot: slotType
                             })}
                             onMouseLeave={() => setHoveredShopItem(null)}
                             className="lg:pointer-events-auto"
@@ -406,9 +417,10 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
                               onPreview={() => setMobilePreviewItem({
                                 type: 'equipment',
                                 data: item,
-                                slot: item.slot as 'saddle' | 'horseshoes' | 'blinders'
+                                slot: slotType
                               })}
                               showPreviewButton={true}
+                              slotLocked={isSlotLocked}
                             />
                           </div>
                         )
@@ -616,6 +628,10 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
                     if (mobilePreviewItem.type === 'jockey') {
                       return !!hiredJockey  // Hiring is free, only check if already hired
                     }
+                    if (mobilePreviewItem.type === 'equipment') {
+                      const equipSlot = (mobilePreviewItem.data as Equipment).slot as 'saddle' | 'horseshoes' | 'blinders'
+                      if (!unlockedEquipmentSlots.includes(equipSlot)) return true
+                    }
                     return gold < shopUnit.cost
                   })()}
                   className="w-full th-button disabled:opacity-50 disabled:cursor-not-allowed min-h-11 py-2.5 rounded-lg font-bold"
@@ -631,6 +647,10 @@ export function ShopPhase({ sendMessage }: ShopPhaseProps) {
                     if (mobilePreviewItem.type === 'jockey') {
                       if (hiredJockey) return 'Already Hired'
                       return 'Hire'
+                    }
+                    if (mobilePreviewItem.type === 'equipment') {
+                      const equipSlot = (mobilePreviewItem.data as Equipment).slot as 'saddle' | 'horseshoes' | 'blinders'
+                      if (!unlockedEquipmentSlots.includes(equipSlot)) return '🔒 Slot Locked'
                     }
                     return `Buy ${cost}g`
                   })()}
@@ -957,6 +977,7 @@ function EquipmentCard({
   onPreview,
   showPreviewButton = false,
   isSelected = false,
+  slotLocked = false,
 }: {
   equipment: Equipment
   cost: number
@@ -966,6 +987,7 @@ function EquipmentCard({
   onPreview?: () => void
   showPreviewButton?: boolean
   isSelected?: boolean
+  slotLocked?: boolean
 }) {
   const getSlotIcon = (slot: string) => {
     switch (slot) {
@@ -1045,14 +1067,14 @@ function EquipmentCard({
 
       <button
         onClick={onPurchase}
-        disabled={!canAfford}
+        disabled={!canAfford || slotLocked}
         className={`mt-auto w-full min-h-11 py-2.5 rounded font-bold text-sm sm:text-base ${
           isInventory
             ? 'bg-red-600 hover:bg-red-500 active:bg-red-400'
             : 'th-button disabled:opacity-50 disabled:cursor-not-allowed'
         }`}
       >
-        {isInventory ? `Sell ${cost}g` : `Buy ${cost}g`}
+        {slotLocked ? '🔒 Slot Locked' : isInventory ? `Sell ${cost}g` : `Buy ${cost}g`}
       </button>
     </div>
   )
