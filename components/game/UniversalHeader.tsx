@@ -24,7 +24,8 @@ export function UniversalHeader() {
     setBettingStatus,
     entryStatus,
     setEntryStatus,
-    prepSelection
+    prepSelection,
+    betSelection
   } = useGameStore(
     useShallow((state) => ({
       currentPhase: state.currentPhase,
@@ -44,6 +45,7 @@ export function UniversalHeader() {
       entryStatus: state.entryStatus,
       setEntryStatus: state.setEntryStatus,
       prepSelection: state.prepSelection,
+    betSelection: state.betSelection,
     }))
   )
 
@@ -135,19 +137,44 @@ export function UniversalHeader() {
       return
     }
 
-    // For betting phase, we need to handle skip differently
+    // For betting phase, place bet if valid selection, otherwise skip
     if (currentPhase === 'betting') {
-      // Don't allow skip if already bet/skipped
+      // Don't allow if already bet/skipped
       if (bettingStatus !== 'open') {
         console.warn('Betting already done:', bettingStatus)
         return
       }
-      // Skip betting - update store state and mark as ready
-      setBettingStatus('skipped')
-      sendMessage({
-        type: 'ready_up',
-        ready: true,
-      })
+
+      if (hasValidBetSelection && betSelection) {
+        // Place the bet
+        playSfx('ready_up')
+        setBettingStatus('submitted')
+        if (betSelection.betType === 'exacta') {
+          sendMessage({
+            type: 'place_bet',
+            betType: 'exacta',
+            exactaFirst: betSelection.exactaFirst,
+            exactaSecond: betSelection.exactaSecond,
+            amount: 0,
+            betForHeart: false,
+          })
+        } else {
+          sendMessage({
+            type: 'place_bet',
+            betType: betSelection.betType,
+            targetPlayerId: betSelection.selectedPlayer,
+            amount: 0,
+            betForHeart: false,
+          })
+        }
+      } else {
+        // Skip betting - update store state and mark as ready
+        setBettingStatus('skipped')
+        sendMessage({
+          type: 'ready_up',
+          ready: true,
+        })
+      }
       return
     }
 
@@ -160,6 +187,13 @@ export function UniversalHeader() {
   // Check if player can submit a valid entry (has both horse and jockey)
   const canSubmitEntry = prepSelection && prepSelection.horse && prepSelection.jockey
 
+  // Check if player has a valid bet selected
+  const hasValidBetSelection = betSelection && (
+    (betSelection.betType !== 'exacta' && betSelection.selectedPlayer && betSelection.selectedPlayer !== playerId) ||
+    (betSelection.betType === 'exacta' && betSelection.exactaFirst && betSelection.exactaSecond &&
+     betSelection.exactaFirst !== playerId && betSelection.exactaSecond !== playerId)
+  )
+
   // Get button text based on phase
   const getReadyButtonText = () => {
     if (currentPhase === 'preparation') {
@@ -171,7 +205,7 @@ export function UniversalHeader() {
     if (currentPhase === 'betting') {
       if (bettingStatus === 'submitted') return '✓ Bet'
       if (bettingStatus === 'skipped') return '✓ Skip'
-      return 'Skip'
+      return hasValidBetSelection ? 'Place Bet' : 'Skip'
     }
     return isReady ? '✓ Ready' : 'Ready'
   }

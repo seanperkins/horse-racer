@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { useShallow } from 'zustand/react/shallow'
 import { useGameStore } from '@/lib/store/gameStore'
@@ -31,13 +31,14 @@ const BET_REWARDS = {
 }
 
 export function BettingPhase({ sendMessage }: BettingPhaseProps) {
-  const { hearts, bettingEntries, playerId, bettingStatus, setBettingStatus } = useGameStore(
+  const { hearts, bettingEntries, playerId, bettingStatus, setBettingStatus, setBetSelection } = useGameStore(
     useShallow((state) => ({
       hearts: state.hearts,
       bettingEntries: state.bettingEntries,
       playerId: state.playerId,
       bettingStatus: state.bettingStatus,
       setBettingStatus: state.setBettingStatus,
+      setBetSelection: state.setBetSelection,
     }))
   )
   const playSfx = useAudioStore((state) => state.playSfx)
@@ -50,6 +51,16 @@ export function BettingPhase({ sendMessage }: BettingPhaseProps) {
 
   // Use store's bettingStatus instead of local state
   const betPlaced = bettingStatus !== 'open'
+
+  // Sync bet selection to store so UniversalHeader can access it
+  useEffect(() => {
+    setBetSelection({
+      betType,
+      selectedPlayer,
+      exactaFirst,
+      exactaSecond,
+    })
+  }, [betType, selectedPlayer, exactaFirst, exactaSecond, setBetSelection])
 
   const entries = bettingEntries as BettingEntry[]
   const canBetForHeart = hearts < 5

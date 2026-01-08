@@ -34,6 +34,12 @@ interface GameState {
   entryStatus: 'open' | 'submitted' | 'skipped'
   lastSubmittedEntry: SubmittedEntry | null
   prepSelection: SubmittedEntry | null
+  betSelection: {
+    betType: 'win' | 'place' | 'exacta'
+    selectedPlayer: string | null
+    exactaFirst: string | null
+    exactaSecond: string | null
+  } | null
 
   // Inventory
   horses: Horse[]
@@ -111,6 +117,7 @@ interface GameState {
   setBettingStatus: (status: 'open' | 'submitted' | 'skipped') => void
   setEntryStatus: (status: 'open' | 'submitted' | 'skipped', entry?: SubmittedEntry) => void
   setPrepSelection: (selection: SubmittedEntry | null) => void
+  setBetSelection: (selection: { betType: 'win' | 'place' | 'exacta'; selectedPlayer: string | null; exactaFirst: string | null; exactaSecond: string | null } | null) => void
 
   // Economy actions
   setReputation: (reputation: number) => void
@@ -140,6 +147,7 @@ const initialState = {
   entryStatus: 'open' as const,
   lastSubmittedEntry: null,
   prepSelection: null,
+  betSelection: null,
   horses: [],
   hiredJockey: null,
   equipment: [],
@@ -181,9 +189,10 @@ export const useGameStore = create<GameState>((set) => ({
       updates.playerReadyStatus = {}
     }
 
-    // Reset betting status when entering betting phase
+    // Reset betting status and selection when entering betting phase
     if (phase === 'betting') {
       updates.bettingStatus = 'open'
+      updates.betSelection = null
     }
 
     // Reset entry status when entering preparation phase
@@ -259,6 +268,8 @@ export const useGameStore = create<GameState>((set) => ({
     }),
 
   setPrepSelection: (selection) => set({ prepSelection: selection }),
+
+  setBetSelection: (selection) => set({ betSelection: selection }),
 
   // Economy actions
   setReputation: (reputation) => set({ reputation }),
